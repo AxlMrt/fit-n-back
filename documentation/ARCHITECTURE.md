@@ -55,13 +55,11 @@
 
 - Données descriptives (nom, groupes musculaires, durée, calories)
 - Matériel requis, variantes, consignes, erreurs courantes
-- Multimédia associé (vidéo, image, texte)
 
 **Entités principales** :
 
 - `Exercise`
 - `Tag` (e.g., "cardio", "poids du corps")
-- `MediaResource`
 
 **Couplage** : Utilisé par `Workouts`, `Content`, `Coach`
 

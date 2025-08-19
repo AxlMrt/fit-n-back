@@ -1,5 +1,4 @@
 using FitnessApp.Modules.Exercises.Application.Interfaces;
-using FitnessApp.Modules.Exercises.Application.Mapping;
 using FitnessApp.Modules.Exercises.Application.Services;
 using FitnessApp.Modules.Exercises.Domain.Repositories;
 using FitnessApp.Modules.Exercises.Infrastructure.Persistence;
@@ -14,28 +13,18 @@ public static class ExercisesModule
 {
     public static IServiceCollection AddExercisesModule(this IServiceCollection services, string connectionString)
     {
-        // Register DbContext
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new ArgumentException("A valid connection string must be provided to register the Exercises module.", nameof(connectionString));
+
+        // Register EF Core DbContext
         services.AddDbContext<ExercisesDbContext>(options =>
-            options.UseNpgsql(connectionString,
-                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "exercises")));
+            options.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(ExercisesModule).Assembly.FullName)));
 
-        // Register repositories
+        // Domain repositories
         services.AddScoped<IExerciseRepository, ExerciseRepository>();
-        services.AddScoped<ITagRepository, TagRepository>();
-        services.AddScoped<IMuscleGroupRepository, MuscleGroupRepository>();
-        services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 
-        // Register services
+        // Application services
         services.AddScoped<IExerciseService, ExerciseService>();
-        services.AddScoped<ITagService, TagService>();
-        services.AddScoped<IMuscleGroupService, MuscleGroupService>();
-        services.AddScoped<IEquipmentService, EquipmentService>();
-
-        // Register validators
-        //services.AddValidatorsFromAssemblyContaining<ExerciseValidator>();
-
-        // Register mappers
-        services.AddScoped<IExerciseMapper, ExerciseMapper>();
 
         return services;
     }

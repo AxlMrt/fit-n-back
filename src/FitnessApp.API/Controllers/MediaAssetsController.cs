@@ -53,6 +53,16 @@ public class MediaAssetsController : ControllerBase
         return File(stream, asset.ContentType ?? "application/octet-stream", Path.GetFileName(asset.Key));
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var asset = await _repository.GetByIdAsync(id);
+        if (asset == null) return NotFound();
+
+        await _service.DeleteAsync(id);
+        return NoContent();
+    }
+
     [HttpGet("exercises/{exerciseId:guid}/assets")]
     public async Task<IActionResult> ListByExercise(Guid exerciseId)
     {

@@ -31,7 +31,6 @@ public class MediaAssetService : IMediaAssetService
         await _repository.AddAsync(asset);
         await _repository.SaveChangesAsync();
 
-        // Persist link in join table (best-effort) using EF so it works with InMemory and relational providers
         try
         {
             _dbContext.ExerciseMediaAssets.Add(new ExerciseMediaAsset { ExerciseId = exerciseId, MediaAssetId = asset.Id });
@@ -42,7 +41,6 @@ public class MediaAssetService : IMediaAssetService
             // best-effort: ignore failures when persisting the join entry
         }
 
-        // Enqueue transcode job if a queue is available
         if (_transcodeQueue != null)
         {
             await _transcodeQueue.EnqueueAsync(new TranscodeRequest(asset.Id, asset.Key, "mp4"));
@@ -60,5 +58,15 @@ public class MediaAssetService : IMediaAssetService
     public async Task<IEnumerable<MediaAsset>> GetByExerciseIdAsync(Guid exerciseId)
     {
         return await _repository.GetByExerciseIdAsync(exerciseId);
+    }
+
+    //delete
+    public async Task DeleteAsync(Guid id)
+    {
+        var asset = await _repository.GetByIdAsync(id);
+        if (asset == null) throw new ArgumentException("Asset not found");
+        await _storage.DeleteObjectAsync(asset.Key);
+        await _repository.DeleteAsync(asset);
+        await _repository.SaveChangesAsync();
     }
 }

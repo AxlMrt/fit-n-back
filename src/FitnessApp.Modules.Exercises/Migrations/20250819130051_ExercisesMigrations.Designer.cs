@@ -3,6 +3,7 @@ using System;
 using FitnessApp.Modules.Exercises.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FitnessApp.Modules.Exercises.Migrations
 {
     [DbContext(typeof(ExercisesDbContext))]
-    partial class ExercisesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250819130051_ExercisesMigrations")]
+    partial class ExercisesMigrations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

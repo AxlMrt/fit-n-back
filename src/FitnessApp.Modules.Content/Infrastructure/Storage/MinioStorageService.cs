@@ -49,6 +49,24 @@ public class FileSystemStorageService : IStorageService, IDisposable
         return $"/media/{key}";
     }
 
+    public async Task DeleteObjectAsync(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentNullException(nameof(key));
+        var filePath = Path.Combine(_basePath, key.Replace('/', Path.DirectorySeparatorChar));
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch
+        {
+            // ignore deletion failures
+        }
+        await Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         // nothing to dispose
@@ -138,6 +156,21 @@ public class MinioStorageService : IStorageService, IDisposable
         catch
         {
             return $"/media/{key}";
+        }
+    }
+
+    public async Task DeleteObjectAsync(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentNullException(nameof(key));
+        try
+        {
+            await _client.RemoveObjectAsync(new Minio.DataModel.Args.RemoveObjectArgs()
+                .WithBucket(_settings.BucketName)
+                .WithObject(key));
+        }
+        catch
+        {
+            // ignore storage deletion failures
         }
     }
 

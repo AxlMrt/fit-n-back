@@ -50,4 +50,20 @@ public class MediaAssetRepository : IMediaAssetRepository
     {
         await _dbContext.SaveChangesAsync();
     }
+
+    public async Task AddExerciseLinkAsync(Guid exerciseId, Guid mediaAssetId)
+    {
+        _dbContext.ExerciseMediaAssets.Add(new ExerciseMediaAsset { ExerciseId = exerciseId, MediaAssetId = mediaAssetId });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task RemoveExerciseLinkAsync(Guid exerciseId, Guid mediaAssetId)
+    {
+        var link = await _dbContext.ExerciseMediaAssets.FirstOrDefaultAsync(e => e.ExerciseId == exerciseId && e.MediaAssetId == mediaAssetId);
+        if (link != null)
+        {
+            _dbContext.ExerciseMediaAssets.Remove(link);
+            await _dbContext.SaveChangesAsync();
+        }
+    }
 }
