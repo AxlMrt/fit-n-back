@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+﻿using AwesomeAssertions;
 using Moq;
 using FitnessApp.Modules.Users.Application.Services;
 using FitnessApp.Modules.Users.Application.DTOs.Requests;

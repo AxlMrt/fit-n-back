@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using Moq;
 using FitnessApp.Modules.Authentication.Application.Interfaces;
 using FitnessApp.Modules.Authentication.Application.Services;
