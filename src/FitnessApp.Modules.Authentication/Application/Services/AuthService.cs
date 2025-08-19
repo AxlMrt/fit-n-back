@@ -41,7 +41,6 @@ public class AuthService : IAuthService
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
 
         var profile = new UserProfile(user.Id);
-        profile.UpdatePersonalInfo(request.FirstName, request.LastName, null, null);
         user.SetProfile(profile);
 
         await _userRepository.CreateAsync(user);

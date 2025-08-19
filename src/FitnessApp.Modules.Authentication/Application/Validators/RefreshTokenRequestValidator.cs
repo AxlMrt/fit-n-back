@@ -7,6 +7,8 @@ public class RefreshTokenRequestValidator : AbstractValidator<RefreshTokenReques
 {
     public RefreshTokenRequestValidator()
     {
-        RuleFor(x => x.RefreshToken).NotEmpty();
+        RuleFor(x => x.RefreshToken)
+            .NotEmpty()
+            .Matches("^[a-zA-Z0-9-_]*$").WithMessage("Refresh token contains invalid characters.");
     }
 }

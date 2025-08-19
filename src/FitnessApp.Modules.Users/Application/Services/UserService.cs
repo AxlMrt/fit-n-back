@@ -61,22 +61,47 @@ public class UserService : IUserService
 
     public async Task UpdatePreferencesAsync(Guid userId, PreferencesUpdateRequest request)
     {
-        User user = await _userRepository.GetByIdAsync(userId) ?? throw new Exception("User not found");
+        await _validationService.ValidateAsync(request);
 
+        var existingPrefs = await _userRepository.GetPreferencesAsync(userId);
+        var toUpsert = new List<Preference>();
+        var toDelete = new List<(string Category, string Key)>();
+
+        // Build maps for quick lookup
+        var existingMap = existingPrefs.ToDictionary(p => (p.Category, p.Key));
+        var incomingMap = request.Items.ToDictionary(i => (i.Category, i.Key));
+
+        // Preferences to add or update
         foreach (var item in request.Items)
         {
-            var existing = user.Preferences.FirstOrDefault(p => p.Category == item.Category && p.Key == item.Key);
-            if (existing is null)
+            if (existingMap.TryGetValue((item.Category, item.Key), out var existing))
             {
-                user.AddPreference(new Preference(user.Id, item.Category, item.Key, item.Value));
+                if (existing.Value != item.Value)
+                {
+                    existing.UpdateValue(item.Value);
+                    toUpsert.Add(existing);
+                }
             }
             else
             {
-                existing.UpdateValue(item.Value);
+                toUpsert.Add(new Preference(userId, item.Category, item.Key, item.Value));
             }
         }
 
-        await _userRepository.UpdateAsync(user);
+        // Preferences to delete (present in DB but not in request)
+        foreach (var existing in existingPrefs)
+        {
+            if (!incomingMap.ContainsKey((existing.Category, existing.Key)))
+            {
+                toDelete.Add((existing.Category, existing.Key));
+            }
+        }
+
+        if (toUpsert.Count > 0)
+            await _userRepository.UpsertPreferencesAsync(userId, toUpsert);
+
+        if (toDelete.Count > 0)
+            await _userRepository.DeletePreferencesAsync(userId, toDelete);
     }
 
     public Task<UserGoalsResponse> GetGoalsAsync(Guid userId)

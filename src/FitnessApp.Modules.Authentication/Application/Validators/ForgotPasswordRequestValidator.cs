@@ -7,6 +7,9 @@ public class ForgotPasswordRequestValidator : AbstractValidator<ForgotPasswordRe
 {
     public ForgotPasswordRequestValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Email)
+            .NotEmpty()
+            .EmailAddress()
+            .Matches("^[^<>]*$").WithMessage("Email contains invalid characters."); // Prévention XSS
     }
 }

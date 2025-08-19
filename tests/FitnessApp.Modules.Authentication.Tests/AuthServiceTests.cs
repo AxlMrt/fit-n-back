@@ -45,7 +45,7 @@ public class AuthServiceTests
 
         var sut = new AuthService(_validator.Object, _users.Object, _jwt.Object, _revocation.Object, _refresh.Object);
 
-        var resp = await sut.RegisterAsync(new RegisterRequest("john@doe.com", "john", "P@ssw0rd", "John", "Doe"));
+        var resp = await sut.RegisterAsync(new RegisterRequest("john@doe.com", "john", "P@ssw0rd", "P@ssw0rd"));
 
         resp.AccessToken.Should().Be("access");
         resp.RefreshToken.Should().Be("refresh");
