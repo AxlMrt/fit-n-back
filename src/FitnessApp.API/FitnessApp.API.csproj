@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.8" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FitnessApp.Modules.Authentication\FitnessApp.Modules.Authentication.csproj" />
+    <ProjectReference Include="..\FitnessApp.Modules.Users\FitnessApp.Modules.Users.csproj" />
+    <ProjectReference Include="..\FitnessApp.Modules.Exercises\FitnessApp.Modules.Exercises.csproj" />
+    <ProjectReference Include="..\FitnessApp.Modules.Content\FitnessApp.Modules.Content.csproj" />
+  </ItemGroup>
+
+</Project>

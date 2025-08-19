@@ -1,0 +1,60 @@
+services:
+  fitness-api:
+    build:
+      context: ..
+      dockerfile: ./src/FitnessApp.API/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=fitnessapp;Username=postgres;Password=fitnesspass
+      Minio__Endpoint: minio:9000
+      Minio__AccessKey: minioadmin
+      Minio__SecretKey: miniopass
+      Minio__BucketName: fitness-media
+    depends_on:
+      - db
+      - minio
+    volumes:
+      - media_storage:/app/storage
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: fitnesspass
+      POSTGRES_DB: fitnessapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@fitnessapp.com
+      PGADMIN_DEFAULT_PASSWORD: admin1234
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: miniopass
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media_storage:
+  minio_data:
