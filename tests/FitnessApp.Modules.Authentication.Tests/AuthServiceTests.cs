@@ -23,8 +23,8 @@ public class AuthServiceTests
         var user = new User("john@doe.com", "john");
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword("P@ssw0rd"));
         _users.Setup(r => r.GetByEmailAsync("john@doe.com")).ReturnsAsync(user);
-        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.UserName, user.Email)).Returns("access");
-        _refresh.Setup(r => r.IssueAsync(user.Id, null)).ReturnsAsync(("refresh", DateTime.UtcNow.AddDays(14)));
+        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.UserName, user.Email, user.Role, It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access");
+        _refresh.Setup(r => r.IssueAsync(user.Id, It.IsAny<TimeSpan?>())).ReturnsAsync(("refresh", DateTime.UtcNow.AddDays(14)));
 
         var sut = new AuthService(_validator.Object, _users.Object, _jwt.Object, _revocation.Object, _refresh.Object);
 
@@ -40,8 +40,8 @@ public class AuthServiceTests
     {
         _users.Setup(r => r.EmailExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
         _users.Setup(r => r.UserNameExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
-        _jwt.Setup(j => j.GenerateJwtToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>())).Returns("access");
-        _refresh.Setup(r => r.IssueAsync(It.IsAny<Guid>(), null)).ReturnsAsync(("refresh", DateTime.UtcNow.AddDays(14)));
+        _jwt.Setup(j => j.GenerateJwtToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Authorization.Enums.Role>(), It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access");
+        _refresh.Setup(r => r.IssueAsync(It.IsAny<Guid>(), It.IsAny<TimeSpan?>())).ReturnsAsync(("refresh", DateTime.UtcNow.AddDays(14)));
 
         var sut = new AuthService(_validator.Object, _users.Object, _jwt.Object, _revocation.Object, _refresh.Object);
 
@@ -57,8 +57,8 @@ public class AuthServiceTests
         var user = new User("john@doe.com", "john");
         _refresh.Setup(r => r.ValidateAsync("valid")).ReturnsAsync(user.Id);
         _users.Setup(r => r.GetByIdAsync(user.Id)).ReturnsAsync(user);
-        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.UserName, user.Email)).Returns("access2");
-        _refresh.Setup(r => r.IssueAsync(user.Id, null)).ReturnsAsync(("refresh2", DateTime.UtcNow.AddDays(14)));
+        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.UserName, user.Email, user.Role, It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access2");
+        _refresh.Setup(r => r.IssueAsync(user.Id, It.IsAny<TimeSpan?>())).ReturnsAsync(("refresh2", DateTime.UtcNow.AddDays(14)));
 
         var sut = new AuthService(_validator.Object, _users.Object, _jwt.Object, _revocation.Object, _refresh.Object);
 

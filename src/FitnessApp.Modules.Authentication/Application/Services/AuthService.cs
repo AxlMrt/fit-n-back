@@ -1,4 +1,5 @@
 using FitnessApp.Modules.Authentication.Application.Interfaces;
+using FitnessApp.Modules.Authorization.Enums;
 using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.SharedKernel.DTOs.Auth.Requests;
 using FitnessApp.SharedKernel.DTOs.Auth.Responses;
@@ -45,9 +46,23 @@ public class AuthService : IAuthService
 
         await _userRepository.CreateAsync(user);
 
-        string access = _jwtService.GenerateJwtToken(user.Id, user.UserName, user.Email);
+        string access = _jwtService.GenerateJwtToken(
+            user.Id, 
+            user.UserName, 
+            user.Email, 
+            user.Role, 
+            user.Subscription?.Level);
         var (refresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
-        return new AuthResponse(user.Id, user.UserName, user.Email, access, DateTime.UtcNow.AddDays(7), refresh, refreshExp);
+        return new AuthResponse(
+            user.Id, 
+            user.UserName, 
+            user.Email, 
+            access, 
+            DateTime.UtcNow.AddDays(7), 
+            user.Role,
+            user.Subscription?.Level,
+            refresh, 
+            refreshExp);
     }
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request)
@@ -67,9 +82,23 @@ public class AuthService : IAuthService
         user.RegisterLogin();
         await _userRepository.SaveChangesAsync();
 
-        string access = _jwtService.GenerateJwtToken(user.Id, user.UserName, user.Email);
+        string access = _jwtService.GenerateJwtToken(
+            user.Id, 
+            user.UserName, 
+            user.Email, 
+            user.Role, 
+            user.Subscription?.Level);
         var (refresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
-        return new AuthResponse(user.Id, user.UserName, user.Email, access, DateTime.UtcNow.AddDays(7), refresh, refreshExp);
+        return new AuthResponse(
+            user.Id, 
+            user.UserName, 
+            user.Email, 
+            access, 
+            DateTime.UtcNow.AddDays(7), 
+            user.Role,
+            user.Subscription?.Level,
+            refresh, 
+            refreshExp);
     }
 
     public async Task LogoutAsync(Guid userId, string accessToken)
@@ -87,9 +116,23 @@ public class AuthService : IAuthService
         if (user is null) return null;
 
         await _refreshTokenService.InvalidateAsync(request.RefreshToken);
-        string access = _jwtService.GenerateJwtToken(user.Id, user.UserName, user.Email);
+        string access = _jwtService.GenerateJwtToken(
+            user.Id, 
+            user.UserName, 
+            user.Email, 
+            user.Role, 
+            user.Subscription?.Level);
         var (newRefresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
-        return new AuthResponse(user.Id, user.UserName, user.Email, access, DateTime.UtcNow.AddDays(7), newRefresh, refreshExp);
+        return new AuthResponse(
+            user.Id, 
+            user.UserName, 
+            user.Email, 
+            access, 
+            DateTime.UtcNow.AddDays(7), 
+            user.Role,
+            user.Subscription?.Level,
+            newRefresh, 
+            refreshExp);
     }
 
     public Task ForgotPasswordAsync(ForgotPasswordRequest request)

@@ -29,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FitnessApp.Modules.Authorization\FitnessApp.Modules.Authorization.csproj" />
     <ProjectReference Include="..\FitnessApp.SharedKernel\FitnessApp.SharedKernel.csproj" />
   </ItemGroup>
 

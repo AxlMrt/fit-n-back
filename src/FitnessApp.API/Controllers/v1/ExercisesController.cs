@@ -1,12 +1,14 @@
+using FitnessApp.Modules.Authorization.Policies;
 using FitnessApp.Modules.Exercises.Application.DTOs;
 using FitnessApp.Modules.Exercises.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FitnessApp.API.Controllers;
+namespace FitnessApp.API.Controllers.v1;
 
+[ApiController]
 [Authorize]
-[Route("api/exercises")]
+[Route("api/v1/exercises")]
 public class ExercisesController : ControllerBase
 {
     private readonly IExerciseService _service;
@@ -32,6 +34,7 @@ public class ExercisesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     public async Task<IActionResult> Create([FromBody] CreateExerciseDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -39,6 +42,7 @@ public class ExercisesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     public async Task<IActionResult> Update(Guid id, [FromBody] ExerciseDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
@@ -47,6 +51,7 @@ public class ExercisesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     public async Task<IActionResult> Delete(Guid id)
     {
         await _service.DeleteAsync(id);

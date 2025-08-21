@@ -2,6 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using FitnessApp.Modules.Authentication.Application.Interfaces;
+using FitnessApp.Modules.Authorization;
+using FitnessApp.Modules.Authorization.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -15,7 +17,7 @@ public class GenerateJwtTokenService : IGenerateJwtTokenService
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
-    public string GenerateJwtToken(Guid userId, string userName, string email)
+    public string GenerateJwtToken(Guid userId, string userName, string email, Role role, SubscriptionLevel? subscriptionLevel)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         byte[] key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured"));
@@ -24,8 +26,15 @@ public class GenerateJwtTokenService : IGenerateJwtTokenService
         {
             new(ClaimTypes.NameIdentifier, userId.ToString()),
             new(ClaimTypes.Name, userName),
-            new(ClaimTypes.Email, email)
+            new(ClaimTypes.Email, email),
+            new(ClaimTypes.Role, role.ToString())
         };
+
+        // Add subscription level claim if available
+        if (subscriptionLevel.HasValue)
+        {
+            claims.Add(new Claim(FitnessAppClaimTypes.SubscriptionLevel, subscriptionLevel.Value.ToString()));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
@@ -42,5 +51,4 @@ public class GenerateJwtTokenService : IGenerateJwtTokenService
         SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
-
 }

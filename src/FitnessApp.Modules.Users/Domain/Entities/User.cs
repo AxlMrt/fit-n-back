@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using FitnessApp.Modules.Authorization.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Entities;
 
@@ -14,6 +15,7 @@ public class User
     public DateTime? LockoutEnd { get; private set; }
     public bool LockoutEnabled { get; private set; }
     public int AccessFailedCount { get; private set; }
+    public Role Role { get; private set; }
     public UserProfile Profile { get; private set; } = null!;
     public Subscription? Subscription { get; private set; }
     public Collection<Preference> Preferences { get; private set; } = new();
@@ -30,6 +32,7 @@ public class User
         CreatedAt = DateTime.UtcNow;
         SecurityStamp = Guid.NewGuid().ToString();
         LockoutEnabled = true;
+        Role = Role.Athlete; // Default role is Athlete
     }
 
     public void SetPasswordHash(string passwordHash)
@@ -45,6 +48,11 @@ public class User
     public void UpdateSubscription(Subscription subscription)
     {
         Subscription = subscription;
+    }
+
+    public void SetRole(Role role)
+    {
+        Role = role;
     }
 
     public void AddPreference(Preference preference)

@@ -1,3 +1,5 @@
+using FitnessApp.Modules.Authorization.Enums;
+
 namespace FitnessApp.Modules.Authentication.Application.Interfaces;
 
 public interface IGenerateJwtTokenService
@@ -8,6 +10,8 @@ public interface IGenerateJwtTokenService
     /// <param name="userId">The unique identifier of the user.</param>
     /// <param name="userName">The username of the user.</param>
     /// <param name="email">The email address of the user.</param>
+    /// <param name="role">The role of the user.</param>
+    /// <param name="subscriptionLevel">The subscription level of the user.</param>
     /// <returns>A string representing the generated JWT token.</returns>
-    string GenerateJwtToken(Guid userId, string userName, string email);
+    string GenerateJwtToken(Guid userId, string userName, string email, Role role, SubscriptionLevel? subscriptionLevel);
 }

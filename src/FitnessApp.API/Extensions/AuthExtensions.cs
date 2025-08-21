@@ -1,6 +1,6 @@
 using System.Text;
+using FitnessApp.Modules.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 namespace FitnessApp.API.Extensions;
@@ -30,14 +30,7 @@ public static class AuthExtensions
     
     public static IServiceCollection AddJwtAuthorization(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder()
-                .RequireAuthenticatedUser()
-                .Build())
-            .AddPolicy("AdminOnly", policy =>
-                policy.RequireRole("Admin"))
-            .AddPolicy("UserManagement", policy =>
-                policy.RequireRole("Admin", "Manager"));
+        services.AddAuthorizationModule();
 
         return services;
     }

@@ -40,6 +40,17 @@ public class UserServiceTests
         user.SetProfile(new UserProfile(id));
         _repo.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(user);
         _repo.Setup(r => r.UpdateAsync(user)).ReturnsAsync(user);
+        // Mock GetPreferencesAsync to return an empty collection instead of null
+        _repo.Setup(r => r.GetPreferencesAsync(id)).ReturnsAsync(new List<Preference>());
+        
+        // Simuler l'ajout des préférences lorsque UpsertPreferencesAsync est appelé
+        _repo.Setup(r => r.UpsertPreferencesAsync(id, It.IsAny<IEnumerable<Preference>>()))
+            .Callback<Guid, IEnumerable<Preference>>((userId, prefs) => {
+                foreach (var pref in prefs)
+                {
+                    user.AddPreference(pref);
+                }
+            });
 
         var sut = new UserService(_repo.Object, _validator.Object);
         var request = new PreferencesUpdateRequest(new []
@@ -52,7 +63,7 @@ public class UserServiceTests
 
         user.Preferences.Should().HaveCount(2);
         user.Preferences.Should().Contain(p => p.Key == "theme" && p.Value == "dark");
-        _repo.Verify(r => r.UpdateAsync(user), Times.Once);
+        _repo.Verify(r => r.UpsertPreferencesAsync(id, It.IsAny<IEnumerable<Preference>>()), Times.Once);
     }
 
     [Fact]

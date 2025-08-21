@@ -1,4 +1,5 @@
 
+using FitnessApp.Modules.Authorization.Enums;
 using FitnessApp.Modules.Users.Application.DTOs.Responses;
 using FitnessApp.Modules.Users.Domain.Entities;
 
@@ -12,6 +13,7 @@ public static class UserMapper
             user.Id,
             user.Email,
             user.UserName,
+            user.Role,
             MapToUserProfileDto(user.Profile),
             user.Subscription != null ? MapToSubscriptionDto(user.Subscription) : null,
             user.Preferences.Select(MapToPreferenceDto)
@@ -40,7 +42,7 @@ public static class UserMapper
     {
         return new SubscriptionResponse(
             subscription.Id,
-            subscription.Plan,
+            subscription.Level,
             subscription.StartDate,
             subscription.EndDate,
             subscription.IsActive

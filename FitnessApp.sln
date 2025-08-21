@@ -17,8 +17,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Programs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Tracking", "src\FitnessApp.Modules.Tracking\FitnessApp.Modules.Tracking.csproj", "{DAAD3A6F-E502-4492-9130-B08EF3EB657A}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Users.Tests", "tests\FitnessApp.Modules.Users.Tests\FitnessApp.Modules.Users.Tests.csproj", "{0EED08BB-12A5-4D77-B4A3-2E88CB85376D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Exercises", "src\FitnessApp.Modules.Exercises\FitnessApp.Modules.Exercises.csproj", "{4F851775-3C91-47B0-8941-8BE33454D571}"
@@ -33,8 +31,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Payments
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Content", "src\FitnessApp.Modules.Content\FitnessApp.Modules.Content.csproj", "{90476393-C95F-44EA-8548-B152CB20D4BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Admin", "src\FitnessApp.Modules.Admin\FitnessApp.Modules.Admin.csproj", "{4A02EBD6-0BE1-4839-A1FC-DA788651D433}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Exercises.Tests", "tests\FitnessApp.Modules.Exercises.Tests\FitnessApp.Modules.Exercises.Tests.csproj", "{646D7E57-0BBE-4D78-B9F8-66492E1810B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Authentication", "src\FitnessApp.Modules.Authentication\FitnessApp.Modules.Authentication.csproj", "{0B495AE8-FAE4-4615-A9F5-BF1177A77E30}"
@@ -42,6 +38,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Authentication.Tests", "tests\FitnessApp.Modules.Authentication.Tests\FitnessApp.Modules.Authentication.Tests.csproj", "{D4C6F7A1-8A4D-4F3D-8A6F-9B6F7A1D6E4B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Content.Tests", "tests\FitnessApp.Modules.Content.Tests\FitnessApp.Modules.Content.Tests.csproj", "{C3F96D9F-27DC-42C2-B705-DBA1D46EDAC0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Authorization", "src\FitnessApp.Modules.Authorization\FitnessApp.Modules.Authorization.csproj", "{9DA65371-C7C9-4615-9E56-0FE00850F858}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -209,18 +207,6 @@ Global
 		{90476393-C95F-44EA-8548-B152CB20D4BF}.Release|x64.Build.0 = Release|Any CPU
 		{90476393-C95F-44EA-8548-B152CB20D4BF}.Release|x86.ActiveCfg = Release|Any CPU
 		{90476393-C95F-44EA-8548-B152CB20D4BF}.Release|x86.Build.0 = Release|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Debug|x64.Build.0 = Debug|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Debug|x86.Build.0 = Debug|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Release|x64.ActiveCfg = Release|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Release|x64.Build.0 = Release|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Release|x86.ActiveCfg = Release|Any CPU
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433}.Release|x86.Build.0 = Release|Any CPU
 		{646D7E57-0BBE-4D78-B9F8-66492E1810B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{646D7E57-0BBE-4D78-B9F8-66492E1810B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{646D7E57-0BBE-4D78-B9F8-66492E1810B5}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -269,6 +255,18 @@ Global
 		{C3F96D9F-27DC-42C2-B705-DBA1D46EDAC0}.Release|x64.Build.0 = Release|Any CPU
 		{C3F96D9F-27DC-42C2-B705-DBA1D46EDAC0}.Release|x86.ActiveCfg = Release|Any CPU
 		{C3F96D9F-27DC-42C2-B705-DBA1D46EDAC0}.Release|x86.Build.0 = Release|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Debug|x64.Build.0 = Debug|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Debug|x86.Build.0 = Debug|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x64.ActiveCfg = Release|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x64.Build.0 = Release|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x86.ActiveCfg = Release|Any CPU
+		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -286,7 +284,7 @@ Global
 		{B22DC43A-67F0-4641-A098-87B067348932} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{994AEF32-6D23-4D6B-9FBA-6F13B5CBA054} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{90476393-C95F-44EA-8548-B152CB20D4BF} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{4A02EBD6-0BE1-4839-A1FC-DA788651D433} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0B495AE8-FAE4-4615-A9F5-BF1177A77E30} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{9DA65371-C7C9-4615-9E56-0FE00850F858} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

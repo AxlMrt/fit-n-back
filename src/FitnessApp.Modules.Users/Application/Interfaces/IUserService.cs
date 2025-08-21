@@ -1,3 +1,4 @@
+using FitnessApp.Modules.Authorization.Enums;
 using FitnessApp.Modules.Users.Application.DTOs.Requests;
 using FitnessApp.Modules.Users.Application.DTOs.Responses;
 
@@ -11,7 +12,10 @@ public interface IUserService
     Task<bool> DeleteUserAsync(Guid userId);
     Task<bool> IsServiceHealthyAsync();
 
-    // New user-centric operations
+    // User role operations
+    Task<UserResponse> UpdateUserRoleAsync(Guid userId, Role role);
+
+    // User preferences and stats
     Task UpdatePreferencesAsync(Guid userId, PreferencesUpdateRequest request);
     Task<UserGoalsResponse> GetGoalsAsync(Guid userId);
     Task<UserStatsResponse> GetStatsAsync(Guid userId);

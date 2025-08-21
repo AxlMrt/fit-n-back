@@ -10,11 +10,11 @@ public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequ
     {
         RuleFor(x => x.FirstName)
             .MaximumLength(50).WithMessage("First name cannot exceed 50 characters")
-            .Matches("^[^<>]*$").WithMessage("First name contains invalid characters."); // Prévention XSS
+            .Matches("^[^<>]*$").WithMessage("First name contains invalid characters.");
 
         RuleFor(x => x.LastName)
             .MaximumLength(50).WithMessage("Last name cannot exceed 50 characters")
-            .Matches("^[^<>]*$").WithMessage("Last name contains invalid characters."); // Prévention XSS
+            .Matches("^[^<>]*$").WithMessage("Last name contains invalid characters.");
 
         RuleFor(x => x.DateOfBirth)
             .LessThanOrEqualTo(DateTime.UtcNow.Date).WithMessage("Date of birth cannot be in the future")
@@ -29,13 +29,13 @@ public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequ
         RuleFor(x => x.FitnessLevel)
             .Must(value => Enum.TryParse<FitnessLevel>(value, true, out _))
             .When(x => !string.IsNullOrEmpty(x.FitnessLevel))
-            .Matches("^[^<>]*$").WithMessage("Fitness level contains invalid characters.") // Prévention XSS
+            .Matches("^[^<>]*$").WithMessage("Fitness level contains invalid characters.")
             .WithMessage("Invalid fitness level");
 
         RuleFor(x => x.FitnessGoal)
             .Must(value => Enum.TryParse<FitnessGoal>(value, true, out _))
             .When(x => !string.IsNullOrEmpty(x.FitnessGoal))
-            .Matches("^[^<>]*$").WithMessage("Fitness goal contains invalid characters.") // Prévention XSS
+            .Matches("^[^<>]*$").WithMessage("Fitness goal contains invalid characters.")
             .WithMessage("Invalid fitness goal");
     }
 }

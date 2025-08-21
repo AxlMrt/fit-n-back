@@ -1,3 +1,5 @@
+using FitnessApp.Modules.Authorization.Enums;
+
 namespace FitnessApp.SharedKernel.DTOs.Auth.Responses;
 
 /// <summary>
@@ -9,6 +11,8 @@ public record AuthResponse(
     string Email,
     string AccessToken,
     DateTime ExpiresAt,
+    Role Role,
+    SubscriptionLevel? SubscriptionLevel = null,
     string? RefreshToken = null,
     DateTime? RefreshTokenExpiresAt = null
 );

@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using FitnessApp.Modules.Content.Application.Interfaces;
 using FitnessApp.Modules.Content.Application.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using FitnessApp.Modules.Authorization.Policies;
 
-namespace FitnessApp.API.Controllers;
+namespace FitnessApp.API.Controllers.v1;
 
 [ApiController]
-[Route("api/content/assets")]
+[Authorize]
+[Route("api/v1/content/assets")]
 public class MediaAssetsController : ControllerBase
 {
     private readonly IMediaAssetService _service;
@@ -18,6 +21,7 @@ public class MediaAssetsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] Guid exerciseId, [FromForm] string? description)
     {
         if (file == null || file.Length == 0) return BadRequest("No file provided");
@@ -54,6 +58,7 @@ public class MediaAssetsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var asset = await _repository.GetByIdAsync(id);
