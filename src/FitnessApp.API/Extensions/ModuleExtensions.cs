@@ -2,6 +2,7 @@ using FitnessApp.Modules.Users;
 using FitnessApp.Modules.Exercises;
 using FitnessApp.Modules.Authentication;
 using FitnessApp.Modules.Content;
+using FitnessApp.Modules.Workouts;
 
 namespace FitnessApp.API.Extensions;
 public static class ModuleExtensions
@@ -13,7 +14,8 @@ public static class ModuleExtensions
         services.AddUsersModule(connectionString!);
         services.AddAuthenticationModule(connectionString!);
         services.AddContentModule(connectionString!, configuration);
-        
+        services.AddWorkoutsModule(connectionString!);
+
         return services;
     }
 
@@ -23,7 +25,8 @@ public static class ModuleExtensions
         app.UseAuthenticationModule();
         app.UseExercisesModule();
         app.UseContentModule();
-        
+        app.UseWorkoutsModule();
+
         return app;
     }
 }

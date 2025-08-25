@@ -41,6 +41,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Content.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Authorization", "src\FitnessApp.Modules.Authorization\FitnessApp.Modules.Authorization.csproj", "{9DA65371-C7C9-4615-9E56-0FE00850F858}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FitnessApp.Modules.Workouts.Tests", "tests\FitnessApp.Modules.Workouts.Tests\FitnessApp.Modules.Workouts.Tests.csproj", "{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -267,6 +271,18 @@ Global
 		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x64.Build.0 = Release|Any CPU
 		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x86.ActiveCfg = Release|Any CPU
 		{9DA65371-C7C9-4615-9E56-0FE00850F858}.Release|x86.Build.0 = Release|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Debug|x64.Build.0 = Debug|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Debug|x86.Build.0 = Debug|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Release|x64.ActiveCfg = Release|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Release|x64.Build.0 = Release|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Release|x86.ActiveCfg = Release|Any CPU
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -286,5 +302,6 @@ Global
 		{90476393-C95F-44EA-8548-B152CB20D4BF} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0B495AE8-FAE4-4615-A9F5-BF1177A77E30} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{9DA65371-C7C9-4615-9E56-0FE00850F858} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{663FAD54-1957-47C8-BA36-20DA2FEB3AB6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
