@@ -1,6 +1,7 @@
 using FitnessApp.Modules.Authorization.Enums;
 using FitnessApp.Modules.Authorization.Policies;
 using FitnessApp.Modules.Users.Application.DTOs.Requests;
+using FitnessApp.Modules.Users.Application.Services;
 using FitnessApp.Modules.Users.Application.Interfaces;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;

@@ -1,4 +1,3 @@
-using FitnessApp.Modules.Authorization.Enums;
 using FitnessApp.Modules.Users.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,9 +6,7 @@ namespace FitnessApp.Modules.Users.Infrastructure.Persistence;
 public class UsersDbContext : DbContext
 {
     public DbSet<User> Users => Set<User>();
-    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Preference> Preferences => Set<Preference>();
-    public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
     public UsersDbContext(DbContextOptions<UsersDbContext> options) : base(options)
     {
@@ -18,61 +15,77 @@ public class UsersDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<User>(b =>
         {
             b.HasKey(u => u.Id);
-            b.HasIndex(u => u.Email).IsUnique();
-            b.HasIndex(u => u.UserName).IsUnique();
+            
+            // Configure value objects
+            b.OwnsOne(u => u.Name, n =>
+            {
+                n.Property(fn => fn.FirstName).HasColumnName("FirstName").HasMaxLength(100);
+                n.Property(ln => ln.LastName).HasColumnName("LastName").HasMaxLength(100);
+            });
+            
+            b.OwnsOne(u => u.Email, e =>
+            {
+                e.Property(em => em.Value).HasColumnName("Email").HasMaxLength(255);
+                e.HasIndex(em => em.Value).IsUnique();
+            });
+            
+            b.OwnsOne(u => u.Username, un =>
+            {
+                un.Property(u => u.Value).HasColumnName("Username").HasMaxLength(50);
+                un.HasIndex(u => u.Value).IsUnique();
+            });
+            
+            b.OwnsOne(u => u.DateOfBirth, dob =>
+            {
+                dob.Property(d => d.Value).HasColumnName("DateOfBirth");
+            });
+            
+            b.OwnsOne(u => u.PhysicalMeasurements, pm =>
+            {
+                pm.Property(p => p.HeightCm).HasColumnName("HeightCm").HasPrecision(5, 2);
+                pm.Property(p => p.WeightKg).HasColumnName("WeightKg").HasPrecision(5, 2);
+                pm.Property(p => p.BMI).HasColumnName("BMI").HasPrecision(4, 2);
+            });
+            
+            // Configure enum
+            b.Property(u => u.Gender).HasConversion<string>();
+            
+            // Configure other properties  
+            b.Property(u => u.PasswordHash).HasMaxLength(500);
+            b.Property(u => u.SecurityStamp).HasMaxLength(100);
+            b.Property(u => u.Role).HasConversion<string>();
+            b.Property(u => u.FitnessLevel).HasConversion<string>();
+            b.Property(u => u.PrimaryFitnessGoal).HasConversion<string>();
 
-            b.HasOne(u => u.Profile)
-             .WithOne(p => p.User)
-             .HasForeignKey<UserProfile>(p => p.UserId)
-             .IsRequired();
-
+            // Configure relationships
             b.HasMany(u => u.Preferences)
              .WithOne(p => p.User)
              .HasForeignKey(p => p.UserId)
-             .IsRequired();
+             .OnDelete(DeleteBehavior.Cascade);
 
-            b.Property(u => u.Role)
-                .HasConversion<string>()           // stocke "Admin", "Coach", ...
-                .HasMaxLength(32)
-                .IsRequired()
-                .HasDefaultValue(Role.Athlete);
-
-            b.HasIndex(u => u.Role);
-        });
-
-        modelBuilder.Entity<UserProfile>(b =>
-        {
-            b.HasKey(p => p.UserId); 
-            b.HasOne(p => p.User)
-            .WithOne(u => u.Profile)
-            .HasForeignKey<UserProfile>(p => p.UserId)
-            .IsRequired();
+            b.HasIndex(u => u.CreatedAt);
         });
 
         modelBuilder.Entity<Preference>(b =>
         {
-            b.HasIndex(p => new { p.UserId, p.Category, p.Key }).IsUnique();
-        });
-
-        modelBuilder.Entity<Subscription>(b =>
-        {
-            b.HasKey(s => s.Id);
+            b.HasKey(p => p.Id);
             
-            b.HasOne(s => s.User)
-             .WithOne(u => u.Subscription)
-             .HasForeignKey<Subscription>(s => s.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
-
-            b.Property(s => s.Level)
-             .HasConversion<string>()
-             .HasMaxLength(32)
+            b.Property(p => p.Category)
+             .HasMaxLength(100)
+             .IsRequired();
+             
+            b.Property(p => p.Key)
+             .HasMaxLength(100)
+             .IsRequired();
+             
+            b.Property(p => p.Value)
              .IsRequired();
 
-            b.HasIndex(s => s.UserId);
+            b.HasIndex(p => new { p.UserId, p.Category, p.Key }).IsUnique();
         });
 
         modelBuilder.HasDefaultSchema("users");

@@ -22,7 +22,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("profile")]
-    public async Task<ActionResult<UserResponse>> GetProfile()
+    public async Task<ActionResult<UserDto>> GetProfile()
     {
         try
         {
@@ -31,7 +31,7 @@ public class UsersController : ControllerBase
                 return BadRequest(new { message = "Invalid user identifier" });
             }
 
-            var userDto = await _userService.GetUserByIdAsync(userId);
+            var userDto = await _userService.GetByIdAsync(userId);
             if (userDto == null)
             {
                 return NotFound(new { message = "User not found" });
@@ -47,7 +47,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("profile")]
-    public async Task<ActionResult<UserResponse>> UpdateProfile([FromBody] UpdateProfileRequest request)
+    public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateUserProfileRequest request)
     {
         try
         {
@@ -67,7 +67,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("preferences")]
-    public async Task<IActionResult> UpdatePreferences([FromBody] PreferencesUpdateRequest request)
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request)
     {
         try
         {
@@ -76,7 +76,7 @@ public class UsersController : ControllerBase
                 return BadRequest(new { message = "Invalid user identifier" });
             }
 
-            await _userService.UpdatePreferencesAsync(userId, request);
+            await _userService.UpdateUserPreferencesAsync(userId, request);
             return Ok(new { message = "Preferences updated successfully" });
         }
         catch (Exception ex)
@@ -88,9 +88,9 @@ public class UsersController : ControllerBase
 
     [HttpGet("{userId:guid}")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
-    public async Task<ActionResult<UserResponse>> GetUserById(Guid userId)
+    public async Task<ActionResult<UserDto>> GetUserById(Guid userId)
     {
-        var userDto = await _userService.GetUserByIdAsync(userId);
+        var userDto = await _userService.GetByIdAsync(userId);
         if (userDto == null)
         {
             return NotFound(new { message = "User not found" });
@@ -100,9 +100,9 @@ public class UsersController : ControllerBase
 
     [HttpGet("by-email")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
-    public async Task<ActionResult<UserResponse>> GetUserByEmail([FromQuery] string email)
+    public async Task<ActionResult<UserDto>> GetUserByEmail([FromQuery] string email)
     {
-        var userDto = await _userService.GetUserByEmailAsync(email);
+        var userDto = await _userService.GetByEmailAsync(email);
         if (userDto == null)
         {
             return NotFound(new { message = "User not found" });
@@ -120,7 +120,7 @@ public class UsersController : ControllerBase
             return Forbid();
         }
 
-        await _userService.DeleteUserAsync(userId);
+        await _userService.DeactivateUserAsync(userId);
         return NoContent();
     }
 }

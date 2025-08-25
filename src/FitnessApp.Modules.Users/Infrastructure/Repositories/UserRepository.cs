@@ -1,6 +1,8 @@
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.Modules.Users.Domain.Enums;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Infrastructure.Persistence;
+using FitnessApp.SharedKernel.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitnessApp.Modules.Users.Infrastructure.Repositories;
@@ -17,8 +19,6 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(Guid userId)
     {
         return await _dbContext.Users
-            .Include(u => u.Profile)
-            .Include(u => u.Subscription)
             .Include(u => u.Preferences)
             .FirstOrDefaultAsync(u => u.Id == userId);
     }
@@ -26,107 +26,184 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByEmailAsync(string email)
     {
         return await _dbContext.Users
-            .Include(u => u.Profile)
-            .Include(u => u.Subscription)
             .Include(u => u.Preferences)
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .FirstOrDefaultAsync(u => u.Email.Value == email);
     }
 
-    public async Task<bool> EmailExistsAsync(string email)
+    public async Task<User?> GetByUsernameAsync(string username)
     {
-        return await _dbContext.Users.AnyAsync(u => u.Email == email);
+        return await _dbContext.Users
+            .Include(u => u.Preferences)
+            .FirstOrDefaultAsync(u => u.Username.Value == username);
     }
 
-    public async Task<bool> UserNameExistsAsync(string userName)
-    {
-        return await _dbContext.Users.AnyAsync(u => u.UserName == userName);
-    }
-
-    public async Task<User> CreateAsync(User user)
+    public async Task<User> AddAsync(User user)
     {
         _dbContext.Users.Add(user);
-        await SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
         return user;
     }
 
     public async Task<User> UpdateAsync(User user)
     {
+        // Simple approach: if the user is already tracked, just save
         var entry = _dbContext.Entry(user);
-        // If the entity is not being tracked by the context, attach it and mark for update.
-        // If it is already tracked (e.g. loaded with GetByIdAsync), its changes are tracked
-        // and we should not force the state to Modified to avoid incorrect updates
-        // on related entities which can lead to concurrency exceptions.
         if (entry.State == EntityState.Detached)
         {
-            _dbContext.Users.Update(user);
+            // Attach the user and mark as modified
+            _dbContext.Users.Attach(user);
+            _dbContext.Entry(user).State = EntityState.Modified;
         }
-
-        await SaveChangesAsync();
+        
+        await _dbContext.SaveChangesAsync();
         return user;
     }
 
     public async Task<bool> DeleteAsync(Guid userId)
     {
         var user = await _dbContext.Users.FindAsync(userId);
+        if (user == null) return false;
         
-        if (user == null)
-        {
-            return false;
-        }
-
         _dbContext.Users.Remove(user);
-        await SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<IEnumerable<User>> GetAllAsync()
+    {
+        return await _dbContext.Users
+            .Include(u => u.Preferences)
+            .ToListAsync();
+    }
+
+    public async Task<(IEnumerable<User> Users, int TotalCount)> GetPagedAsync(
+        string? emailFilter = null,
+        string? nameFilter = null,
+        Gender? genderFilter = null,
+        FitnessLevel? fitnessLevelFilter = null,
+        bool? isActiveFilter = null,
+        string sortBy = "CreatedAt",
+        bool sortDescending = true,
+        int page = 1,
+        int pageSize = 20)
+    {
+        var query = _dbContext.Users.Include(u => u.Preferences).AsQueryable();
+
+        // Apply basic filters
+        if (!string.IsNullOrWhiteSpace(emailFilter))
+            query = query.Where(u => u.Email.Value.Contains(emailFilter));
+
+        if (!string.IsNullOrWhiteSpace(nameFilter))
+            query = query.Where(u => (u.Name.FirstName != null && u.Name.FirstName.Contains(nameFilter)) || 
+                                   (u.Name.LastName != null && u.Name.LastName.Contains(nameFilter)));
+
+        if (genderFilter.HasValue)
+            query = query.Where(u => u.Gender == genderFilter.Value);
+
+        if (fitnessLevelFilter.HasValue)
+            query = query.Where(u => u.FitnessLevel.HasValue && u.FitnessLevel.Value == fitnessLevelFilter.Value);
+
+        if (isActiveFilter.HasValue)
+            query = query.Where(u => isActiveFilter.Value 
+                ? (!u.LockoutEnd.HasValue || u.LockoutEnd <= DateTime.UtcNow)
+                : (u.LockoutEnd.HasValue && u.LockoutEnd > DateTime.UtcNow));
+
+        var totalCount = await query.CountAsync();
+
+        // Apply pagination
+        var users = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (users, totalCount);
+    }
+
+    public async Task<bool> ExistsWithEmailAsync(string email)
+    {
+        return await _dbContext.Users.AnyAsync(u => u.Email.Value == email);
+    }
+
+    public async Task<bool> ExistsWithUsernameAsync(string username)
+    {
+        return await _dbContext.Users.AnyAsync(u => u.Username.Value == username);
+    }
+
+    public async Task<bool> ExistsAsync(Guid userId)
+    {
+        return await _dbContext.Users.AnyAsync(u => u.Id == userId);
     }
 
     public async Task<IReadOnlyCollection<Preference>> GetPreferencesAsync(Guid userId)
     {
-        var prefs = await _dbContext.Preferences
-            .Where(p => p.UserId == userId)
-            .ToListAsync();
-        return prefs;
+        var user = await _dbContext.Users
+            .Include(u => u.Preferences)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        return user?.Preferences ?? new List<Preference>();
     }
 
     public async Task UpsertPreferencesAsync(Guid userId, IEnumerable<Preference> preferences)
     {
+        var user = await _dbContext.Users
+            .Include(u => u.Preferences)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null) return;
+
         foreach (var pref in preferences)
         {
-            var existing = await _dbContext.Preferences
-                .FirstOrDefaultAsync(p => p.UserId == userId && p.Category == pref.Category && p.Key == pref.Key);
-
-            if (existing == null)
+            var existing = user.Preferences.FirstOrDefault(p => 
+                p.Category == pref.Category && p.Key == pref.Key);
+                
+            if (existing != null)
             {
-                // Ensure the UserId is set to the provided userId (defensive)
-                var toAdd = new Preference(userId, pref.Category, pref.Key, pref.Value);
-                _dbContext.Preferences.Add(toAdd);
+                existing.UpdateValue(pref.Value);
             }
             else
             {
-                existing.UpdateValue(pref.Value);
-                _dbContext.Preferences.Update(existing);
+                var newPref = new Preference(userId, pref.Category, pref.Key, pref.Value);
+                _dbContext.Preferences.Add(newPref);
             }
         }
 
-        await SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
     }
 
     public async Task DeletePreferencesAsync(Guid userId, IEnumerable<(string Category, string Key)> keys)
     {
-        foreach (var k in keys)
-        {
-            var existing = await _dbContext.Preferences
-                .FirstOrDefaultAsync(p => p.UserId == userId && p.Category == k.Category && p.Key == k.Key);
-            if (existing != null)
-            {
-                _dbContext.Preferences.Remove(existing);
-            }
-        }
+        var preferencesToDelete = await _dbContext.Preferences
+            .Where(p => p.UserId == userId)
+            .Where(p => keys.Any(k => k.Category == p.Category && k.Key == p.Key))
+            .ToListAsync();
 
-        await SaveChangesAsync();
+        _dbContext.Preferences.RemoveRange(preferencesToDelete);
+        await _dbContext.SaveChangesAsync();
     }
 
-    public async Task SaveChangesAsync()
+    public async Task<IEnumerable<User>> GetActiveUsersAsync()
     {
-        await _dbContext.SaveChangesAsync();
+        return await _dbContext.Users
+            .Include(u => u.Preferences)
+            .Where(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= DateTime.UtcNow)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<User>> GetUsersWithExpiredSubscriptionsAsync()
+    {
+        return await Task.FromResult(new List<User>());
+    }
+
+    public async Task<IEnumerable<User>> GetNewUsersAsync(DateTime since)
+    {
+        return await _dbContext.Users
+            .Include(u => u.Preferences)
+            .Where(u => u.CreatedAt >= since)
+            .ToListAsync();
+    }
+
+    public async Task<int> GetTotalUsersCountAsync()
+    {
+        return await _dbContext.Users.CountAsync();
     }
 }

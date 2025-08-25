@@ -1,41 +1,101 @@
 using FitnessApp.Modules.Exercises.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace FitnessApp.Modules.Exercises.Application.DTOs
 {
-    public class ExerciseDto
+    public sealed record ExerciseDto(
+        Guid Id,
+        string Name,
+        string? Description,
+        ExerciseType Type,
+        List<string> MuscleGroups,
+        Guid? ImageContentId,
+        Guid? VideoContentId,
+        DifficultyLevel Difficulty,
+        List<string> Equipment,
+        string? Instructions,
+        bool IsActive,
+        DateTime CreatedAt,
+        DateTime? UpdatedAt
+    );
+
+    public sealed record CreateExerciseDto
     {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public ExerciseType Type { get; set; }
+        [Required]
+        [StringLength(100, MinimumLength = 2)]
+        public required string Name { get; init; }
 
-        // Expose muscle groups as string list for clients
-        public List<string> MuscleGroups { get; set; } = new();
+        [StringLength(1000)]
+        public string? Description { get; init; }
 
-        // Content module resource ids
-        public Guid? ImageContentId { get; set; }
-        public Guid? VideoContentId { get; set; }
+        [Required]
+        public ExerciseType Type { get; init; }
 
-        // Use human-friendly fields for clients; mapping will convert
-        public DifficultyLevelDto Difficulty { get; set; } = DifficultyLevelDto.Unknown;
-        public List<string> Equipment { get; set; } = new();
+        public List<string> MuscleGroups { get; init; } = new();
+
+        public DifficultyLevel Difficulty { get; init; } = DifficultyLevel.Unknown;
+
+        public List<string> Equipment { get; init; } = new();
+
+        [StringLength(2000)]
+        public string? Instructions { get; init; }
+
+        public Guid? ImageContentId { get; init; }
+        public Guid? VideoContentId { get; init; }
     }
 
-    public class CreateExerciseDto
+    public sealed record UpdateExerciseDto
     {
-        public string Name { get; set; } = string.Empty;
-        public ExerciseType Type { get; set; }
-        public List<string> MuscleGroups { get; set; } = new();
-        public DifficultyLevelDto Difficulty { get; set; } = DifficultyLevelDto.Unknown;
-        public List<string> Equipment { get; set; } = new();
+        [StringLength(100, MinimumLength = 2)]
+        public string? Name { get; init; }
+
+        [StringLength(1000)]
+        public string? Description { get; init; }
+
+        public ExerciseType? Type { get; init; }
+
+        public List<string>? MuscleGroups { get; init; }
+
+        public DifficultyLevel? Difficulty { get; init; }
+
+        public List<string>? Equipment { get; init; }
+
+        [StringLength(2000)]
+        public string? Instructions { get; init; }
+
+        public Guid? ImageContentId { get; init; }
+        public Guid? VideoContentId { get; init; }
     }
 
-    public enum DifficultyLevelDto
+    public sealed record ExerciseQueryDto
     {
-        Unknown = 0,
-        Beginner = 1,
-        Intermediate = 2,
-        Advanced = 3,
-        Expert = 4,
-        Other = 100
+        public string? NameFilter { get; init; }
+        public ExerciseType? Type { get; init; }
+        public DifficultyLevel? Difficulty { get; init; }
+        public List<string>? MuscleGroups { get; init; }
+        public bool? RequiresEquipment { get; init; }
+        public bool? IsActive { get; init; }
+        public int PageNumber { get; init; } = 1;
+        public int PageSize { get; init; } = 20;
+        public string SortBy { get; init; } = "Name";
+        public bool SortDescending { get; init; } = false;
     }
+
+    public sealed record ExerciseListDto(
+        Guid Id,
+        string Name,
+        ExerciseType Type,
+        DifficultyLevel Difficulty,
+        List<string> MuscleGroups,
+        bool RequiresEquipment,
+        bool IsActive
+    );
+
+    public sealed record PagedResultDto<T>(
+        List<T> Items,
+        int TotalCount,
+        int PageNumber,
+        int PageSize,
+        int TotalPages
+    ) where T : class;
 }

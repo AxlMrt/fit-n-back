@@ -3,6 +3,7 @@ using Moq;
 using FitnessApp.Modules.Authentication.Application.Interfaces;
 using FitnessApp.Modules.Authentication.Application.Services;
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.Modules.Users.Domain.ValueObjects;
 using FitnessApp.SharedKernel.Interfaces;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.SharedKernel.DTOs.Auth.Requests;
@@ -20,10 +21,12 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_Should_Return_Tokens_When_Credentials_Are_Valid()
     {
-        var user = new User("john@doe.com", "john");
+        var email = Email.Create("john@doe.com");
+        var username = Username.Create("john");
+        var user = new User(email, username);
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword("P@ssw0rd"));
         _users.Setup(r => r.GetByEmailAsync("john@doe.com")).ReturnsAsync(user);
-        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.UserName, user.Email, user.Role, It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access");
+        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.Username.Value, user.Email.Value, user.Role, It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access");
         _refresh.Setup(r => r.IssueAsync(user.Id, It.IsAny<TimeSpan?>())).ReturnsAsync(("refresh", DateTime.UtcNow.AddDays(14)));
 
         var sut = new AuthService(_validator.Object, _users.Object, _jwt.Object, _revocation.Object, _refresh.Object);
@@ -38,8 +41,8 @@ public class AuthServiceTests
     [Fact]
     public async Task Register_Should_Create_User_And_Return_Tokens()
     {
-        _users.Setup(r => r.EmailExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
-        _users.Setup(r => r.UserNameExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _users.Setup(r => r.ExistsWithEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _users.Setup(r => r.ExistsWithUsernameAsync(It.IsAny<string>())).ReturnsAsync(false);
         _jwt.Setup(j => j.GenerateJwtToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Authorization.Enums.Role>(), It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access");
         _refresh.Setup(r => r.IssueAsync(It.IsAny<Guid>(), It.IsAny<TimeSpan?>())).ReturnsAsync(("refresh", DateTime.UtcNow.AddDays(14)));
 
@@ -54,10 +57,12 @@ public class AuthServiceTests
     [Fact]
     public async Task RefreshToken_Should_Issue_New_Tokens_When_Valid()
     {
-        var user = new User("john@doe.com", "john");
+        var email = Email.Create("john@doe.com");
+        var username = Username.Create("john");
+        var user = new User(email, username);
         _refresh.Setup(r => r.ValidateAsync("valid")).ReturnsAsync(user.Id);
         _users.Setup(r => r.GetByIdAsync(user.Id)).ReturnsAsync(user);
-        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.UserName, user.Email, user.Role, It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access2");
+        _jwt.Setup(j => j.GenerateJwtToken(user.Id, user.Username.Value, user.Email.Value, user.Role, It.IsAny<Authorization.Enums.SubscriptionLevel?>())).Returns("access2");
         _refresh.Setup(r => r.IssueAsync(user.Id, It.IsAny<TimeSpan?>())).ReturnsAsync(("refresh2", DateTime.UtcNow.AddDays(14)));
 
         var sut = new AuthService(_validator.Object, _users.Object, _jwt.Object, _revocation.Object, _refresh.Object);

@@ -1,6 +1,7 @@
 using FitnessApp.Modules.Authentication.Application.Interfaces;
 using FitnessApp.Modules.Authorization.Enums;
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.Modules.Users.Domain.ValueObjects;
 using FitnessApp.SharedKernel.DTOs.Auth.Requests;
 using FitnessApp.SharedKernel.DTOs.Auth.Responses;
 using FitnessApp.SharedKernel.Interfaces;
@@ -33,30 +34,29 @@ public class AuthService : IAuthService
     {
         await _validationService.ValidateAsync(request);
 
-        if (await _userRepository.EmailExistsAsync(request.Email))
+        if (await _userRepository.ExistsWithEmailAsync(request.Email))
             throw new Exception("Email is already in use");
-        if (await _userRepository.UserNameExistsAsync(request.UserName))
+        if (await _userRepository.ExistsWithUsernameAsync(request.UserName))
             throw new Exception("Username is already in use");
 
-        var user = new User(request.Email, request.UserName);
+        var user = new User(
+            Email.Create(request.Email), 
+            Username.Create(request.UserName));
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
 
-        var profile = new UserProfile(user.Id);
-        user.SetProfile(profile);
-
-        await _userRepository.CreateAsync(user);
+        await _userRepository.AddAsync(user);
 
         string access = _jwtService.GenerateJwtToken(
             user.Id, 
-            user.UserName, 
-            user.Email, 
+            user.Username.Value, 
+            user.Email.Value, 
             user.Role, 
             user.Subscription?.Level);
         var (refresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
         return new AuthResponse(
             user.Id, 
-            user.UserName, 
-            user.Email, 
+            user.Username.Value, 
+            user.Email.Value, 
             access, 
             DateTime.UtcNow.AddDays(7), 
             user.Role,
@@ -74,25 +74,25 @@ public class AuthService : IAuthService
         {
             user.IncrementAccessFailedCount();
             if (user.AccessFailedCount >= 5) user.LockAccount(TimeSpan.FromMinutes(15));
-            await _userRepository.SaveChangesAsync();
+            await _userRepository.UpdateAsync(user);
             return null;
         }
 
         user.ResetAccessFailedCount();
         user.RegisterLogin();
-        await _userRepository.SaveChangesAsync();
+        await _userRepository.UpdateAsync(user);
 
         string access = _jwtService.GenerateJwtToken(
             user.Id, 
-            user.UserName, 
-            user.Email, 
+            user.Username.Value, 
+            user.Email.Value, 
             user.Role, 
             user.Subscription?.Level);
         var (refresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
         return new AuthResponse(
             user.Id, 
-            user.UserName, 
-            user.Email, 
+            user.Username.Value, 
+            user.Email.Value, 
             access, 
             DateTime.UtcNow.AddDays(7), 
             user.Role,
@@ -118,15 +118,15 @@ public class AuthService : IAuthService
         await _refreshTokenService.InvalidateAsync(request.RefreshToken);
         string access = _jwtService.GenerateJwtToken(
             user.Id, 
-            user.UserName, 
-            user.Email, 
+            user.Username.Value, 
+            user.Email.Value, 
             user.Role, 
             user.Subscription?.Level);
         var (newRefresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
         return new AuthResponse(
             user.Id, 
-            user.UserName, 
-            user.Email, 
+            user.Username.Value, 
+            user.Email.Value, 
             access, 
             DateTime.UtcNow.AddDays(7), 
             user.Role,

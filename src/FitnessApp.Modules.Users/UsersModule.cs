@@ -1,10 +1,11 @@
 using System.Reflection;
+using FitnessApp.Modules.Users.Application.DTOs;
 using FitnessApp.Modules.Users.Application.Interfaces;
 using FitnessApp.Modules.Users.Application.Services;
+using FitnessApp.Modules.Users.Application.Validators;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Infrastructure.Persistence;
 using FitnessApp.Modules.Users.Infrastructure.Repositories;
-using FitnessApp.Modules.Users.Infrastructure.Seeding;
 using FitnessApp.SharedKernel.Interfaces;
 using FitnessApp.SharedKernel.Services;
 using FluentValidation;
@@ -24,10 +25,7 @@ public static class UsersModule
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserService, UserService>();
-        services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IValidationService, ValidationService>();
-        services.AddScoped<UsersSeedService>();
-        services.AddScoped<ISubscriptionService, SubscriptionService>();
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
         services.AddDistributedMemoryCache();
@@ -40,10 +38,6 @@ public static class UsersModule
         using var scope = app.ApplicationServices.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<UsersDbContext>();
         context.Database.EnsureCreated();
-
-        // Seed test users
-        var seedService = scope.ServiceProvider.GetRequiredService<UsersSeedService>();
-        seedService.SeedUsersAsync().GetAwaiter().GetResult();
 
         return app;
     }

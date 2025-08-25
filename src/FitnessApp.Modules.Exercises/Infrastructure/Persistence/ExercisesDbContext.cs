@@ -15,20 +15,68 @@ namespace FitnessApp.Modules.Exercises.Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Exercise>(b =>
+            modelBuilder.Entity<Exercise>(entity =>
             {
-                b.HasKey(e => e.Id);
-                b.Property(e => e.Name).IsRequired().HasMaxLength(200);
-                b.Property(e => e.Type).IsRequired();
-                b.Property(e => e.MuscleGroups).IsRequired();
-                b.Property(e => e.ImageContentId).IsRequired(false);
-                b.Property(e => e.VideoContentId).IsRequired(false);
-                b.Property(e => e.Difficulty).HasConversion<int>().IsRequired();
-                b.Property(e => e.Equipment)
-                    .HasMaxLength(1000)
+                entity.HasKey(e => e.Id);
+                
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Description)
+                    .IsRequired(false)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.Type)
+                    .IsRequired()
+                    .HasConversion<string>();
+
+                entity.Property(e => e.MuscleGroups)
+                    .IsRequired()
+                    .HasConversion<int>();
+
+                entity.Property(e => e.ImageContentId)
+                    .IsRequired(false);
+
+                entity.Property(e => e.VideoContentId)
+                    .IsRequired(false);
+
+                entity.Property(e => e.Difficulty)
+                    .IsRequired()
+                    .HasConversion<int>();
+
+                entity.Property(e => e.Equipment)
+                    .IsRequired()
+                    .HasMaxLength(500)
                     .HasConversion(
                         v => v.ToString(),
                         v => Domain.ValueObjects.Equipment.FromString(v));
+
+                entity.Property(e => e.Instructions)
+                    .IsRequired(false)
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.IsActive)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(e => e.UpdatedAt)
+                    .IsRequired(false);
+
+                // Indexes for performance
+                entity.HasIndex(e => e.Name)
+                    .IsUnique();
+
+                entity.HasIndex(e => e.Type);
+
+                entity.HasIndex(e => e.Difficulty);
+
+                entity.HasIndex(e => e.IsActive);
+
+                entity.HasIndex(e => e.CreatedAt);
             });
         }
     }
