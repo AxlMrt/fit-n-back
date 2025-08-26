@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FitnessApp.SharedKernel\FitnessApp.SharedKernel.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -48,11 +48,16 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("UserProfileUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserProfileUserId");
 
                     b.HasIndex("UserId", "Category", "Key")
                         .IsUnique();
@@ -60,46 +65,14 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                     b.ToTable("Preferences", "users");
                 });
 
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.Subscription", b =>
+            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.UserProfile", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Level")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Subscription", "users");
-                });
-
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("FitnessLevel")
                         .HasColumnType("text");
@@ -107,114 +80,92 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("PrimaryFitnessGoal")
                         .HasColumnType("text");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SecurityStamp")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id");
+                    b.HasKey("UserId");
 
                     b.HasIndex("CreatedAt");
 
-                    b.ToTable("Users", "users");
+                    b.ToTable("UserProfiles", "users");
                 });
 
             modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.Preference", b =>
                 {
-                    b.HasOne("FitnessApp.Modules.Users.Domain.Entities.User", "User")
+                    b.HasOne("FitnessApp.Modules.Users.Domain.Entities.UserProfile", null)
                         .WithMany("Preferences")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.Subscription", b =>
-                {
-                    b.HasOne("FitnessApp.Modules.Users.Domain.Entities.User", "User")
-                        .WithOne("Subscription")
-                        .HasForeignKey("FitnessApp.Modules.Users.Domain.Entities.Subscription", "UserId")
+                    b.HasOne("FitnessApp.Modules.Users.Domain.Entities.UserProfile", "UserProfile")
+                        .WithMany()
+                        .HasForeignKey("UserProfileUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("UserProfile");
                 });
 
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.User", b =>
+            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.UserProfile", b =>
                 {
+                    b.OwnsOne("FitnessApp.Modules.Users.Domain.Entities.Subscription", "Subscription", b1 =>
+                        {
+                            b1.Property<Guid>("UserProfileUserId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTime>("EndDate")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("SubscriptionEndDate");
+
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Level")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("SubscriptionLevel");
+
+                            b1.Property<DateTime>("StartDate")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("SubscriptionStartDate");
+
+                            b1.Property<Guid>("UserId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("UserProfileUserId");
+
+                            b1.ToTable("UserProfiles", "users");
+
+                            b1.WithOwner("UserProfile")
+                                .HasForeignKey("UserProfileUserId");
+
+                            b1.Navigation("UserProfile");
+                        });
+
                     b.OwnsOne("FitnessApp.Modules.Users.Domain.ValueObjects.DateOfBirth", "DateOfBirth", b1 =>
                         {
-                            b1.Property<Guid>("UserId")
+                            b1.Property<Guid>("UserProfileUserId")
                                 .HasColumnType("uuid");
 
                             b1.Property<DateTime>("Value")
                                 .HasColumnType("timestamp with time zone")
                                 .HasColumnName("DateOfBirth");
 
-                            b1.HasKey("UserId");
+                            b1.HasKey("UserProfileUserId");
 
-                            b1.ToTable("Users", "users");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UserId");
-                        });
-
-                    b.OwnsOne("FitnessApp.Modules.Users.Domain.ValueObjects.Email", "Email", b1 =>
-                        {
-                            b1.Property<Guid>("UserId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(255)
-                                .HasColumnType("character varying(255)")
-                                .HasColumnName("Email");
-
-                            b1.HasKey("UserId");
-
-                            b1.HasIndex("Value")
-                                .IsUnique();
-
-                            b1.ToTable("Users", "users");
+                            b1.ToTable("UserProfiles", "users");
 
                             b1.WithOwner()
-                                .HasForeignKey("UserId");
+                                .HasForeignKey("UserProfileUserId");
                         });
 
                     b.OwnsOne("FitnessApp.Modules.Users.Domain.ValueObjects.FullName", "Name", b1 =>
                         {
-                            b1.Property<Guid>("UserId")
+                            b1.Property<Guid>("UserProfileUserId")
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("FirstName")
@@ -227,17 +178,17 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("LastName");
 
-                            b1.HasKey("UserId");
+                            b1.HasKey("UserProfileUserId");
 
-                            b1.ToTable("Users", "users");
+                            b1.ToTable("UserProfiles", "users");
 
                             b1.WithOwner()
-                                .HasForeignKey("UserId");
+                                .HasForeignKey("UserProfileUserId");
                         });
 
                     b.OwnsOne("FitnessApp.Modules.Users.Domain.ValueObjects.PhysicalMeasurements", "PhysicalMeasurements", b1 =>
                         {
-                            b1.Property<Guid>("UserId")
+                            b1.Property<Guid>("UserProfileUserId")
                                 .HasColumnType("uuid");
 
                             b1.Property<decimal?>("BMI")
@@ -255,40 +206,15 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                                 .HasColumnType("numeric(5,2)")
                                 .HasColumnName("WeightKg");
 
-                            b1.HasKey("UserId");
+                            b1.HasKey("UserProfileUserId");
 
-                            b1.ToTable("Users", "users");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UserId");
-                        });
-
-                    b.OwnsOne("FitnessApp.Modules.Users.Domain.ValueObjects.Username", "Username", b1 =>
-                        {
-                            b1.Property<Guid>("UserId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)")
-                                .HasColumnName("Username");
-
-                            b1.HasKey("UserId");
-
-                            b1.HasIndex("Value")
-                                .IsUnique();
-
-                            b1.ToTable("Users", "users");
+                            b1.ToTable("UserProfiles", "users");
 
                             b1.WithOwner()
-                                .HasForeignKey("UserId");
+                                .HasForeignKey("UserProfileUserId");
                         });
 
                     b.Navigation("DateOfBirth");
-
-                    b.Navigation("Email")
-                        .IsRequired();
 
                     b.Navigation("Name")
                         .IsRequired();
@@ -296,15 +222,12 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                     b.Navigation("PhysicalMeasurements")
                         .IsRequired();
 
-                    b.Navigation("Username")
-                        .IsRequired();
+                    b.Navigation("Subscription");
                 });
 
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.User", b =>
+            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.UserProfile", b =>
                 {
                     b.Navigation("Preferences");
-
-                    b.Navigation("Subscription");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,6 +1,5 @@
 using FitnessApp.Modules.Authorization.Requirements;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace FitnessApp.Modules.Authorization.Handlers;
 

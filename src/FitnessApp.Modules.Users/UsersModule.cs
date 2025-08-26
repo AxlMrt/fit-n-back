@@ -1,8 +1,6 @@
 using System.Reflection;
-using FitnessApp.Modules.Users.Application.DTOs;
 using FitnessApp.Modules.Users.Application.Interfaces;
 using FitnessApp.Modules.Users.Application.Services;
-using FitnessApp.Modules.Users.Application.Validators;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Infrastructure.Persistence;
 using FitnessApp.Modules.Users.Infrastructure.Repositories;
@@ -23,8 +21,8 @@ public static class UsersModule
                 options.UseNpgsql(connectionString, 
                     npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "users")));
 
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IValidationService, ValidationService>();
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
@@ -37,7 +35,7 @@ public static class UsersModule
     {
         using var scope = app.ApplicationServices.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<UsersDbContext>();
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
 
         return app;
     }

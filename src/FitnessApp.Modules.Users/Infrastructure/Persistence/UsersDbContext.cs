@@ -5,7 +5,7 @@ namespace FitnessApp.Modules.Users.Infrastructure.Persistence;
 
 public class UsersDbContext : DbContext
 {
-    public DbSet<User> Users => Set<User>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Preference> Preferences => Set<Preference>();
 
     public UsersDbContext(DbContextOptions<UsersDbContext> options) : base(options)
@@ -16,27 +16,15 @@ public class UsersDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<User>(b =>
+        modelBuilder.Entity<UserProfile>(b =>
         {
-            b.HasKey(u => u.Id);
+            b.HasKey(u => u.UserId);
             
             // Configure value objects
             b.OwnsOne(u => u.Name, n =>
             {
                 n.Property(fn => fn.FirstName).HasColumnName("FirstName").HasMaxLength(100);
                 n.Property(ln => ln.LastName).HasColumnName("LastName").HasMaxLength(100);
-            });
-            
-            b.OwnsOne(u => u.Email, e =>
-            {
-                e.Property(em => em.Value).HasColumnName("Email").HasMaxLength(255);
-                e.HasIndex(em => em.Value).IsUnique();
-            });
-            
-            b.OwnsOne(u => u.Username, un =>
-            {
-                un.Property(u => u.Value).HasColumnName("Username").HasMaxLength(50);
-                un.HasIndex(u => u.Value).IsUnique();
             });
             
             b.OwnsOne(u => u.DateOfBirth, dob =>
@@ -51,19 +39,22 @@ public class UsersDbContext : DbContext
                 pm.Property(p => p.BMI).HasColumnName("BMI").HasPrecision(4, 2);
             });
             
-            // Configure enum
+            // Configure enum properties
             b.Property(u => u.Gender).HasConversion<string>();
-            
-            // Configure other properties  
-            b.Property(u => u.PasswordHash).HasMaxLength(500);
-            b.Property(u => u.SecurityStamp).HasMaxLength(100);
-            b.Property(u => u.Role).HasConversion<string>();
             b.Property(u => u.FitnessLevel).HasConversion<string>();
             b.Property(u => u.PrimaryFitnessGoal).HasConversion<string>();
 
+            // Configure Subscription as owned entity
+            b.OwnsOne(u => u.Subscription, s =>
+            {
+                s.Property(sub => sub.Level).HasColumnName("SubscriptionLevel").HasConversion<string>();
+                s.Property(sub => sub.StartDate).HasColumnName("SubscriptionStartDate");
+                s.Property(sub => sub.EndDate).HasColumnName("SubscriptionEndDate");
+            });
+
             // Configure relationships
             b.HasMany(u => u.Preferences)
-             .WithOne(p => p.User)
+             .WithOne()
              .HasForeignKey(p => p.UserId)
              .OnDelete(DeleteBehavior.Cascade);
 

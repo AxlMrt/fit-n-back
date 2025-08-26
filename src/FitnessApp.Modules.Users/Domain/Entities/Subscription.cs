@@ -1,4 +1,4 @@
-using FitnessApp.Modules.Authorization.Enums;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Entities;
 
@@ -10,14 +10,14 @@ public class Subscription
     public DateTime StartDate { get; private set; }
     public DateTime EndDate { get; private set; }
     public bool IsActive => DateTime.UtcNow >= StartDate && DateTime.UtcNow <= EndDate;
-    public User User { get; private set; } = null!;
+    public UserProfile UserProfile { get; private set; } = null!;
 
     private Subscription() { } // EF Core constructor
 
-    public Subscription(User user, SubscriptionLevel level, DateTime startDate, DateTime endDate)
+    public Subscription(UserProfile userProfile, SubscriptionLevel level, DateTime startDate, DateTime endDate)
     {
         Id = Guid.NewGuid();
-        UserId = user.Id;
+        UserProfile = userProfile;
         Level = level;
         StartDate = startDate;
         EndDate = endDate;

@@ -9,7 +9,7 @@ public class Preference
 {
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
-    public User User { get; private set; } = null!;
+    public UserProfile UserProfile { get; private set; } = null!;
     public string Category { get; private set; } = null!;
     public string Key { get; private set; } = null!;
     public string Value { get; private set; } = null!;

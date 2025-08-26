@@ -3,7 +3,7 @@ using FitnessApp.Modules.Authorization.Policies;
 using FitnessApp.Modules.Authorization.Requirements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using FitnessApp.Modules.Authorization.Enums;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Authorization;
 

@@ -1,8 +1,10 @@
-using FitnessApp.Modules.Authorization.Enums;
+using FitnessApp.SharedKernel.Enums;
 using FitnessApp.Modules.Users.Application.Exceptions;
 using FitnessApp.Modules.Users.Application.Interfaces;
+using FitnessApp.Modules.Users.Application.Mapping;
 using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.Modules.Users.Domain.Repositories;
+using FitnessApp.SharedKernel.DTOs.UserProfile.Responses;
 using Microsoft.Extensions.Logging;
 
 namespace FitnessApp.Modules.Users.Application.Services;
@@ -12,68 +14,61 @@ namespace FitnessApp.Modules.Users.Application.Services;
 /// </summary>
 public class SubscriptionService : ISubscriptionService
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IUserProfileRepository _userProfileRepository;
     private readonly ILogger<SubscriptionService> _logger;
 
     public SubscriptionService(
-        IUserRepository userRepository,
+        IUserProfileRepository userProfileRepository,
         ILogger<SubscriptionService> logger)
     {
-        _userRepository = userRepository;
+        _userProfileRepository = userProfileRepository;
         _logger = logger;
     }
 
     public async Task<Guid> CreateSubscriptionAsync(Guid userId, SubscriptionLevel level, DateTime startDate, DateTime endDate)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        if (userProfile == null)
         {
-            _logger.LogWarning("User with ID {UserId} not found when creating subscription", userId);
-            throw new NotFoundException($"User with ID {userId} not found");
+            throw new UserNotFoundException($"User with ID {userId} not found");
         }
 
-        if (user.Subscription != null && user.Subscription.IsActive)
+        // Check if user already has an active subscription
+        if (userProfile.Subscription != null)
         {
-            _logger.LogWarning("User {UserId} already has an active subscription", userId);
             throw new InvalidOperationException("User already has an active subscription");
         }
 
-        if (startDate >= endDate)
-        {
-            throw new ArgumentException("Start date must be before end date");
-        }
+        var subscription = new Subscription(userProfile, level, startDate, endDate);
+        userProfile.UpdateSubscription(subscription);
 
-        var subscription = new Subscription(user, level, startDate, endDate);
-        user.UpdateSubscription(subscription);
+        await _userProfileRepository.UpdateAsync(userProfile);
 
-        await _userRepository.UpdateAsync(user);
+        _logger.LogInformation("Created subscription {SubscriptionId} for user {UserId}", 
+            subscription.Id, userId);
 
-        _logger.LogInformation("Created subscription {SubscriptionId} for user {UserId}", subscription.Id, userId);
         return subscription.Id;
     }
 
     public async Task<bool> UpdateSubscriptionAsync(Guid userId, SubscriptionLevel level, DateTime endDate)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        if (userProfile == null)
         {
-            _logger.LogWarning("User with ID {UserId} not found when updating subscription", userId);
-            throw new NotFoundException($"User with ID {userId} not found");
+            return false;
         }
 
-        if (user.Subscription == null || !user.Subscription.IsActive)
+        var activeSubscription = userProfile.Subscription;
+        if (activeSubscription == null)
         {
-            _logger.LogWarning("User {UserId} does not have an active subscription to update", userId);
-            throw new InvalidOperationException("User does not have an active subscription");
+            return false;
         }
 
-        if (endDate <= DateTime.UtcNow)
-        {
-            throw new ArgumentException("End date must be in the future");
-        }
+        // Create new subscription
+        var newSubscription = new Subscription(userProfile, level, DateTime.UtcNow, endDate);
+        userProfile.UpdateSubscription(newSubscription);
 
-        user.Subscription.UpdateSubscription(level, endDate);
-        await _userRepository.UpdateAsync(user);
+        await _userProfileRepository.UpdateAsync(userProfile);
 
         _logger.LogInformation("Updated subscription for user {UserId}", userId);
         return true;
@@ -81,21 +76,22 @@ public class SubscriptionService : ISubscriptionService
 
     public async Task<bool> CancelSubscriptionAsync(Guid userId)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        if (userProfile == null)
         {
-            _logger.LogWarning("User with ID {UserId} not found when cancelling subscription", userId);
-            throw new NotFoundException($"User with ID {userId} not found");
-        }
-
-        if (user.Subscription == null || !user.Subscription.IsActive)
-        {
-            _logger.LogWarning("User {UserId} does not have an active subscription to cancel", userId);
             return false;
         }
 
-        user.Subscription.Cancel();
-        await _userRepository.UpdateAsync(user);
+        var activeSubscription = userProfile.Subscription;
+        if (activeSubscription == null)
+        {
+            return false;
+        }
+
+        // Remove subscription
+        userProfile.UpdateSubscription(null);
+
+        await _userProfileRepository.UpdateAsync(userProfile);
 
         _logger.LogInformation("Cancelled subscription for user {UserId}", userId);
         return true;
@@ -103,20 +99,68 @@ public class SubscriptionService : ISubscriptionService
 
     public async Task<SubscriptionDto?> GetCurrentSubscriptionAsync(Guid userId)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user?.Subscription == null)
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        return userProfile?.Subscription?.MapToDto();
+    }
+
+    public async Task<bool> HasActiveSubscriptionAsync(Guid userId)
+    {
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        return userProfile?.Subscription?.IsActive ?? false;
+    }
+
+    public async Task<SubscriptionLevel?> GetCurrentSubscriptionLevelAsync(Guid userId)
+    {
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        return userProfile?.Subscription?.Level;
+    }
+
+    public async Task ExtendSubscriptionAsync(Guid userId, DateTime newEndDate)
+    {
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        if (userProfile == null)
         {
-            return null;
+            throw new UserNotFoundException($"User with ID {userId} not found");
         }
 
-        var subscription = user.Subscription;
-        return new SubscriptionDto
+        var activeSubscription = userProfile.Subscription;
+        if (activeSubscription == null)
         {
-            Id = subscription.Id,
-            UserId = subscription.UserId,
-            Level = subscription.Level,
-            StartDate = subscription.StartDate,
-            EndDate = subscription.EndDate
-        };
+            throw new InvalidOperationException("No active subscription to extend");
+        }
+
+        // Create new subscription that starts when current one ends
+        var newSubscription = new Subscription(userProfile, activeSubscription.Level, 
+            activeSubscription.EndDate.AddDays(1), newEndDate);
+        userProfile.UpdateSubscription(newSubscription);
+
+        await _userProfileRepository.UpdateAsync(userProfile);
+
+        _logger.LogInformation("Extended subscription for user {UserId} until {EndDate}", 
+            userId, newEndDate);
+    }
+
+    public async Task UpgradeSubscriptionAsync(Guid userId, SubscriptionLevel newLevel)
+    {
+        var userProfile = await _userProfileRepository.GetByUserIdAsync(userId);
+        if (userProfile == null)
+        {
+            throw new UserNotFoundException($"User with ID {userId} not found");
+        }
+
+        var activeSubscription = userProfile.Subscription;
+        if (activeSubscription == null)
+        {
+            throw new InvalidOperationException("No active subscription to upgrade");
+        }
+
+        // Create new subscription
+        var newSubscription = new Subscription(userProfile, newLevel, DateTime.UtcNow, activeSubscription.EndDate);
+        userProfile.UpdateSubscription(newSubscription);
+
+        await _userProfileRepository.UpdateAsync(userProfile);
+
+        _logger.LogInformation("Upgraded subscription for user {UserId} to {Level}", 
+            userId, newLevel);
     }
 }

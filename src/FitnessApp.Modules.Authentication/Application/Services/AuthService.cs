@@ -1,103 +1,174 @@
 using FitnessApp.Modules.Authentication.Application.Interfaces;
-using FitnessApp.Modules.Authorization.Enums;
-using FitnessApp.Modules.Users.Domain.Entities;
-using FitnessApp.Modules.Users.Domain.ValueObjects;
+using FitnessApp.Modules.Authentication.Domain.Entities;
+using FitnessApp.Modules.Authentication.Domain.Repositories;
+using FitnessApp.Modules.Authentication.Domain.ValueObjects;
+using FitnessApp.Modules.Authentication.Infrastructure.Repositories;
 using FitnessApp.SharedKernel.DTOs.Auth.Requests;
 using FitnessApp.SharedKernel.DTOs.Auth.Responses;
 using FitnessApp.SharedKernel.Interfaces;
+using FitnessApp.SharedKernel.ValueObjects;
+using Microsoft.Extensions.Logging;
 
 namespace FitnessApp.Modules.Authentication.Application.Services;
 
+/// <summary>
+/// Authentication service responsible only for authentication operations.
+/// Does not manage user profiles - that's handled by the Users module.
+/// </summary>
 public class AuthService : IAuthService
 {
     private readonly IValidationService _validationService;
-    private readonly Users.Domain.Repositories.IUserRepository _userRepository;
+    private readonly IAuthenticationRepository _authenticationRepository;
     private readonly IGenerateJwtTokenService _jwtService;
     private readonly ITokenRevocationService _revocationService;
-    private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IValidationService validationService,
-        Users.Domain.Repositories.IUserRepository userRepository,
+        IAuthenticationRepository authenticationRepository,
         IGenerateJwtTokenService jwtService,
         ITokenRevocationService revocationService,
-        IRefreshTokenService refreshTokenService)
+        IRefreshTokenRepository refreshTokenRepository,
+        ILogger<AuthService> logger)
     {
-        _validationService = validationService;
-        _userRepository = userRepository;
-        _jwtService = jwtService;
-        _revocationService = revocationService;
-        _refreshTokenService = refreshTokenService;
+        _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
+        _authenticationRepository = authenticationRepository ?? throw new ArgumentNullException(nameof(authenticationRepository));
+        _jwtService = jwtService ?? throw new ArgumentNullException(nameof(jwtService));
+        _revocationService = revocationService ?? throw new ArgumentNullException(nameof(revocationService));
+        _refreshTokenRepository = refreshTokenRepository ?? throw new ArgumentNullException(nameof(refreshTokenRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
+        _logger.LogInformation("Starting user registration for email: {Email}", request.Email);
+        
         await _validationService.ValidateAsync(request);
 
-        if (await _userRepository.ExistsWithEmailAsync(request.Email))
-            throw new Exception("Email is already in use");
-        if (await _userRepository.ExistsWithUsernameAsync(request.UserName))
-            throw new Exception("Username is already in use");
+        // Check for duplicates
+        if (await _authenticationRepository.ExistsWithEmailAsync(request.Email))
+        {
+            _logger.LogWarning("Registration attempt with existing email: {Email}", request.Email);
+            throw new InvalidOperationException("Email is already in use");
+        }
+        
+        if (await _authenticationRepository.ExistsWithUsernameAsync(request.UserName))
+        {
+            _logger.LogWarning("Registration attempt with existing username: {UserName}", request.UserName);
+            throw new InvalidOperationException("Username is already in use");
+        }
 
-        var user = new User(
-            Email.Create(request.Email), 
-            Username.Create(request.UserName));
-        user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
+        // Validate password confirmation
+        if (request.Password != request.ConfirmPassword)
+        {
+            throw new InvalidOperationException("Passwords do not match");
+        }
 
-        await _userRepository.AddAsync(user);
+        try
+        {
+            // Create value objects
+            var email = Email.Create(request.Email);
+            var username = Username.Create(request.UserName);
+            var passwordHash = PasswordHash.Create(request.Password);
 
-        string access = _jwtService.GenerateJwtToken(
-            user.Id, 
-            user.Username.Value, 
-            user.Email.Value, 
-            user.Role, 
-            user.Subscription?.Level);
-        var (refresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
-        return new AuthResponse(
-            user.Id, 
-            user.Username.Value, 
-            user.Email.Value, 
-            access, 
-            DateTime.UtcNow.AddDays(7), 
-            user.Role,
-            user.Subscription?.Level,
-            refresh, 
-            refreshExp);
+            // Create authentication user
+            var authUser = new AuthUser(email, username, passwordHash);
+
+            // Save to repository
+            var savedAuthUser = await _authenticationRepository.AddAsync(authUser);
+
+            _logger.LogInformation("User registered successfully with ID: {UserId}", savedAuthUser.Id);
+
+            // Generate tokens
+            string accessToken = _jwtService.GenerateJwtToken(
+                savedAuthUser.Id, 
+                savedAuthUser.Username.Value, 
+                savedAuthUser.Email.Value, 
+                savedAuthUser.Role, 
+                null); // No subscription level in auth module
+                
+            var (refreshToken, refreshExp) = await _refreshTokenRepository.IssueAsync(savedAuthUser.Id);
+
+            return new AuthResponse(
+                savedAuthUser.Id, 
+                savedAuthUser.Username.Value, 
+                savedAuthUser.Email.Value, 
+                accessToken, 
+                DateTime.UtcNow.AddDays(7), 
+                savedAuthUser.Role,
+                null, // No subscription level in auth module
+                refreshToken, 
+                refreshExp);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during user registration for email: {Email}", request.Email);
+            throw;
+        }
     }
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request)
     {
+        _logger.LogInformation("Login attempt for email: {Email}", request.Email);
+        
         await _validationService.ValidateAsync(request);
-        var user = await _userRepository.GetByEmailAsync(request.Email) ?? throw new Exception("User not found");
-
-        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        
+        var authUser = await _authenticationRepository.GetByEmailAsync(request.Email);
+        if (authUser == null)
         {
-            user.IncrementAccessFailedCount();
-            if (user.AccessFailedCount >= 5) user.LockAccount(TimeSpan.FromMinutes(15));
-            await _userRepository.UpdateAsync(user);
+            _logger.LogWarning("Login attempt with non-existent email: {Email}", request.Email);
+            return null; // Don't reveal whether user exists
+        }
+
+        // Check if account is active and not locked
+        if (!authUser.IsActive)
+        {
+            _logger.LogWarning("Login attempt for inactive account: {Email}", request.Email);
             return null;
         }
 
-        user.ResetAccessFailedCount();
-        user.RegisterLogin();
-        await _userRepository.UpdateAsync(user);
+        if (authUser.IsLockedOut())
+        {
+            _logger.LogWarning("Login attempt for locked account: {Email}", request.Email);
+            return null;
+        }
 
-        string access = _jwtService.GenerateJwtToken(
-            user.Id, 
-            user.Username.Value, 
-            user.Email.Value, 
-            user.Role, 
-            user.Subscription?.Level);
-        var (refresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
+        // Verify password
+        if (!authUser.VerifyPassword(request.Password))
+        {
+            _logger.LogWarning("Invalid password attempt for email: {Email}", request.Email);
+            authUser.IncrementAccessFailedCount();
+            await _authenticationRepository.UpdateAsync(authUser);
+            return null;
+        }
+
+        // Successful login
+        authUser.ResetAccessFailedCount();
+        authUser.RegisterLogin();
+        await _authenticationRepository.UpdateAsync(authUser);
+
+        _logger.LogInformation("Successful login for user: {UserId}", authUser.Id);
+
+        // Generate tokens
+        string accessToken = _jwtService.GenerateJwtToken(
+            authUser.Id, 
+            authUser.Username.Value, 
+            authUser.Email.Value, 
+            authUser.Role, 
+            null); // No subscription in auth module
+            
+        var (refreshToken, refreshExp) = await _refreshTokenRepository.IssueAsync(authUser.Id);
+        
         return new AuthResponse(
-            user.Id, 
-            user.Username.Value, 
-            user.Email.Value, 
-            access, 
+            authUser.Id, 
+            authUser.Username.Value, 
+            authUser.Email.Value, 
+            accessToken, 
             DateTime.UtcNow.AddDays(7), 
-            user.Role,
-            user.Subscription?.Level,
-            refresh, 
+            authUser.Role,
+            null, // No subscription in auth module
+            refreshToken, 
             refreshExp);
     }
 
@@ -109,39 +180,390 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse?> RefreshTokenAsync(RefreshTokenRequest request)
     {
-        var userId = await _refreshTokenService.ValidateAsync(request.RefreshToken);
-        if (userId is null) return null;
+        _logger.LogDebug("Refresh token attempt");
+        
+        var userId = await _refreshTokenRepository.ValidateAsync(request.RefreshToken);
+        if (userId is null) 
+        {
+            _logger.LogWarning("Invalid refresh token provided");
+            return null;
+        }
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user is null) return null;
+        var authUser = await _authenticationRepository.GetByIdAsync(userId.Value);
+        if (authUser is null || !authUser.IsActive) 
+        {
+            _logger.LogWarning("Refresh token for invalid or inactive user: {UserId}", userId.Value);
+            return null;
+        }
 
-        await _refreshTokenService.InvalidateAsync(request.RefreshToken);
-        string access = _jwtService.GenerateJwtToken(
-            user.Id, 
-            user.Username.Value, 
-            user.Email.Value, 
-            user.Role, 
-            user.Subscription?.Level);
-        var (newRefresh, refreshExp) = await _refreshTokenService.IssueAsync(user.Id);
+        await _refreshTokenRepository.InvalidateAsync(request.RefreshToken);
+        
+        string accessToken = _jwtService.GenerateJwtToken(
+            authUser.Id, 
+            authUser.Username.Value, 
+            authUser.Email.Value, 
+            authUser.Role, 
+            null); // No subscription in auth module
+            
+        var (newRefreshToken, refreshExp) = await _refreshTokenRepository.IssueAsync(authUser.Id);
+        
         return new AuthResponse(
-            user.Id, 
-            user.Username.Value, 
-            user.Email.Value, 
-            access, 
+            authUser.Id, 
+            authUser.Username.Value, 
+            authUser.Email.Value, 
+            accessToken, 
             DateTime.UtcNow.AddDays(7), 
-            user.Role,
-            user.Subscription?.Level,
-            newRefresh, 
+            authUser.Role,
+            null, // No subscription in auth module
+            newRefreshToken, 
             refreshExp);
     }
 
-    public Task ForgotPasswordAsync(ForgotPasswordRequest request)
+    public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
     {
-        return Task.CompletedTask;
+        _logger.LogInformation("Password reset requested for email: {Email}", request.Email);
+        
+        await _validationService.ValidateAsync(request);
+        
+        var authUser = await _authenticationRepository.GetByEmailAsync(request.Email);
+        if (authUser == null || !authUser.IsActive)
+        {
+            // Don't reveal if user exists - just log and return
+            _logger.LogWarning("Password reset requested for non-existent or inactive email: {Email}", request.Email);
+            return; // Always return success to prevent email enumeration
+        }
+
+        // Generate password reset token (this should be added to AuthUser entity)
+        // For now, just log that the request was processed
+        _logger.LogInformation("Password reset token would be generated for user: {UserId}", authUser.Id);
+        
+        // In a real implementation:
+        // 1. Generate secure token
+        // 2. Set expiration time (e.g., 1 hour)
+        // 3. Send email with reset link
+        // 4. Save token to database
     }
 
-    public Task ResetPasswordAsync(ResetPasswordRequest request)
+    public async Task ResetPasswordAsync(ResetPasswordRequest request)
     {
-        return Task.CompletedTask;
+        _logger.LogInformation("Password reset attempt for email: {Email}", request.Email);
+        
+        await _validationService.ValidateAsync(request);
+
+        // Validate password confirmation
+        if (request.NewPassword != request.ConfirmNewPassword)
+        {
+            throw new InvalidOperationException("Passwords do not match");
+        }
+
+        var authUser = await _authenticationRepository.GetByEmailAsync(request.Email);
+        if (authUser == null || !authUser.IsActive)
+        {
+            _logger.LogWarning("Password reset attempt for non-existent or inactive email: {Email}", request.Email);
+            throw new InvalidOperationException("Invalid reset request");
+        }
+
+        // In a real implementation, validate the token here
+        // For now, just update the password
+        try
+        {
+            var newPasswordHash = PasswordHash.Create(request.NewPassword);
+            authUser.SetPasswordHash(newPasswordHash);
+            
+            await _authenticationRepository.UpdateAsync(authUser);
+            
+            _logger.LogInformation("Password successfully reset for user: {UserId}", authUser.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password for user email: {Email}", request.Email);
+            throw;
+        }
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+    {
+        _logger.LogInformation("Password change requested for user: {UserId}", userId);
+        
+        await _validationService.ValidateAsync(request);
+
+        // Validate password confirmation
+        if (request.NewPassword != request.ConfirmNewPassword)
+        {
+            throw new InvalidOperationException("Passwords do not match");
+        }
+
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null || !authUser.IsActive)
+        {
+            _logger.LogWarning("Password change attempt for non-existent or inactive user: {UserId}", userId);
+            throw new InvalidOperationException("User not found or inactive");
+        }
+
+        // Verify current password
+        if (!authUser.VerifyPassword(request.CurrentPassword))
+        {
+            _logger.LogWarning("Invalid current password provided for user: {UserId}", userId);
+            throw new InvalidOperationException("Current password is incorrect");
+        }
+
+        try
+        {
+            var newPasswordHash = PasswordHash.Create(request.NewPassword);
+            authUser.SetPasswordHash(newPasswordHash);
+            
+            await _authenticationRepository.UpdateAsync(authUser);
+            
+            _logger.LogInformation("Password successfully changed for user: {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password for user: {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<AuthUserDto> GetAuthUserAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null)
+        {
+            throw new InvalidOperationException("User not found");
+        }
+
+        return new AuthUserDto(
+            authUser.Id,
+            authUser.Email.Value,
+            authUser.Username.Value,
+            authUser.Role,
+            authUser.EmailConfirmed,
+            authUser.TwoFactorEnabled,
+            authUser.IsActive,
+            authUser.CreatedAt,
+            authUser.LastLoginAt
+        );
+    }
+
+    public async Task UpdateEmailAsync(Guid userId, UpdateEmailRequest request)
+    {
+        _logger.LogInformation("Email update requested for user: {UserId}", userId);
+        
+        await _validationService.ValidateAsync(request);
+
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null || !authUser.IsActive)
+        {
+            throw new InvalidOperationException("User not found or inactive");
+        }
+
+        // Check if new email already exists
+        if (await _authenticationRepository.ExistsWithEmailAsync(request.NewEmail))
+        {
+            throw new InvalidOperationException("Email is already in use");
+        }
+
+        try
+        {
+            var newEmail = Email.Create(request.NewEmail);
+            authUser.UpdateEmail(newEmail);
+            
+            await _authenticationRepository.UpdateAsync(authUser);
+            
+            _logger.LogInformation("Email updated successfully for user: {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating email for user: {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task UpdateUsernameAsync(Guid userId, UpdateUsernameRequest request)
+    {
+        _logger.LogInformation("Username update requested for user: {UserId}", userId);
+        
+        await _validationService.ValidateAsync(request);
+
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null || !authUser.IsActive)
+        {
+            throw new InvalidOperationException("User not found or inactive");
+        }
+
+        // Check if new username already exists
+        if (await _authenticationRepository.ExistsWithUsernameAsync(request.NewUsername))
+        {
+            throw new InvalidOperationException("Username is already in use");
+        }
+
+        try
+        {
+            var newUsername = Username.Create(request.NewUsername);
+            authUser.UpdateUsername(newUsername);
+            
+            await _authenticationRepository.UpdateAsync(authUser);
+            
+            _logger.LogInformation("Username updated successfully for user: {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating username for user: {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task ConfirmEmailAsync(ConfirmEmailRequest request)
+    {
+        _logger.LogInformation("Email confirmation requested with token");
+        
+        await _validationService.ValidateAsync(request);
+
+        var authUser = await _authenticationRepository.GetByEmailVerificationTokenAsync(request.Token);
+        if (authUser == null)
+        {
+            throw new InvalidOperationException("Invalid or expired confirmation token");
+        }
+
+        if (authUser.IsEmailVerificationTokenValid(request.Token))
+        {
+            authUser.ConfirmEmail();
+            authUser.ClearEmailVerificationToken();
+            
+            await _authenticationRepository.UpdateAsync(authUser);
+            
+            _logger.LogInformation("Email confirmed successfully for user: {UserId}", authUser.Id);
+        }
+        else
+        {
+            throw new InvalidOperationException("Invalid or expired confirmation token");
+        }
+    }
+
+    public async Task ResendEmailConfirmationAsync(ResendEmailConfirmationRequest request)
+    {
+        _logger.LogInformation("Email confirmation resend requested for: {Email}", request.Email);
+        
+        await _validationService.ValidateAsync(request);
+
+        var authUser = await _authenticationRepository.GetByEmailAsync(request.Email);
+        if (authUser == null || !authUser.IsActive)
+        {
+            // Don't reveal if user exists
+            _logger.LogWarning("Email confirmation resend for non-existent email: {Email}", request.Email);
+            return;
+        }
+
+        if (authUser.EmailConfirmed)
+        {
+            _logger.LogInformation("Email confirmation resend requested for already confirmed email: {Email}", request.Email);
+            return; // Don't resend if already confirmed
+        }
+
+        authUser.GenerateEmailVerificationToken();
+        await _authenticationRepository.UpdateAsync(authUser);
+        
+        _logger.LogInformation("Email confirmation token regenerated for user: {UserId}", authUser.Id);
+        
+        // In real implementation: send email with new token
+    }
+
+    public async Task<SecurityStatusDto> GetSecurityStatusAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null)
+        {
+            throw new InvalidOperationException("User not found");
+        }
+
+        return new SecurityStatusDto(
+            authUser.EmailConfirmed,
+            authUser.TwoFactorEnabled,
+            authUser.IsLockedOut(),
+            authUser.LockoutEnd,
+            authUser.AccessFailedCount,
+            authUser.LastLoginAt,
+            !string.IsNullOrEmpty(authUser.PasswordResetToken),
+            authUser.UpdatedAt
+        );
+    }
+
+    public async Task EnableTwoFactorAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null || !authUser.IsActive)
+        {
+            throw new InvalidOperationException("User not found or inactive");
+        }
+
+        authUser.EnableTwoFactor();
+        await _authenticationRepository.UpdateAsync(authUser);
+        
+        _logger.LogInformation("Two-factor authentication enabled for user: {UserId}", userId);
+    }
+
+    public async Task DisableTwoFactorAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null || !authUser.IsActive)
+        {
+            throw new InvalidOperationException("User not found or inactive");
+        }
+
+        authUser.DisableTwoFactor();
+        await _authenticationRepository.UpdateAsync(authUser);
+        
+        _logger.LogInformation("Two-factor authentication disabled for user: {UserId}", userId);
+    }
+
+    public async Task UnlockAccountAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null)
+        {
+            throw new InvalidOperationException("User not found");
+        }
+
+        authUser.UnlockAccount();
+        await _authenticationRepository.UpdateAsync(authUser);
+        
+        _logger.LogInformation("Account unlocked for user: {UserId}", userId);
+    }
+
+    public async Task DeactivateAccountAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null)
+        {
+            throw new InvalidOperationException("User not found");
+        }
+
+        authUser.Deactivate();
+        await _authenticationRepository.UpdateAsync(authUser);
+        
+        _logger.LogInformation("Account deactivated for user: {UserId}", userId);
+    }
+
+    public async Task ReactivateAccountAsync(Guid userId)
+    {
+        var authUser = await _authenticationRepository.GetByIdAsync(userId);
+        if (authUser == null)
+        {
+            throw new InvalidOperationException("User not found");
+        }
+
+        authUser.Reactivate();
+        await _authenticationRepository.UpdateAsync(authUser);
+        
+        _logger.LogInformation("Account reactivated for user: {UserId}", userId);
+    }
+
+    public async Task<bool> ExistsWithEmailAsync(string email)
+    {
+        return await _authenticationRepository.ExistsWithEmailAsync(email);
+    }
+
+    public async Task<bool> ExistsWithUsernameAsync(string username)
+    {
+        return await _authenticationRepository.ExistsWithUsernameAsync(username);
     }
 }

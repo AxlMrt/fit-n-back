@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using FitnessApp.Modules.Authentication.Application.Interfaces;
 using FitnessApp.Modules.Authorization;
-using FitnessApp.Modules.Authorization.Enums;
+using FitnessApp.SharedKernel.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 

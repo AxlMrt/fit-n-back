@@ -1,4 +1,5 @@
-using FitnessApp.Modules.Authorization.Enums;
+using FitnessApp.SharedKernel.Enums;
+using FitnessApp.SharedKernel.DTOs.UserProfile.Responses;
 
 namespace FitnessApp.Modules.Users.Application.Interfaces;
 
