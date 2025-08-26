@@ -24,11 +24,11 @@ public record CreateUserProfileRequest(
 
     Gender? Gender = null,
 
-    [Range(0.1, 3.0, ErrorMessage = "Height must be between 0.1m and 3.0m")]
-    decimal? HeightInMeters = null,
+    [Range(50, 250, ErrorMessage = "Height must be between 50cm and 250cm")]
+    decimal? Height = null,
 
-    [Range(1, 1000, ErrorMessage = "Weight must be between 1kg and 1000kg")]
-    decimal? WeightInKilograms = null,
+    [Range(20, 300, ErrorMessage = "Weight must be between 20kg and 300kg")]
+    decimal? Weight = null,
 
     FitnessLevel? FitnessLevel = null,
 
@@ -53,11 +53,11 @@ public record UpdateUserProfileRequest(
 
     Gender? Gender = null,
 
-    [Range(0.1, 3.0, ErrorMessage = "Height must be between 0.1m and 3.0m")]
-    decimal? HeightInMeters = null,
+    [Range(50, 250, ErrorMessage = "Height must be between 50cm and 250cm")]
+    decimal? Height = null,
 
-    [Range(1, 1000, ErrorMessage = "Weight must be between 1kg and 1000kg")]
-    decimal? WeightInKilograms = null,
+    [Range(20, 300, ErrorMessage = "Weight must be between 20kg and 300kg")]
+    decimal? Weight = null,
 
     FitnessLevel? FitnessLevel = null,
 

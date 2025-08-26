@@ -1,21 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.SharedKernel.DTOs.Responses;
-
-public sealed record UserDto(
-    Guid Id,
-    string Email,
-    string Username,
-    string DisplayName,
-    UserProfileDto Profile,
-    UserSecurityDto Security,
-    UserSubscriptionDto? Subscription,
-    List<UserPreferenceDto> Preferences,
-    DateTime CreatedAt,
-    DateTime? UpdatedAt,
-    DateTime? LastLoginAt,
-    bool IsActive
-);
 
 public sealed record UserProfileDto(
     string? FirstName,
@@ -26,8 +12,8 @@ public sealed record UserProfileDto(
     string? AgeGroup,
     Gender? Gender,
     string? GenderDisplay,
-    decimal? HeightCm,
-    decimal? WeightKg,
+    decimal? Height,
+    decimal? Weight,
     decimal? BMI,
     string? BMICategory,
     FitnessLevel? FitnessLevel,
@@ -86,10 +72,89 @@ public sealed record UserStatsDto(
     Dictionary<string, int> UsersByAgeGroup
 );
 
-public sealed record PagedUserResult(
-    IEnumerable<UserListDto> Users,
-    int TotalCount,
-    int Page,
-    int PageSize,
-    int TotalPages
+/// <summary>
+/// Lightweight user profile DTO for lists and search results.
+/// </summary>
+public sealed record UserProfileListDto(
+    Guid Id,
+    Guid UserId,
+    string DisplayName,
+    string FirstName,
+    string LastName,
+    int? Age,
+    Gender? Gender,
+    FitnessLevel? FitnessLevel,
+    SubscriptionLevel SubscriptionLevel,
+    string? Bio,
+    DateTime CreatedAt
+);
+
+/// <summary>
+/// Public profile DTO for other users viewing the profile.
+/// Contains only publicly visible information.
+/// </summary>
+public sealed record PublicUserProfileDto(
+    Guid Id,
+    string DisplayName,
+    int? Age,
+    Gender? Gender,
+    FitnessLevel? FitnessLevel,
+    SubscriptionLevel SubscriptionLevel,
+    string? Bio,
+    DateTime CreatedAt
+);
+
+/// <summary>
+/// User profile statistics DTO for admin/analytics.
+/// </summary>
+public sealed record UserProfileStatsDto(
+    int TotalProfiles,
+    int ActiveProfiles,
+    int FreeUsers,
+    int PremiumUsers,
+    int CoachUsers,
+    Dictionary<FitnessLevel, int> FitnessLevelDistribution,
+    Dictionary<Gender, int> GenderDistribution,
+    Dictionary<SubscriptionLevel, int> SubscriptionDistribution
+);
+
+/// <summary>
+/// Profile creation response.
+/// </summary>
+public record ProfileCreationResponse(
+    Guid ProfileId,
+    string Message,
+    bool Success = true
+);
+
+/// <summary>
+/// Profile update response.
+/// </summary>
+public record ProfileUpdateResponse(
+    string Message,
+    bool Success = true,
+    DateTime? UpdatedAt = null
+);
+
+/// <summary>
+/// User preference DTO
+/// </summary>
+public sealed record PreferenceDto(
+    Guid Id,
+    string Category,
+    string Key,
+    string Value,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt
+);
+
+/// <summary>
+/// Subscription DTO
+/// </summary>
+public sealed record SubscriptionDto(
+    Guid Id,
+    SubscriptionLevel Level,
+    DateTime StartDate,
+    DateTime EndDate,
+    bool IsActive
 );

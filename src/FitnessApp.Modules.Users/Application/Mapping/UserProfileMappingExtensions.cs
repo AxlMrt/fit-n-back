@@ -1,4 +1,5 @@
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.SharedKernel.DTOs.Responses;
 using FitnessApp.SharedKernel.DTOs.UserProfile.Responses;
 using FitnessApp.SharedKernel.Enums;
 
@@ -20,8 +21,8 @@ public static class UserProfileMappingExtensions
             userProfile.DateOfBirth?.Value,
             userProfile.GetAge(),
             userProfile.Gender,
-            userProfile.PhysicalMeasurements?.HeightCm / 100m, // Convert cm to meters
-            userProfile.PhysicalMeasurements?.WeightKg,
+            userProfile.PhysicalMeasurements?.HeightCm, // Height in cm
+            userProfile.PhysicalMeasurements?.WeightKg, // Weight in kg
             userProfile.FitnessLevel,
             null, // Bio - not available in current entity
             userProfile.Subscription?.Level ?? SubscriptionLevel.Free,

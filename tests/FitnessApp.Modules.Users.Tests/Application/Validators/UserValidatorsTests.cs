@@ -271,7 +271,7 @@ public class UpdateUserProfileRequestValidatorTests
         var result = _validator.TestValidate(request);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.HeightCm);
+        result.ShouldHaveValidationErrorFor(x => x.Height);
     }
 
     [Theory]
@@ -295,7 +295,7 @@ public class UpdateUserProfileRequestValidatorTests
         var result = _validator.TestValidate(request);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.WeightKg);
+        result.ShouldHaveValidationErrorFor(x => x.Weight);
     }
 }
 

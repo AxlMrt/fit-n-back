@@ -30,15 +30,15 @@ public class CreateUserProfileRequestValidator : AbstractValidator<CreateUserPro
             .When(x => x.DateOfBirth.HasValue)
             .WithMessage("Age must be between 13 and 120 years");
 
-        RuleFor(x => x.HeightInMeters)
-            .InclusiveBetween(0.1m, 3.0m)
-            .When(x => x.HeightInMeters.HasValue)
-            .WithMessage("Height must be between 0.1m and 3.0m");
+        RuleFor(x => x.Height)
+            .InclusiveBetween(50m, 250m)
+            .When(x => x.Height.HasValue)
+            .WithMessage("Height must be between 50cm and 250cm");
 
-        RuleFor(x => x.WeightInKilograms)
-            .InclusiveBetween(1m, 1000m)
-            .When(x => x.WeightInKilograms.HasValue)
-            .WithMessage("Weight must be between 1kg and 1000kg");
+        RuleFor(x => x.Weight)
+            .InclusiveBetween(20m, 300m)
+            .When(x => x.Weight.HasValue)
+            .WithMessage("Weight must be between 20kg and 300kg");
 
         RuleFor(x => x.Bio)
             .MaximumLength(500)
@@ -80,15 +80,15 @@ public class UpdateUserProfileRequestValidator : AbstractValidator<UpdateUserPro
             .When(x => x.DateOfBirth.HasValue)
             .WithMessage("Age must be between 13 and 120 years");
 
-        RuleFor(x => x.HeightInMeters)
-            .InclusiveBetween(0.1m, 3.0m)
-            .When(x => x.HeightInMeters.HasValue)
-            .WithMessage("Height must be between 0.1m and 3.0m");
+        RuleFor(x => x.Height)
+            .InclusiveBetween(50m, 250m)
+            .When(x => x.Height.HasValue)
+            .WithMessage("Height must be between 50cm and 250cm");
 
-        RuleFor(x => x.WeightInKilograms)
-            .InclusiveBetween(1m, 1000m)
-            .When(x => x.WeightInKilograms.HasValue)
-            .WithMessage("Weight must be between 1kg and 1000kg");
+        RuleFor(x => x.Weight)
+            .InclusiveBetween(20m, 300m)
+            .When(x => x.Weight.HasValue)
+            .WithMessage("Weight must be between 20kg and 300kg");
 
         RuleFor(x => x.Bio)
             .MaximumLength(500)

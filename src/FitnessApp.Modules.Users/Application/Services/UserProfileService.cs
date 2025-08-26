@@ -3,9 +3,8 @@ using FitnessApp.Modules.Users.Application.Mapping;
 using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Domain.ValueObjects;
-using FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
-using UserProfileResponses = FitnessApp.SharedKernel.DTOs.UserProfile.Responses;
 using FitnessApp.SharedKernel.DTOs.Responses;
+using FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
 using FitnessApp.SharedKernel.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -26,19 +25,19 @@ public class UserProfileService : IUserProfileService
         _logger = logger;
     }
 
-    public async Task<UserProfileResponses.UserProfileDto?> GetByUserIdAsync(Guid userId)
+    public async Task<UserProfileDto?> GetByUserIdAsync(Guid userId)
     {
         var profile = await _repository.GetByUserIdAsync(userId);
         return profile?.MapToDto();
     }
 
-    public async Task<UserProfileResponses.UserProfileListDto?> GetListDtoByUserIdAsync(Guid userId)
+    public async Task<UserProfileListDto?> GetListDtoByUserIdAsync(Guid userId)
     {
         var profile = await _repository.GetByUserIdAsync(userId);
         return profile?.MapToListDto();
     }
 
-    public async Task<UserProfileResponses.UserProfileDto> CreateProfileAsync(CreateUserProfileRequest request)
+    public async Task<UserProfileDto> CreateProfileAsync(CreateUserProfileRequest request)
     {
         // Check if profile already exists
         if (await _repository.GetByUserIdAsync(request.UserId) != null)
@@ -56,11 +55,9 @@ public class UserProfileService : IUserProfileService
             profile.UpdatePersonalInfo(fullName, dateOfBirth, request.Gender);
         }
 
-        if (request.HeightInMeters.HasValue || request.WeightInKilograms.HasValue)
+        if (request.Height.HasValue || request.Weight.HasValue)
         {
-            var heightCm = request.HeightInMeters.HasValue ? (int?)(request.HeightInMeters.Value * 100) : null;
-            var weightKg = request.WeightInKilograms.HasValue ? (int?)request.WeightInKilograms.Value : null;
-            var measurements = PhysicalMeasurements.Create(heightCm, weightKg);
+            var measurements = PhysicalMeasurements.Create(request.Height, request.Weight);
             profile.UpdatePhysicalMeasurements(measurements);
         }
 
@@ -75,7 +72,7 @@ public class UserProfileService : IUserProfileService
         return profile.MapToDto();
     }
 
-    public async Task<UserProfileResponses.UserProfileDto> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest request)
+    public async Task<UserProfileDto> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest request)
     {
         var profile = await _repository.GetByUserIdAsync(userId);
         if (profile == null)
@@ -102,15 +99,15 @@ public class UserProfileService : IUserProfileService
         }
 
         // Update physical measurements if provided
-        if (request.HeightInMeters.HasValue || request.WeightInKilograms.HasValue)
+        if (request.Height.HasValue || request.Weight.HasValue)
         {
-            var currentHeightCm = profile.PhysicalMeasurements?.HeightCm;
-            var currentWeightKg = profile.PhysicalMeasurements?.WeightKg;
+            var currentHeight = profile.PhysicalMeasurements?.HeightCm;
+            var currentWeight = profile.PhysicalMeasurements?.WeightKg;
             
-            var heightCm = request.HeightInMeters.HasValue ? (int?)(request.HeightInMeters.Value * 100) : currentHeightCm;
-            var weightKg = request.WeightInKilograms.HasValue ? (int?)request.WeightInKilograms.Value : currentWeightKg;
+            var height = request.Height ?? currentHeight;
+            var weight = request.Weight ?? currentWeight;
             
-            var measurements = PhysicalMeasurements.Create(heightCm, weightKg);
+            var measurements = PhysicalMeasurements.Create(height, weight);
             profile.UpdatePhysicalMeasurements(measurements);
         }
 
@@ -169,13 +166,13 @@ public class UserProfileService : IUserProfileService
         _logger.LogInformation("Updated preferences for user {UserId}", userId);
     }
 
-    public async Task<PagedResult<UserProfileResponses.UserProfileDto>> GetProfilesAsync(UserProfileQueryRequest request)
+    public async Task<PagedResult<UserProfileDto>> GetProfilesAsync(UserProfileQueryRequest request)
     {
         // Simplified implementation - returning empty result for now
         await Task.CompletedTask; // Make method truly async
-        var profileDtos = new List<UserProfileResponses.UserProfileDto>();
+        var profileDtos = new List<UserProfileDto>();
         
-        return new PagedResult<UserProfileResponses.UserProfileDto>(
+        return new PagedResult<UserProfileDto>(
             profileDtos,
             0,
             request.Page,
@@ -184,12 +181,12 @@ public class UserProfileService : IUserProfileService
         );
     }
 
-    public async Task<UserProfileResponses.UserProfileStatsDto> GetProfileStatsAsync()
+    public async Task<UserProfileStatsDto> GetProfileStatsAsync()
     {
         // Simplified implementation - returning empty stats for now
         await Task.CompletedTask; // Make method truly async
         
-        return new UserProfileResponses.UserProfileStatsDto(
+        return new UserProfileStatsDto(
             0, // TotalProfiles
             0, // ActiveProfiles
             0, // FreeUsers
