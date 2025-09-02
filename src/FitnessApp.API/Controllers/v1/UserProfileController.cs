@@ -1,5 +1,6 @@
 using FitnessApp.Modules.Users.Application.Interfaces;
-using FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
+using FitnessApp.SharedKernel.DTOs.Users.Requests;
+using FitnessApp.SharedKernel.DTOs.Users.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -7,12 +8,12 @@ using System.Security.Claims;
 namespace FitnessApp.API.Controllers.v1;
 
 /// <summary>
-/// User profile controller handling only profile-related operations.
-/// Authentication operations are handled by the AuthController.
+/// Controller for managing user profiles, preferences, and subscriptions.
+/// Handles profile data separate from authentication.
 /// </summary>
 [ApiController]
+[Route("api/v1/users")]
 [Authorize]
-[Route("api/v1/profiles")]
 [Produces("application/json")]
 public class UserProfileController : ControllerBase
 {
@@ -20,282 +21,507 @@ public class UserProfileController : ControllerBase
     private readonly ILogger<UserProfileController> _logger;
 
     public UserProfileController(
-        IUserProfileService userProfileService, 
+        IUserProfileService userProfileService,
         ILogger<UserProfileController> logger)
     {
         _userProfileService = userProfileService ?? throw new ArgumentNullException(nameof(userProfileService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    #region Profile Management
+
     /// <summary>
-    /// Get current user's profile
+    /// Get the current user's profile
     /// </summary>
-    /// <returns>Current user's profile data</returns>
-    [HttpGet("me")]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 404)]
-    public async Task<IActionResult> GetMyProfile()
+    /// <returns>User profile information</returns>
+    [HttpGet("profile")]
+    [ProducesResponseType(typeof(UserProfileResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetProfile(CancellationToken cancellationToken = default)
     {
-        try
+        var userId = GetCurrentUserId();
+        
+        var profile = await _userProfileService.GetUserProfileAsync(userId, cancellationToken);
+        
+        if (profile == null)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return BadRequest(new { message = "Invalid user identifier" });
-            }
-
-            var profile = await _userProfileService.GetByUserIdAsync(userId);
-            if (profile == null)
-            {
-                return NotFound(new { message = "Profile not found" });
-            }
-
-            return Ok(profile);
+            return NotFound(new { message = "Profile not found" });
         }
-        catch (Exception ex)
+
+        return Ok(profile);
+    }
+
+    /// <summary>
+    /// Get a user profile summary by user ID
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <returns>User profile summary</returns>
+    [HttpGet("{userId:guid}/profile/summary")]
+    [ProducesResponseType(typeof(UserProfileSummaryResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetProfileSummary(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var profile = await _userProfileService.GetUserProfileSummaryAsync(userId, cancellationToken);
+        
+        if (profile == null)
         {
-            _logger.LogError(ex, "Error retrieving user profile");
-            return StatusCode(500, new { message = "An error occurred retrieving profile" });
+            return NotFound(new { message = "Profile not found" });
         }
+
+        return Ok(profile);
     }
 
     /// <summary>
     /// Create a new user profile
     /// </summary>
-    /// <param name="request">Profile creation data</param>
-    /// <returns>Created profile data</returns>
-    [HttpPost]
-    [ProducesResponseType(typeof(object), 201)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 409)]
-    public async Task<IActionResult> CreateProfile([FromBody] CreateUserProfileRequest request)
+    /// <param name="request">Profile creation request</param>
+    /// <returns>Created profile</returns>
+    [HttpPost("profile")]
+    [ProducesResponseType(typeof(UserProfileResponse), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(409)]
+    public async Task<IActionResult> CreateProfile([FromBody] CreateUserProfileRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return BadRequest(new { message = "Invalid user identifier" });
-            }
-
+            var userId = GetCurrentUserId();
+            
             // Check if profile already exists
-            if (await _userProfileService.ProfileExistsAsync(userId))
+            if (await _userProfileService.UserProfileExistsAsync(userId, cancellationToken))
             {
                 return Conflict(new { message = "Profile already exists" });
             }
 
-            // Override the UserId from the request with the authenticated user's ID
-            var profileRequest = request with { UserId = userId };
+            var profile = await _userProfileService.CreateUserProfileAsync(userId, request, cancellationToken);
             
-            var profile = await _userProfileService.CreateProfileAsync(profileRequest);
-            _logger.LogInformation("Created profile for user {UserId}", userId);
-            return CreatedAtAction(nameof(GetMyProfile), new { }, profile);
+            _logger.LogInformation("Profile created successfully for user {UserId}", userId);
+            
+            return CreatedAtAction(nameof(GetProfile), new { }, profile);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error creating profile for user");
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating user profile");
-            return StatusCode(500, new { message = "An error occurred creating profile" });
-        }
     }
 
     /// <summary>
-    /// Update current user's profile
+    /// Update personal information
     /// </summary>
-    /// <param name="request">Profile update data</param>
-    /// <returns>Updated profile data</returns>
-    [HttpPut]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 404)]
-    public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileRequest request)
+    /// <param name="request">Personal info update request</param>
+    /// <returns>Updated profile</returns>
+    [HttpPatch("profile/personal")]
+    [ProducesResponseType(typeof(UserProfileResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> UpdatePersonalInfo([FromBody] UpdatePersonalInfoRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return BadRequest(new { message = "Invalid user identifier" });
-            }
-
-            var profile = await _userProfileService.UpdateProfileAsync(userId, request);
-            _logger.LogInformation("Updated profile for user {UserId}", userId);
-            return Ok(profile);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating user profile");
-            return StatusCode(500, new { message = "An error occurred updating profile" });
-        }
-    }
-
-    /// <summary>
-    /// Update current user's preferences
-    /// </summary>
-    /// <param name="request">Preferences data</param>
-    /// <returns>Success message</returns>
-    [HttpPut("preferences")]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 404)]
-    public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request)
-    {
-        try
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return BadRequest(new { message = "Invalid user identifier" });
-            }
-
-            await _userProfileService.UpdatePreferencesAsync(userId, request);
-            _logger.LogInformation("Updated preferences for user {UserId}", userId);
-            return Ok(new { message = "Preferences updated successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating preferences");
-            return StatusCode(500, new { message = "An error occurred updating preferences" });
-        }
-    }
-
-    /// <summary>
-    /// Get profiles with search and filtering (public profiles only)
-    /// </summary>
-    /// <param name="request">Query parameters for filtering and pagination</param>
-    /// <returns>Paginated list of profiles</returns>
-    [HttpGet]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(object), 200)]
-    public async Task<IActionResult> GetProfiles([FromQuery] UserProfileQueryRequest request)
-    {
-        try
-        {
-            var profiles = await _userProfileService.GetProfilesAsync(request);
-            return Ok(profiles);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving profiles");
-            return StatusCode(500, new { message = "An error occurred retrieving profiles" });
-        }
-    }
-
-    /// <summary>
-    /// Get profile by user ID (public profiles only)
-    /// </summary>
-    /// <param name="userId">User ID to get profile for</param>
-    /// <returns>User profile data</returns>
-    [HttpGet("{userId:guid}")]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 404)]
-    public async Task<IActionResult> GetProfileByUserId(Guid userId)
-    {
-        try
-        {
-            var profile = await _userProfileService.GetListDtoByUserIdAsync(userId);
-            if (profile == null)
-            {
-                return NotFound(new { message = "Profile not found" });
-            }
-
-            return Ok(profile);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving profile by user ID");
-            return StatusCode(500, new { message = "An error occurred retrieving profile" });
-        }
-    }
-
-    /// <summary>
-    /// Check if current user has completed their profile
-    /// </summary>
-    /// <returns>Profile completion status</returns>
-    [HttpGet("completion-status")]
-    [ProducesResponseType(typeof(object), 200)]
-    public async Task<IActionResult> GetCompletionStatus()
-    {
-        try
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return BadRequest(new { message = "Invalid user identifier" });
-            }
-
-            var hasCompleted = await _userProfileService.HasCompletedProfileAsync(userId);
-            var canAccessPremium = await _userProfileService.CanAccessPremiumFeaturesAsync(userId);
+            var userId = GetCurrentUserId();
+            var profile = await _userProfileService.UpdatePersonalInfoAsync(userId, request, cancellationToken);
             
-            return Ok(new 
-            { 
-                hasCompletedProfile = hasCompleted,
-                canAccessPremiumFeatures = canAccessPremium
-            });
+            _logger.LogInformation("Personal info updated successfully for user {UserId}", userId);
+            
+            return Ok(profile);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking profile completion status");
-            return StatusCode(500, new { message = "An error occurred checking profile status" });
+            _logger.LogError(ex, "Error updating personal info for user");
+            return BadRequest(new { message = ex.Message });
         }
     }
 
     /// <summary>
-    /// Get profile statistics (admin only)
+    /// Update physical measurements
     /// </summary>
-    /// <returns>Profile statistics</returns>
-    [HttpGet("statistics")]
-    [Authorize(Roles = "Admin")]
-    [ProducesResponseType(typeof(object), 200)]
-    public async Task<IActionResult> GetProfileStatistics()
+    /// <param name="request">Physical measurements update request</param>
+    /// <returns>Updated profile</returns>
+    [HttpPatch("profile/measurements")]
+    [ProducesResponseType(typeof(UserProfileResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> UpdatePhysicalMeasurements([FromBody] UpdatePhysicalMeasurementsRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var stats = await _userProfileService.GetProfileStatsAsync();
-            return Ok(stats);
+            var userId = GetCurrentUserId();
+            var profile = await _userProfileService.UpdatePhysicalMeasurementsAsync(userId, request, cancellationToken);
+            
+            _logger.LogInformation("Physical measurements updated successfully for user {UserId}", userId);
+            
+            return Ok(profile);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving profile statistics");
-            return StatusCode(500, new { message = "An error occurred retrieving statistics" });
+            _logger.LogError(ex, "Error updating physical measurements for user");
+            return BadRequest(new { message = ex.Message });
         }
     }
 
     /// <summary>
-    /// Check if a profile exists for the current user
+    /// Update fitness profile
     /// </summary>
-    /// <returns>Boolean indicating if profile exists</returns>
-    [HttpGet("exists")]
-    [ProducesResponseType(typeof(object), 200)]
-    public async Task<IActionResult> CheckProfileExists()
+    /// <param name="request">Fitness profile update request</param>
+    /// <returns>Updated profile</returns>
+    [HttpPatch("profile/fitness")]
+    [ProducesResponseType(typeof(UserProfileResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> UpdateFitnessProfile([FromBody] UpdateFitnessProfileRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return BadRequest(new { message = "Invalid user identifier" });
-            }
-
-            var exists = await _userProfileService.ProfileExistsAsync(userId);
-            return Ok(new { exists });
+            var userId = GetCurrentUserId();
+            var profile = await _userProfileService.UpdateFitnessProfileAsync(userId, request, cancellationToken);
+            
+            _logger.LogInformation("Fitness profile updated successfully for user {UserId}", userId);
+            
+            return Ok(profile);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if profile exists");
-            return StatusCode(500, new { message = "An error occurred checking profile existence" });
+            _logger.LogError(ex, "Error updating fitness profile for user");
+            return BadRequest(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Delete the current user's profile
+    /// </summary>
+    /// <returns>Deletion confirmation</returns>
+    [HttpDelete("profile")]
+    [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> DeleteProfile(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _userProfileService.DeleteUserProfileAsync(userId, cancellationToken);
+            
+            _logger.LogInformation("Profile deleted successfully for user {UserId}", userId);
+            
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile for user");
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region Subscription Management
+
+    /// <summary>
+    /// Get the current user's subscription
+    /// </summary>
+    /// <returns>Subscription information</returns>
+    [HttpGet("subscription")]
+    [ProducesResponseType(typeof(SubscriptionResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetSubscription(CancellationToken cancellationToken = default)
+    {
+        var userId = GetCurrentUserId();
+        
+        var subscription = await _userProfileService.GetUserSubscriptionAsync(userId, cancellationToken);
+        
+        if (subscription == null)
+        {
+            return NotFound(new { message = "No subscription found" });
+        }
+
+        return Ok(subscription);
+    }
+
+    /// <summary>
+    /// Update or create subscription
+    /// </summary>
+    /// <param name="request">Subscription update request</param>
+    /// <returns>Updated subscription</returns>
+    [HttpPost("subscription")]
+    [ProducesResponseType(typeof(SubscriptionResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> UpdateSubscription([FromBody] UpdateSubscriptionRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var subscription = await _userProfileService.UpdateSubscriptionAsync(userId, request, cancellationToken);
+            
+            _logger.LogInformation("Subscription updated successfully for user {UserId}", userId);
+            
+            return Ok(subscription);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating subscription for user");
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cancel the current user's subscription
+    /// </summary>
+    /// <returns>Cancellation confirmation</returns>
+    [HttpDelete("subscription")]
+    [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> CancelSubscription(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _userProfileService.CancelSubscriptionAsync(userId, cancellationToken);
+            
+            _logger.LogInformation("Subscription cancelled successfully for user {UserId}", userId);
+            
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cancelling subscription for user");
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Renew the current user's subscription
+    /// </summary>
+    /// <param name="newEndDate">New subscription end date</param>
+    /// <returns>Renewed subscription</returns>
+    [HttpPatch("subscription/renew")]
+    [ProducesResponseType(typeof(SubscriptionResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> RenewSubscription([FromBody] DateTime newEndDate, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var subscription = await _userProfileService.RenewSubscriptionAsync(userId, newEndDate, cancellationToken);
+            
+            _logger.LogInformation("Subscription renewed successfully for user {UserId}", userId);
+            
+            return Ok(subscription);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error renewing subscription for user");
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region Preferences Management
+
+    /// <summary>
+    /// Get all user preferences
+    /// </summary>
+    /// <returns>User preferences grouped by category</returns>
+    [HttpGet("preferences")]
+    [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetPreferences(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var preferences = await _userProfileService.GetUserPreferencesAsync(userId, cancellationToken);
+            
+            return Ok(preferences);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get user preferences by category
+    /// </summary>
+    /// <param name="category">Preference category</param>
+    /// <returns>User preferences for the specified category</returns>
+    [HttpGet("preferences/{category}")]
+    [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetPreferencesByCategory(string category, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var preferences = await _userProfileService.GetUserPreferencesByCategoryAsync(userId, category, cancellationToken);
+            
+            return Ok(preferences);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Create or update a preference
+    /// </summary>
+    /// <param name="request">Preference create/update request</param>
+    /// <returns>Created/updated preference</returns>
+    [HttpPost("preferences")]
+    [ProducesResponseType(typeof(PreferenceResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> CreateOrUpdatePreference([FromBody] CreateOrUpdatePreferenceRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var preference = await _userProfileService.CreateOrUpdatePreferenceAsync(userId, request, cancellationToken);
+            
+            _logger.LogInformation("Preference created/updated successfully for user {UserId}", userId);
+            
+            return Ok(preference);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating/updating preference for user");
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Update multiple preferences at once
+    /// </summary>
+    /// <param name="request">Preferences update request</param>
+    /// <returns>Updated preferences</returns>
+    [HttpPut("preferences")]
+    [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var preferences = await _userProfileService.UpdatePreferencesAsync(userId, request, cancellationToken);
+            
+            _logger.LogInformation("Multiple preferences updated successfully for user {UserId}", userId);
+            
+            return Ok(preferences);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating preferences for user");
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Delete a specific preference
+    /// </summary>
+    /// <param name="category">Preference category</param>
+    /// <param name="key">Preference key</param>
+    /// <returns>Deletion confirmation</returns>
+    [HttpDelete("preferences/{category}/{key}")]
+    [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> DeletePreference(string category, string key, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _userProfileService.DeletePreferenceAsync(userId, category, key, cancellationToken);
+            
+            _logger.LogInformation("Preference deleted successfully for user {UserId}", userId);
+            
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Clear all preferences
+    /// </summary>
+    /// <returns>Clearing confirmation</returns>
+    [HttpDelete("preferences")]
+    [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> ClearPreferences(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _userProfileService.ClearPreferencesAsync(userId, cancellationToken);
+            
+            _logger.LogInformation("All preferences cleared successfully for user {UserId}", userId);
+            
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region Utility Methods
+
+    private Guid GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                         ?? User.FindFirst("sub")?.Value
+                         ?? User.FindFirst("userId")?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            throw new UnauthorizedAccessException("User ID not found in token");
+        }
+
+        return userId;
+    }
+
+    #endregion
 }

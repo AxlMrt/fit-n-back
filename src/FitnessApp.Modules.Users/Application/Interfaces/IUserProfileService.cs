@@ -1,31 +1,36 @@
-using FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
-using FitnessApp.SharedKernel.DTOs.Responses;
+using FitnessApp.SharedKernel.DTOs.Users.Requests;
+using FitnessApp.SharedKernel.DTOs.Users.Responses;
 
 namespace FitnessApp.Modules.Users.Application.Interfaces;
 
 /// <summary>
-/// Interface for user profile service.
-/// Handles only profile-related operations, not authentication.
+/// Service interface for user profile operations.
 /// </summary>
 public interface IUserProfileService
 {
-    // Profile query operations
-    Task<UserProfileDto?> GetByUserIdAsync(Guid userId);
-    Task<UserProfileListDto?> GetListDtoByUserIdAsync(Guid userId);
+    // Profile Management
+    Task<UserProfileResponse?> GetUserProfileAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<UserProfileSummaryResponse?> GetUserProfileSummaryAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<UserProfileResponse> CreateUserProfileAsync(Guid userId, CreateUserProfileRequest request, CancellationToken cancellationToken = default);
+    Task<UserProfileResponse> UpdatePersonalInfoAsync(Guid userId, UpdatePersonalInfoRequest request, CancellationToken cancellationToken = default);
+    Task<UserProfileResponse> UpdatePhysicalMeasurementsAsync(Guid userId, UpdatePhysicalMeasurementsRequest request, CancellationToken cancellationToken = default);
+    Task<UserProfileResponse> UpdateFitnessProfileAsync(Guid userId, UpdateFitnessProfileRequest request, CancellationToken cancellationToken = default);
+    Task<ProfileOperationResponse> DeleteUserProfileAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    // Subscription Management
+    Task<SubscriptionResponse?> GetUserSubscriptionAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<SubscriptionResponse> UpdateSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request, CancellationToken cancellationToken = default);
+    Task<ProfileOperationResponse> CancelSubscriptionAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<SubscriptionResponse> RenewSubscriptionAsync(Guid userId, DateTime newEndDate, CancellationToken cancellationToken = default);
+
+    // Preferences Management
+    Task<UserPreferencesResponse> GetUserPreferencesAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<UserPreferencesResponse> GetUserPreferencesByCategoryAsync(Guid userId, string category, CancellationToken cancellationToken = default);
+    Task<PreferenceResponse> CreateOrUpdatePreferenceAsync(Guid userId, CreateOrUpdatePreferenceRequest request, CancellationToken cancellationToken = default);
+    Task<UserPreferencesResponse> UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request, CancellationToken cancellationToken = default);
+    Task<ProfileOperationResponse> DeletePreferenceAsync(Guid userId, string category, string key, CancellationToken cancellationToken = default);
+    Task<ProfileOperationResponse> ClearPreferencesAsync(Guid userId, CancellationToken cancellationToken = default);
     
-    // Profile command operations
-    Task<UserProfileDto> CreateProfileAsync(CreateUserProfileRequest request);
-    Task<UserProfileDto> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest request);
-    Task UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request);
-    
-    // Profile queries with pagination
-    Task<PagedResult<UserProfileDto>> GetProfilesAsync(UserProfileQueryRequest request);
-    Task<UserProfileStatsDto> GetProfileStatsAsync();
-    
-    // Validation operations
-    Task<bool> ProfileExistsAsync(Guid userId);
-    
-    // Business operations
-    Task<bool> HasCompletedProfileAsync(Guid userId);
-    Task<bool> CanAccessPremiumFeaturesAsync(Guid userId);
+    // Utility Methods
+    Task<bool> UserProfileExistsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

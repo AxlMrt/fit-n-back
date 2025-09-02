@@ -1,95 +1,109 @@
 using System.ComponentModel.DataAnnotations;
 using FitnessApp.SharedKernel.Enums;
 
-namespace FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
+namespace FitnessApp.SharedKernel.DTOs.Users.Requests;
 
 /// <summary>
-/// Request to create a new user profile after authentication registration.
-/// Contains only profile-related information, not authentication data.
+/// Request to create a new user profile after authentication.
 /// </summary>
-public record CreateUserProfileRequest(
+public sealed record CreateUserProfileRequest(
     [Required]
-    Guid UserId,
-
-    [Required]
-    [StringLength(100, MinimumLength = 1)]
+    [StringLength(50, MinimumLength = 2)]
     string FirstName,
+    
+    [Required]
+    [StringLength(50, MinimumLength = 2)]
+    string LastName,
+    
+    [Required]
+    DateTime DateOfBirth,
+    
+    [Required]
+    Gender Gender,
+    
+    [Required]
+    [Range(1, 250)]
+    int HeightCm,
+    
+    [Required]
+    [Range(1, 500)]
+    decimal WeightKg,
+    
+    [Required]
+    FitnessLevel FitnessLevel,
+    
+    [Required]
+    FitnessGoal PrimaryFitnessGoal
+);
 
+/// <summary>
+/// Request to update personal information in user profile.
+/// </summary>
+public sealed record UpdatePersonalInfoRequest(
+    [StringLength(50, MinimumLength = 2)]
+    string? FirstName,
+    
+    [StringLength(50, MinimumLength = 2)]
+    string? LastName,
+    
+    DateTime? DateOfBirth,
+    
+    Gender? Gender
+);
+
+/// <summary>
+/// Request to update physical measurements.
+/// </summary>
+public sealed record UpdatePhysicalMeasurementsRequest(
+    [Range(1, 250)]
+    int? HeightCm,
+    
+    [Range(1, 500)]
+    decimal? WeightKg
+);
+
+/// <summary>
+/// Request to update fitness profile information.
+/// </summary>
+public sealed record UpdateFitnessProfileRequest(
+    FitnessLevel? FitnessLevel,
+    FitnessGoal? PrimaryFitnessGoal
+);
+
+/// <summary>
+/// Request to create or update a user preference.
+/// </summary>
+public sealed record CreateOrUpdatePreferenceRequest(
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    string Category,
+    
     [Required]
     [StringLength(100, MinimumLength = 1)]
-    string LastName,
-
-    [DataType(DataType.Date)]
-    DateTime? DateOfBirth = null,
-
-    Gender? Gender = null,
-
-    [Range(50, 250, ErrorMessage = "Height must be between 50cm and 250cm")]
-    decimal? Height = null,
-
-    [Range(20, 300, ErrorMessage = "Weight must be between 20kg and 300kg")]
-    decimal? Weight = null,
-
-    FitnessLevel? FitnessLevel = null,
-
-    [StringLength(500)]
-    string? Bio = null,
-
-    SubscriptionLevel SubscriptionLevel = SubscriptionLevel.Free
+    string Key,
+    
+    [StringLength(1000)]
+    string? Value
 );
 
 /// <summary>
-/// Request to update an existing user profile.
+/// Request to update multiple preferences at once.
 /// </summary>
-public record UpdateUserProfileRequest(
-    [StringLength(100, MinimumLength = 1)]
-    string? FirstName = null,
-
-    [StringLength(100, MinimumLength = 1)]
-    string? LastName = null,
-
-    [DataType(DataType.Date)]
-    DateTime? DateOfBirth = null,
-
-    Gender? Gender = null,
-
-    [Range(50, 250, ErrorMessage = "Height must be between 50cm and 250cm")]
-    decimal? Height = null,
-
-    [Range(20, 300, ErrorMessage = "Weight must be between 20kg and 300kg")]
-    decimal? Weight = null,
-
-    FitnessLevel? FitnessLevel = null,
-
-    [StringLength(500)]
-    string? Bio = null
+public sealed record UpdatePreferencesRequest(
+    [Required]
+    IDictionary<string, IDictionary<string, string?>> Preferences
 );
 
 /// <summary>
-/// Request to update user preferences.
+/// Request to update user subscription.
 /// </summary>
-public record UpdatePreferencesRequest(
-    bool? NotificationsEnabled = null,
-    string? PreferredLanguage = null,
-    string? TimeZone = null,
-    bool? PublicProfile = null,
-    bool? ShowAgePublicly = null,
-    bool? ShowWeightProgressPublicly = null
-);
-
-/// <summary>
-/// Request for querying user profiles with filters and pagination.
-/// </summary>
-public record UserProfileQueryRequest(
-    string? SearchTerm = null,
-    FitnessLevel? FitnessLevel = null,
-    Gender? Gender = null,
-    int? MinAge = null,
-    int? MaxAge = null,
-    SubscriptionLevel? SubscriptionLevel = null,
-    bool? PublicProfilesOnly = true,
-    int Page = 1,
-    int PageSize = 20,
-    string? SortBy = "CreatedAt",
-    bool Descending = true
+public sealed record UpdateSubscriptionRequest(
+    [Required]
+    SubscriptionLevel Level,
+    
+    [Required]
+    DateTime StartDate,
+    
+    [Required]
+    DateTime EndDate
 );

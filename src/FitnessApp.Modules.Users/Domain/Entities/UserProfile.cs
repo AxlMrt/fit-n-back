@@ -1,13 +1,8 @@
 using FitnessApp.Modules.Users.Domain.ValueObjects;
-using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Entities;
 
-/// <summary>
-/// Refactored User entity focused solely on profile and business data.
-/// Authentication concerns moved to AuthUser in Authentication module.
-/// </summary>
 public class UserProfile
 {
     private readonly List<Preference> _preferences = new();
@@ -20,7 +15,6 @@ public class UserProfile
     public DateOfBirth? DateOfBirth { get; private set; }
     public Gender? Gender { get; private set; }
     public PhysicalMeasurements PhysicalMeasurements { get; private set; } = PhysicalMeasurements.Empty;
-    
     // Fitness Profile
     public FitnessLevel? FitnessLevel { get; private set; }
     public FitnessGoal? PrimaryFitnessGoal { get; private set; }
@@ -91,23 +85,25 @@ public class UserProfile
             throw new ArgumentException("Key cannot be empty", nameof(key));
 
         var existingPreference = _preferences.FirstOrDefault(p => 
-            p.Category.Equals(category, StringComparison.OrdinalIgnoreCase) && 
-            p.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            p.Category == category && p.Key == key);
 
         if (existingPreference != null)
         {
-            _preferences.Remove(existingPreference);
+            existingPreference.UpdateValue(value ?? string.Empty);
         }
-
-        _preferences.Add(new Preference(UserId, category, key, value));
+        else
+        {
+            var newPreference = new Preference(UserId, category, key, value ?? string.Empty);
+            _preferences.Add(newPreference);
+        }
+        
         SetUpdatedAt();
     }
 
     public void RemovePreference(string category, string key)
     {
         var preference = _preferences.FirstOrDefault(p => 
-            p.Category.Equals(category, StringComparison.OrdinalIgnoreCase) && 
-            p.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            p.Category == category && p.Key == key);
 
         if (preference != null)
         {
@@ -125,9 +121,7 @@ public class UserProfile
     public string? GetPreference(string category, string key)
     {
         return _preferences
-            .FirstOrDefault(p => 
-                p.Category.Equals(category, StringComparison.OrdinalIgnoreCase) && 
-                p.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(p => p.Category == category && p.Key == key)
             ?.Value;
     }
 
@@ -175,5 +169,11 @@ public class UserProfile
     private void SetUpdatedAt()
     {
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    // Public method to force update timestamp (used by repository layer)
+    public void ForceUpdateTimestamp()
+    {
+        SetUpdatedAt();
     }
 }

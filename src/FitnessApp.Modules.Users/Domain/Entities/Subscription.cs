@@ -19,19 +19,21 @@ public class Subscription
         Id = Guid.NewGuid();
         UserProfile = userProfile;
         Level = level;
-        StartDate = startDate;
-        EndDate = endDate;
+        
+        // Ensure dates are in UTC
+        StartDate = startDate.Kind == DateTimeKind.Utc ? startDate : DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+        EndDate = endDate.Kind == DateTimeKind.Utc ? endDate : DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
     }
 
     public void UpdateSubscription(SubscriptionLevel level, DateTime endDate)
     {
         Level = level;
-        EndDate = endDate;
+        EndDate = endDate.Kind == DateTimeKind.Utc ? endDate : DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
     }
 
     public void Renew(DateTime newEndDate)
     {
-        EndDate = newEndDate;
+        EndDate = newEndDate.Kind == DateTimeKind.Utc ? newEndDate : DateTime.SpecifyKind(newEndDate, DateTimeKind.Utc);
     }
 
     public void Cancel()

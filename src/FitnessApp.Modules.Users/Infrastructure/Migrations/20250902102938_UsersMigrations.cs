@@ -49,7 +49,6 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserProfileUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Value = table.Column<string>(type: "text", nullable: false),
@@ -66,13 +65,6 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                         principalTable: "UserProfiles",
                         principalColumn: "UserId",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Preferences_UserProfiles_UserProfileUserId",
-                        column: x => x.UserProfileUserId,
-                        principalSchema: "users",
-                        principalTable: "UserProfiles",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -81,12 +73,6 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                 table: "Preferences",
                 columns: new[] { "UserId", "Category", "Key" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Preferences_UserProfileUserId",
-                schema: "users",
-                table: "Preferences",
-                column: "UserProfileUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserProfiles_CreatedAt",

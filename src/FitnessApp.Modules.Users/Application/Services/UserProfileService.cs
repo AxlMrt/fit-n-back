@@ -3,215 +3,355 @@ using FitnessApp.Modules.Users.Application.Mapping;
 using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Domain.ValueObjects;
-using FitnessApp.SharedKernel.DTOs.Responses;
-using FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
-using FitnessApp.SharedKernel.Enums;
+using FitnessApp.SharedKernel.DTOs.Users.Requests;
+using FitnessApp.SharedKernel.DTOs.Users.Responses;
+using FitnessApp.SharedKernel.Interfaces;
+using FluentValidation;
 using Microsoft.Extensions.Logging;
 
 namespace FitnessApp.Modules.Users.Application.Services;
 
-/// <summary>
-/// Service for managing user profiles.
-/// Handles only profile-related operations, not authentication.
-/// </summary>
 public class UserProfileService : IUserProfileService
 {
-    private readonly IUserProfileRepository _repository;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IValidationService _validationService;
     private readonly ILogger<UserProfileService> _logger;
 
-    public UserProfileService(IUserProfileRepository repository, ILogger<UserProfileService> logger)
+    public UserProfileService(
+        IUserProfileRepository userProfileRepository,
+        IValidationService validationService,
+        ILogger<UserProfileService> logger)
     {
-        _repository = repository;
-        _logger = logger;
+        _userProfileRepository = userProfileRepository ?? throw new ArgumentNullException(nameof(userProfileRepository));
+        _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<UserProfileDto?> GetByUserIdAsync(Guid userId)
+    public async Task<UserProfileResponse?> GetUserProfileAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var profile = await _repository.GetByUserIdAsync(userId);
-        return profile?.MapToDto();
+        _logger.LogInformation("Getting user profile for user {UserId}", userId);
+
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        
+        return profile?.ToResponse();
     }
 
-    public async Task<UserProfileListDto?> GetListDtoByUserIdAsync(Guid userId)
+    public async Task<UserProfileSummaryResponse?> GetUserProfileSummaryAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var profile = await _repository.GetByUserIdAsync(userId);
-        return profile?.MapToListDto();
+        _logger.LogInformation("Getting user profile summary for user {UserId}", userId);
+
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        
+        return profile?.ToSummaryResponse();
     }
 
-    public async Task<UserProfileDto> CreateProfileAsync(CreateUserProfileRequest request)
+    public async Task<UserProfileResponse> CreateUserProfileAsync(Guid userId, CreateUserProfileRequest request, CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("Creating user profile for user {UserId}", userId);
+
+        // Validate request
+        await _validationService.ValidateAsync(request);
+
         // Check if profile already exists
-        if (await _repository.GetByUserIdAsync(request.UserId) != null)
+        var existingProfile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (existingProfile != null)
         {
-            throw new InvalidOperationException($"Profile already exists for user {request.UserId}");
+            throw new InvalidOperationException("User profile already exists");
         }
 
-        var profile = new UserProfile(request.UserId);
+        // Create profile
+        var profile = new UserProfile(userId);
         
-        // Update profile information using existing methods
-        if (!string.IsNullOrEmpty(request.FirstName) || !string.IsNullOrEmpty(request.LastName))
-        {
-            var fullName = FullName.Create(request.FirstName, request.LastName);
-            var dateOfBirth = request.DateOfBirth.HasValue ? DateOfBirth.Create(request.DateOfBirth.Value) : null;
-            profile.UpdatePersonalInfo(fullName, dateOfBirth, request.Gender);
-        }
+        // Set personal information
+        var fullName = UserProfileMappingExtensions.ToFullName(request.FirstName, request.LastName);
+        var dateOfBirth = DateOfBirth.Create(request.DateOfBirth);
+        profile.UpdatePersonalInfo(fullName, dateOfBirth, request.Gender);
 
-        if (request.Height.HasValue || request.Weight.HasValue)
-        {
-            var measurements = PhysicalMeasurements.Create(request.Height, request.Weight);
-            profile.UpdatePhysicalMeasurements(measurements);
-        }
+        // Set physical measurements
+        var measurements = UserProfileMappingExtensions.ToPhysicalMeasurements(request.HeightCm, request.WeightKg);
+        profile.UpdatePhysicalMeasurements(measurements);
 
-        if (request.FitnessLevel.HasValue)
-        {
-            profile.UpdateFitnessProfile(request.FitnessLevel, null);
-        }
+        // Set fitness profile
+        profile.UpdateFitnessProfile(request.FitnessLevel, request.PrimaryFitnessGoal);
 
-        await _repository.AddAsync(profile);
+        // Save profile
+        await _userProfileRepository.AddAsync(profile, cancellationToken);
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created profile for user {UserId}", request.UserId);
-        return profile.MapToDto();
+        _logger.LogInformation("User profile created successfully for user {UserId}", userId);
+        
+        return profile.ToResponse();
     }
 
-    public async Task<UserProfileDto> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest request)
+    public async Task<UserProfileResponse> UpdatePersonalInfoAsync(Guid userId, UpdatePersonalInfoRequest request, CancellationToken cancellationToken = default)
     {
-        var profile = await _repository.GetByUserIdAsync(userId);
+        _logger.LogInformation("Updating personal info for user {UserId}", userId);
+
+        // Validate request
+        await _validationService.ValidateAsync(request);
+
+        // Get existing profile
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        // Update personal information
+        var fullName = request.FirstName != null || request.LastName != null
+            ? UserProfileMappingExtensions.ToFullName(request.FirstName, request.LastName)
+            : null;
+        
+        var dateOfBirth = request.DateOfBirth.HasValue
+            ? DateOfBirth.Create(request.DateOfBirth.Value)
+            : null;
+
+        profile.UpdatePersonalInfo(fullName, dateOfBirth, request.Gender);
+
+        // Save changes
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Personal info updated successfully for user {UserId}", userId);
+        
+        return profile.ToResponse();
+    }
+
+    public async Task<UserProfileResponse> UpdatePhysicalMeasurementsAsync(Guid userId, UpdatePhysicalMeasurementsRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Updating physical measurements for user {UserId}", userId);
+
+        // Validate request
+        await _validationService.ValidateAsync(request);
+
+        // Get existing profile
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        // Update measurements
+        var measurements = UserProfileMappingExtensions.ToPhysicalMeasurements(request.HeightCm, request.WeightKg);
+        profile.UpdatePhysicalMeasurements(measurements);
+
+        // Save changes
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Physical measurements updated successfully for user {UserId}", userId);
+        
+        return profile.ToResponse();
+    }
+
+    public async Task<UserProfileResponse> UpdateFitnessProfileAsync(Guid userId, UpdateFitnessProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Updating fitness profile for user {UserId}", userId);
+
+        // Validate request
+        await _validationService.ValidateAsync(request);
+
+        // Get existing profile
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        // Update fitness profile
+        profile.UpdateFitnessProfile(request.FitnessLevel, request.PrimaryFitnessGoal);
+
+        // Save changes
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Fitness profile updated successfully for user {UserId}", userId);
+        
+        return profile.ToResponse();
+    }
+
+    public async Task<ProfileOperationResponse> DeleteUserProfileAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Deleting user profile for user {UserId}", userId);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        _userProfileRepository.Remove(profile);
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("User profile deleted successfully for user {UserId}", userId);
+        
+        return new ProfileOperationResponse("Profile deleted successfully");
+    }
+
+    public async Task<SubscriptionResponse?> GetUserSubscriptionAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting subscription for user {UserId}", userId);
+
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        
+        return profile?.Subscription?.ToResponse();
+    }
+
+    public async Task<SubscriptionResponse> UpdateSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Updating subscription for user {UserId}", userId);
+
+        // Validate request
+        await _validationService.ValidateAsync(request);
+
+        // Get existing profile
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        // Create or update subscription
+        var subscription = new Subscription(profile, request.Level, request.StartDate, request.EndDate);
+        profile.UpdateSubscription(subscription);
+
+        // Save changes
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Subscription updated successfully for user {UserId}", userId);
+        
+        return subscription.ToResponse();
+    }
+
+    public async Task<ProfileOperationResponse> CancelSubscriptionAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Cancelling subscription for user {UserId}", userId);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        if (profile.Subscription == null)
+        {
+            throw new InvalidOperationException("No active subscription found");
+        }
+
+        profile.Subscription.Cancel();
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Subscription cancelled successfully for user {UserId}", userId);
+        
+        return new ProfileOperationResponse("Subscription cancelled successfully");
+    }
+
+    public async Task<SubscriptionResponse> RenewSubscriptionAsync(Guid userId, DateTime newEndDate, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Renewing subscription for user {UserId}", userId);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        if (profile.Subscription == null)
+        {
+            throw new InvalidOperationException("No subscription found to renew");
+        }
+
+        profile.Subscription.Renew(newEndDate);
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Subscription renewed successfully for user {UserId}", userId);
+        
+        return profile.Subscription.ToResponse();
+    }
+
+    public async Task<UserPreferencesResponse> GetUserPreferencesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting preferences for user {UserId}", userId);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+        
+        return profile.ToPreferencesResponse();
+    }
+
+    public async Task<UserPreferencesResponse> GetUserPreferencesByCategoryAsync(Guid userId, string category, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting preferences for user {UserId} in category {Category}", userId, category);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+        
+        return profile.ToPreferencesByCategoryResponse(category);
+    }
+
+    public async Task<PreferenceResponse> CreateOrUpdatePreferenceAsync(Guid userId, CreateOrUpdatePreferenceRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Creating/updating preference for user {UserId}", userId);
+
+        // Validate request
+        await _validationService.ValidateAsync(request);
+
+        // Use repository method to handle preference update with proper EF tracking
+        var updatedProfile = await _userProfileRepository.UpdatePreferenceAsync(
+            userId, 
+            request.Category, 
+            request.Key, 
+            request.Value ?? string.Empty, 
+            cancellationToken);
+        
+        // Find the created/updated preference
+        var preference = updatedProfile.Preferences
+            .FirstOrDefault(p => p.Category == request.Category && p.Key == request.Key);
+
+        if (preference == null)
+        {
+            throw new InvalidOperationException($"Failed to create/update preference {request.Category}.{request.Key}");
+        }
+
+        _logger.LogInformation("Preference created/updated successfully for user {UserId}", userId);
+        
+        return preference.ToResponse();
+    }
+
+    public async Task<UserPreferencesResponse> UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Updating multiple preferences for user {UserId}", userId);
+
+        // Get existing profile
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        // Update preferences
+        foreach (var categoryGroup in request.Preferences)
+        {
+            var category = categoryGroup.Key;
+            foreach (var preference in categoryGroup.Value)
+            {
+                profile.AddOrUpdatePreference(category, preference.Key, preference.Value ?? string.Empty);
+            }
+        }
+
+        // Save changes
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Multiple preferences updated successfully for user {UserId}", userId);
+        
+        return profile.ToPreferencesResponse();
+    }
+
+    public async Task<ProfileOperationResponse> DeletePreferenceAsync(Guid userId, string category, string key, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Deleting preference for user {UserId} in category {Category} with key {Key}", userId, category, key);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        profile.RemovePreference(category, key);
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Preference deleted successfully for user {UserId}", userId);
+        
+        return new ProfileOperationResponse("Preference deleted successfully");
+    }
+
+    public async Task<ProfileOperationResponse> ClearPreferencesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Clearing all preferences for user {UserId}", userId);
+
+        var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
+
+        profile.ClearPreferences();
+        await _userProfileRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("All preferences cleared successfully for user {UserId}", userId);
+        
+        return new ProfileOperationResponse("All preferences cleared successfully");
+    }
+
+    public async Task<bool> UserProfileExistsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _userProfileRepository.ExistsAsync(userId, cancellationToken);
+    }
+
+    private async Task<UserProfile> GetProfileOrThrowAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        
         if (profile == null)
         {
-            throw new InvalidOperationException($"Profile not found for user {userId}");
+            throw new InvalidOperationException($"User profile not found for user {userId}");
         }
 
-        // Update personal information if provided
-        if (request.FirstName != null || request.LastName != null || request.DateOfBirth.HasValue || request.Gender.HasValue)
-        {
-            var firstName = request.FirstName ?? profile.Name?.FirstName;
-            var lastName = request.LastName ?? profile.Name?.LastName;
-            var fullName = !string.IsNullOrEmpty(firstName) || !string.IsNullOrEmpty(lastName) 
-                ? FullName.Create(firstName, lastName) 
-                : profile.Name;
-            
-            var dateOfBirth = request.DateOfBirth.HasValue 
-                ? DateOfBirth.Create(request.DateOfBirth.Value)
-                : profile.DateOfBirth;
-            
-            var gender = request.Gender ?? profile.Gender;
-            
-            profile.UpdatePersonalInfo(fullName, dateOfBirth, gender);
-        }
-
-        // Update physical measurements if provided
-        if (request.Height.HasValue || request.Weight.HasValue)
-        {
-            var currentHeight = profile.PhysicalMeasurements?.HeightCm;
-            var currentWeight = profile.PhysicalMeasurements?.WeightKg;
-            
-            var height = request.Height ?? currentHeight;
-            var weight = request.Weight ?? currentWeight;
-            
-            var measurements = PhysicalMeasurements.Create(height, weight);
-            profile.UpdatePhysicalMeasurements(measurements);
-        }
-
-        // Update fitness profile if provided
-        if (request.FitnessLevel.HasValue)
-        {
-            profile.UpdateFitnessProfile(request.FitnessLevel, profile.PrimaryFitnessGoal);
-        }
-
-        await _repository.UpdateAsync(profile);
-
-        _logger.LogInformation("Updated profile for user {UserId}", userId);
-        return profile.MapToDto();
-    }
-
-    public async Task UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request)
-    {
-        var profile = await _repository.GetByUserIdAsync(userId);
-        if (profile == null)
-        {
-            throw new InvalidOperationException($"Profile not found for user {userId}");
-        }
-
-        // Update preferences based on available properties
-        if (request.NotificationsEnabled.HasValue)
-        {
-            profile.AddOrUpdatePreference("Notifications", "Enabled", request.NotificationsEnabled.Value.ToString());
-        }
-
-        if (!string.IsNullOrEmpty(request.PreferredLanguage))
-        {
-            profile.AddOrUpdatePreference("Localization", "Language", request.PreferredLanguage);
-        }
-
-        if (!string.IsNullOrEmpty(request.TimeZone))
-        {
-            profile.AddOrUpdatePreference("Localization", "TimeZone", request.TimeZone);
-        }
-
-        if (request.PublicProfile.HasValue)
-        {
-            profile.AddOrUpdatePreference("Privacy", "PublicProfile", request.PublicProfile.Value.ToString());
-        }
-
-        if (request.ShowAgePublicly.HasValue)
-        {
-            profile.AddOrUpdatePreference("Privacy", "ShowAgePublicly", request.ShowAgePublicly.Value.ToString());
-        }
-
-        if (request.ShowWeightProgressPublicly.HasValue)
-        {
-            profile.AddOrUpdatePreference("Privacy", "ShowWeightProgressPublicly", request.ShowWeightProgressPublicly.Value.ToString());
-        }
-
-        await _repository.UpdateAsync(profile);
-        _logger.LogInformation("Updated preferences for user {UserId}", userId);
-    }
-
-    public async Task<PagedResult<UserProfileDto>> GetProfilesAsync(UserProfileQueryRequest request)
-    {
-        // Simplified implementation - returning empty result for now
-        await Task.CompletedTask; // Make method truly async
-        var profileDtos = new List<UserProfileDto>();
-        
-        return new PagedResult<UserProfileDto>(
-            profileDtos,
-            0,
-            request.Page,
-            request.PageSize,
-            0
-        );
-    }
-
-    public async Task<UserProfileStatsDto> GetProfileStatsAsync()
-    {
-        // Simplified implementation - returning empty stats for now
-        await Task.CompletedTask; // Make method truly async
-        
-        return new UserProfileStatsDto(
-            0, // TotalProfiles
-            0, // ActiveProfiles
-            0, // FreeUsers
-            0, // PremiumUsers
-            0, // CoachUsers
-            new Dictionary<FitnessLevel, int>(), // FitnessLevelDistribution
-            new Dictionary<Gender, int>(), // GenderDistribution
-            new Dictionary<SubscriptionLevel, int>() // SubscriptionDistribution
-        );
-    }
-
-    public async Task<bool> ProfileExistsAsync(Guid userId)
-    {
-        return await _repository.GetByUserIdAsync(userId) != null;
-    }
-
-    public async Task<bool> HasCompletedProfileAsync(Guid userId)
-    {
-        var profile = await _repository.GetByUserIdAsync(userId);
-        return profile?.HasCompletedProfile() ?? false;
-    }
-
-    public async Task<bool> CanAccessPremiumFeaturesAsync(Guid userId)
-    {
-        var profile = await _repository.GetByUserIdAsync(userId);
-        return profile?.CanAccessPremiumFeatures() ?? false;
+        return profile;
     }
 }

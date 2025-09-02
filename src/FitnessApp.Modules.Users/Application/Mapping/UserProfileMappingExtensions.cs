@@ -1,63 +1,64 @@
 using FitnessApp.Modules.Users.Domain.Entities;
-using FitnessApp.SharedKernel.DTOs.Responses;
-using FitnessApp.SharedKernel.DTOs.UserProfile.Responses;
-using FitnessApp.SharedKernel.Enums;
+using FitnessApp.Modules.Users.Domain.ValueObjects;
+using FitnessApp.SharedKernel.DTOs.Users.Responses;
 
 namespace FitnessApp.Modules.Users.Application.Mapping;
 
-/// <summary>
-/// Extension methods for mapping between UserProfile domain entities and DTOs.
-/// </summary>
 public static class UserProfileMappingExtensions
 {
-    public static UserProfileDto MapToDto(this UserProfile userProfile)
+    public static UserProfileResponse ToResponse(this UserProfile profile)
     {
-        return new UserProfileDto(
-            userProfile.UserId,
-            userProfile.UserId,
-            userProfile.Name?.FirstName ?? "",
-            userProfile.Name?.LastName ?? "",
-            userProfile.Name?.DisplayName ?? "",
-            userProfile.DateOfBirth?.Value,
-            userProfile.GetAge(),
-            userProfile.Gender,
-            userProfile.PhysicalMeasurements?.HeightCm, // Height in cm
-            userProfile.PhysicalMeasurements?.WeightKg, // Weight in kg
-            userProfile.FitnessLevel,
-            null, // Bio - not available in current entity
-            userProfile.Subscription?.Level ?? SubscriptionLevel.Free,
-            userProfile.HasCompletedProfile(),
-            null, // Phone - not available in current entity
-            null, // Location - not available in current entity
-            false, // ShowFitnessProgressPublicly - default value
-            false, // ShowWeightProgressPublicly - default value
-            userProfile.CanAccessPremiumFeatures(),
-            userProfile.CreatedAt,
-            userProfile.UpdatedAt,
-            userProfile.Subscription?.IsActive ?? false
+        return new UserProfileResponse(
+            profile.UserId,
+            profile.Name.FirstName ?? string.Empty,
+            profile.Name.LastName ?? string.Empty,
+            profile.DateOfBirth?.Value,
+            profile.GetAge(),
+            profile.Gender,
+            (int?)profile.PhysicalMeasurements.HeightCm,
+            profile.PhysicalMeasurements.WeightKg,
+            profile.GetBMI(),
+            profile.FitnessLevel,
+            profile.PrimaryFitnessGoal,
+            profile.Subscription?.ToResponse(),
+            profile.HasCompletedProfile(),
+            profile.CanAccessPremiumFeatures(),
+            profile.CreatedAt,
+            profile.UpdatedAt
         );
     }
 
-    public static UserProfileListDto MapToListDto(this UserProfile userProfile)
+    public static UserProfileSummaryResponse ToSummaryResponse(this UserProfile profile)
     {
-        return new UserProfileListDto(
-            userProfile.UserId,
-            userProfile.UserId,
-            userProfile.Name?.FirstName ?? "",
-            userProfile.Name?.LastName ?? "",
-            userProfile.Name?.DisplayName ?? "Anonymous",
-            userProfile.GetAge(),
-            userProfile.Gender,
-            userProfile.FitnessLevel,
-            userProfile.Subscription?.Level ?? SubscriptionLevel.Free,
-            null, // Location - not available in current entity
-            userProfile.CreatedAt
+        var fullName = $"{profile.Name.FirstName} {profile.Name.LastName}".Trim();
+        if (string.IsNullOrEmpty(fullName))
+            fullName = "User";
+
+        return new UserProfileSummaryResponse(
+            profile.UserId,
+            fullName,
+            profile.GetAge(),
+            profile.Gender,
+            profile.FitnessLevel,
+            profile.Subscription?.Level,
+            profile.HasCompletedProfile()
         );
     }
 
-    public static PreferenceDto MapToDto(this Preference preference)
+    public static SubscriptionResponse ToResponse(this Subscription subscription)
     {
-        return new PreferenceDto(
+        return new SubscriptionResponse(
+            subscription.Id,
+            subscription.Level,
+            subscription.StartDate,
+            subscription.EndDate,
+            subscription.IsActive
+        );
+    }
+
+    public static PreferenceResponse ToResponse(this Preference preference)
+    {
+        return new PreferenceResponse(
             preference.Id,
             preference.Category,
             preference.Key,
@@ -67,14 +68,54 @@ public static class UserProfileMappingExtensions
         );
     }
 
-    public static SubscriptionDto MapToDto(this Subscription subscription)
+    public static UserPreferencesResponse ToPreferencesResponse(this UserProfile profile)
     {
-        return new SubscriptionDto(
-            subscription.Id,
-            subscription.Level,
-            subscription.StartDate,
-            subscription.EndDate,
-            subscription.IsActive
+        var groupedPreferences = profile.Preferences
+            .GroupBy(p => p.Category)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(p => p.Key, p => (string?)p.Value) as IDictionary<string, string?>
+            );
+
+        return new UserPreferencesResponse(
+            profile.UserId,
+            groupedPreferences
         );
+    }
+
+    public static UserPreferencesResponse ToPreferencesByCategoryResponse(this UserProfile profile, string category)
+    {
+        var categoryPreferences = profile.Preferences
+            .Where(p => p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(p => p.Key, p => (string?)p.Value);
+
+        var result = new Dictionary<string, IDictionary<string, string?>>
+        {
+            { category, categoryPreferences }
+        };
+
+        return new UserPreferencesResponse(
+            profile.UserId,
+            result
+        );
+    }
+
+    public static FullName ToFullName(string? firstName, string? lastName)
+    {
+        if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
+            return FullName.Empty;
+
+        return FullName.Create(
+            firstName?.Trim(),
+            lastName?.Trim()
+        );
+    }
+
+    public static PhysicalMeasurements ToPhysicalMeasurements(int? heightCm, decimal? weightKg)
+    {
+        if (heightCm == null && weightKg == null)
+            return PhysicalMeasurements.Empty;
+
+        return PhysicalMeasurements.Create((decimal?)heightCm, weightKg);
     }
 }

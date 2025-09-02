@@ -48,16 +48,11 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserProfileUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserProfileUserId");
 
                     b.HasIndex("UserId", "Category", "Key")
                         .IsUnique();
@@ -100,14 +95,6 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("FitnessApp.Modules.Users.Domain.Entities.UserProfile", "UserProfile")
-                        .WithMany()
-                        .HasForeignKey("UserProfileUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserProfile");
                 });
 
             modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.UserProfile", b =>

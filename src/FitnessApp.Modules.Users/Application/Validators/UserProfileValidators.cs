@@ -1,177 +1,170 @@
 using FluentValidation;
-using FitnessApp.SharedKernel.DTOs.UserProfile.Requests;
-using FitnessApp.SharedKernel.Enums;
+using FitnessApp.SharedKernel.DTOs.Users.Requests;
 
 namespace FitnessApp.Modules.Users.Application.Validators;
 
-/// <summary>
-/// Validator for CreateUserProfileRequest.
-/// </summary>
 public class CreateUserProfileRequestValidator : AbstractValidator<CreateUserProfileRequest>
 {
     public CreateUserProfileRequestValidator()
     {
-        RuleFor(x => x.UserId)
-            .NotEmpty()
-            .WithMessage("UserId is required");
-
         RuleFor(x => x.FirstName)
-            .NotEmpty()
-            .Length(1, 100)
-            .WithMessage("FirstName must be between 1 and 100 characters");
+            .NotEmpty().WithMessage("First name is required")
+            .Length(2, 50).WithMessage("First name must be between 2 and 50 characters")
+            .Matches("^[a-zA-ZÀ-ÿ\\s'-]+$").WithMessage("First name can only contain letters, spaces, hyphens, and apostrophes");
 
         RuleFor(x => x.LastName)
-            .NotEmpty()
-            .Length(1, 100)
-            .WithMessage("LastName must be between 1 and 100 characters");
+            .NotEmpty().WithMessage("Last name is required")
+            .Length(2, 50).WithMessage("Last name must be between 2 and 50 characters")
+            .Matches("^[a-zA-ZÀ-ÿ\\s'-]+$").WithMessage("Last name can only contain letters, spaces, hyphens, and apostrophes");
 
         RuleFor(x => x.DateOfBirth)
-            .Must(BeValidAge)
-            .When(x => x.DateOfBirth.HasValue)
-            .WithMessage("Age must be between 13 and 120 years");
+            .NotEmpty().WithMessage("Date of birth is required")
+            .Must(BeAtLeast13YearsOld).WithMessage("User must be at least 13 years old")
+            .Must(BeReasonableAge).WithMessage("Date of birth must be within a reasonable range");
 
-        RuleFor(x => x.Height)
-            .InclusiveBetween(50m, 250m)
-            .When(x => x.Height.HasValue)
-            .WithMessage("Height must be between 50cm and 250cm");
+        RuleFor(x => x.Gender)
+            .IsInEnum().WithMessage("Invalid gender value");
 
-        RuleFor(x => x.Weight)
-            .InclusiveBetween(20m, 300m)
-            .When(x => x.Weight.HasValue)
-            .WithMessage("Weight must be between 20kg and 300kg");
+        RuleFor(x => x.HeightCm)
+            .InclusiveBetween(50, 250).WithMessage("Height must be between 50 and 250 cm");
 
-        RuleFor(x => x.Bio)
-            .MaximumLength(500)
-            .When(x => !string.IsNullOrEmpty(x.Bio))
-            .WithMessage("Bio cannot exceed 500 characters");
+        RuleFor(x => x.WeightKg)
+            .InclusiveBetween(10, 500).WithMessage("Weight must be between 10 and 500 kg");
+
+        RuleFor(x => x.FitnessLevel)
+            .IsInEnum().WithMessage("Invalid fitness level");
+
+        RuleFor(x => x.PrimaryFitnessGoal)
+            .IsInEnum().WithMessage("Invalid fitness goal");
     }
 
-    private bool BeValidAge(DateTime? dateOfBirth)
+    private static bool BeAtLeast13YearsOld(DateTime dateOfBirth)
+    {
+        var age = DateTime.Today.Year - dateOfBirth.Year;
+        if (dateOfBirth.Date > DateTime.Today.AddYears(-age))
+            age--;
+        return age >= 13;
+    }
+
+    private static bool BeReasonableAge(DateTime dateOfBirth)
+    {
+        var age = DateTime.Today.Year - dateOfBirth.Year;
+        if (dateOfBirth.Date > DateTime.Today.AddYears(-age))
+            age--;
+        return age <= 120 && dateOfBirth <= DateTime.Today;
+    }
+}
+
+public class UpdatePersonalInfoRequestValidator : AbstractValidator<UpdatePersonalInfoRequest>
+{
+    public UpdatePersonalInfoRequestValidator()
+    {
+        RuleFor(x => x.FirstName)
+            .Length(2, 50).WithMessage("First name must be between 2 and 50 characters")
+            .Matches("^[a-zA-ZÀ-ÿ\\s'-]+$").WithMessage("First name can only contain letters, spaces, hyphens, and apostrophes")
+            .When(x => !string.IsNullOrEmpty(x.FirstName));
+
+        RuleFor(x => x.LastName)
+            .Length(2, 50).WithMessage("Last name must be between 2 and 50 characters")
+            .Matches("^[a-zA-ZÀ-ÿ\\s'-]+$").WithMessage("Last name can only contain letters, spaces, hyphens, and apostrophes")
+            .When(x => !string.IsNullOrEmpty(x.LastName));
+
+        RuleFor(x => x.DateOfBirth)
+            .Must(BeAtLeast13YearsOld).WithMessage("User must be at least 13 years old")
+            .Must(BeReasonableAge).WithMessage("Date of birth must be within a reasonable range")
+            .When(x => x.DateOfBirth.HasValue);
+
+        RuleFor(x => x.Gender)
+            .IsInEnum().WithMessage("Invalid gender value")
+            .When(x => x.Gender.HasValue);
+    }
+
+    private static bool BeAtLeast13YearsOld(DateTime? dateOfBirth)
     {
         if (!dateOfBirth.HasValue) return true;
-        
         var age = DateTime.Today.Year - dateOfBirth.Value.Year;
         if (dateOfBirth.Value.Date > DateTime.Today.AddYears(-age))
             age--;
-            
-        return age >= 13 && age <= 120;
-    }
-}
-
-/// <summary>
-/// Validator for UpdateUserProfileRequest.
-/// </summary>
-public class UpdateUserProfileRequestValidator : AbstractValidator<UpdateUserProfileRequest>
-{
-    public UpdateUserProfileRequestValidator()
-    {
-        RuleFor(x => x.FirstName)
-            .Length(1, 100)
-            .When(x => !string.IsNullOrEmpty(x.FirstName))
-            .WithMessage("FirstName must be between 1 and 100 characters");
-
-        RuleFor(x => x.LastName)
-            .Length(1, 100)
-            .When(x => !string.IsNullOrEmpty(x.LastName))
-            .WithMessage("LastName must be between 1 and 100 characters");
-
-        RuleFor(x => x.DateOfBirth)
-            .Must(BeValidAge)
-            .When(x => x.DateOfBirth.HasValue)
-            .WithMessage("Age must be between 13 and 120 years");
-
-        RuleFor(x => x.Height)
-            .InclusiveBetween(50m, 250m)
-            .When(x => x.Height.HasValue)
-            .WithMessage("Height must be between 50cm and 250cm");
-
-        RuleFor(x => x.Weight)
-            .InclusiveBetween(20m, 300m)
-            .When(x => x.Weight.HasValue)
-            .WithMessage("Weight must be between 20kg and 300kg");
-
-        RuleFor(x => x.Bio)
-            .MaximumLength(500)
-            .When(x => x.Bio != null)
-            .WithMessage("Bio cannot exceed 500 characters");
+        return age >= 13;
     }
 
-    private bool BeValidAge(DateTime? dateOfBirth)
+    private static bool BeReasonableAge(DateTime? dateOfBirth)
     {
         if (!dateOfBirth.HasValue) return true;
-        
         var age = DateTime.Today.Year - dateOfBirth.Value.Year;
         if (dateOfBirth.Value.Date > DateTime.Today.AddYears(-age))
             age--;
-            
-        return age >= 13 && age <= 120;
+        return age <= 120 && dateOfBirth.Value <= DateTime.Today;
     }
 }
 
-/// <summary>
-/// Validator for UpdatePreferencesRequest.
-/// </summary>
-public class UpdatePreferencesRequestValidator : AbstractValidator<UpdatePreferencesRequest>
+public class UpdatePhysicalMeasurementsRequestValidator : AbstractValidator<UpdatePhysicalMeasurementsRequest>
 {
-    public UpdatePreferencesRequestValidator()
+    public UpdatePhysicalMeasurementsRequestValidator()
     {
-        RuleFor(x => x.PreferredLanguage)
-            .Length(2, 10)
-            .When(x => !string.IsNullOrEmpty(x.PreferredLanguage))
-            .WithMessage("PreferredLanguage must be between 2 and 10 characters");
+        RuleFor(x => x.HeightCm)
+            .InclusiveBetween(50, 250).WithMessage("Height must be between 50 and 250 cm")
+            .When(x => x.HeightCm.HasValue);
 
-        RuleFor(x => x.TimeZone)
-            .MaximumLength(50)
-            .When(x => !string.IsNullOrEmpty(x.TimeZone))
-            .WithMessage("TimeZone cannot exceed 50 characters");
-    }
-}
-
-/// <summary>
-/// Validator for UserProfileQueryRequest.
-/// </summary>
-public class UserProfileQueryRequestValidator : AbstractValidator<UserProfileQueryRequest>
-{
-    public UserProfileQueryRequestValidator()
-    {
-        RuleFor(x => x.SearchTerm)
-            .MaximumLength(100)
-            .When(x => !string.IsNullOrEmpty(x.SearchTerm))
-            .WithMessage("SearchTerm cannot exceed 100 characters");
-
-        RuleFor(x => x.MinAge)
-            .InclusiveBetween(13, 120)
-            .When(x => x.MinAge.HasValue)
-            .WithMessage("MinAge must be between 13 and 120");
-
-        RuleFor(x => x.MaxAge)
-            .InclusiveBetween(13, 120)
-            .When(x => x.MaxAge.HasValue)
-            .WithMessage("MaxAge must be between 13 and 120");
+        RuleFor(x => x.WeightKg)
+            .InclusiveBetween(10, 500).WithMessage("Weight must be between 10 and 500 kg")
+            .When(x => x.WeightKg.HasValue);
 
         RuleFor(x => x)
-            .Must(x => !x.MinAge.HasValue || !x.MaxAge.HasValue || x.MinAge <= x.MaxAge)
-            .WithMessage("MinAge must be less than or equal to MaxAge");
-
-        RuleFor(x => x.Page)
-            .GreaterThan(0)
-            .WithMessage("Page must be greater than 0");
-
-        RuleFor(x => x.PageSize)
-            .InclusiveBetween(1, 100)
-            .WithMessage("PageSize must be between 1 and 100");
-
-        RuleFor(x => x.SortBy)
-            .Must(BeValidSortField)
-            .When(x => !string.IsNullOrEmpty(x.SortBy))
-            .WithMessage("Invalid sort field");
+            .Must(x => x.HeightCm.HasValue || x.WeightKg.HasValue)
+            .WithMessage("At least one measurement must be provided");
     }
+}
 
-    private bool BeValidSortField(string? sortBy)
+public class UpdateFitnessProfileRequestValidator : AbstractValidator<UpdateFitnessProfileRequest>
+{
+    public UpdateFitnessProfileRequestValidator()
     {
-        if (string.IsNullOrEmpty(sortBy)) return true;
-        
-        var validFields = new[] { "name", "createdat", "age", "fitnesslevel" };
-        return validFields.Contains(sortBy.ToLower());
+        RuleFor(x => x.FitnessLevel)
+            .IsInEnum().WithMessage("Invalid fitness level")
+            .When(x => x.FitnessLevel.HasValue);
+
+        RuleFor(x => x.PrimaryFitnessGoal)
+            .IsInEnum().WithMessage("Invalid fitness goal")
+            .When(x => x.PrimaryFitnessGoal.HasValue);
+
+        RuleFor(x => x)
+            .Must(x => x.FitnessLevel.HasValue || x.PrimaryFitnessGoal.HasValue)
+            .WithMessage("At least one fitness profile field must be provided");
+    }
+}
+
+public class CreateOrUpdatePreferenceRequestValidator : AbstractValidator<CreateOrUpdatePreferenceRequest>
+{
+    public CreateOrUpdatePreferenceRequestValidator()
+    {
+        RuleFor(x => x.Category)
+            .NotEmpty().WithMessage("Category is required")
+            .Length(1, 50).WithMessage("Category must be between 1 and 50 characters")
+            .Matches("^[a-zA-Z0-9_-]+$").WithMessage("Category can only contain letters, numbers, underscores, and hyphens");
+
+        RuleFor(x => x.Key)
+            .NotEmpty().WithMessage("Key is required")
+            .Length(1, 100).WithMessage("Key must be between 1 and 100 characters")
+            .Matches("^[a-zA-Z0-9_.-]+$").WithMessage("Key can only contain letters, numbers, underscores, dots, and hyphens");
+
+        RuleFor(x => x.Value)
+            .MaximumLength(1000).WithMessage("Value cannot exceed 1000 characters");
+    }
+}
+
+public class UpdateSubscriptionRequestValidator : AbstractValidator<UpdateSubscriptionRequest>
+{
+    public UpdateSubscriptionRequestValidator()
+    {
+        RuleFor(x => x.Level)
+            .IsInEnum().WithMessage("Invalid subscription level");
+
+        RuleFor(x => x.StartDate)
+            .NotEmpty().WithMessage("Start date is required");
+
+        RuleFor(x => x.EndDate)
+            .NotEmpty().WithMessage("End date is required")
+            .GreaterThan(x => x.StartDate).WithMessage("End date must be after start date");
     }
 }

@@ -1,0 +1,144 @@
+# Tests du contrôleur UserProfile
+# Remplacez {{host}} par votre URL de base (ex: https://localhost:5001 or http://localhost:5000)
+# Remplacez {{token}} par un token JWT valide
+
+@host = https://localhost:5001
+@token = your-jwt-token-here
+
+### 1. Créer un profil utilisateur
+POST {{host}}/api/v1/users/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "dateOfBirth": "1990-01-15",
+  "gender": 0,
+  "heightCm": 180,
+  "weightKg": 75.5,
+  "fitnessLevel": 1,
+  "primaryFitnessGoal": 1
+}
+
+### 2. Obtenir mon profil
+GET {{host}}/api/v1/users/profile
+Authorization: Bearer {{token}}
+
+### 3. Obtenir un résumé de profil (par userId)
+GET {{host}}/api/v1/users/{{$guid}}/profile/summary
+Authorization: Bearer {{token}}
+
+### 4. Mettre à jour mes informations personnelles
+PATCH {{host}}/api/v1/users/profile/personal
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "John Updated",
+  "lastName": "Doe Updated",
+  "dateOfBirth": "1990-01-15",
+  "gender": 0
+}
+
+### 5. Mettre à jour mes mesures physiques
+PATCH {{host}}/api/v1/users/profile/measurements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "heightCm": 182,
+  "weightKg": 76.0
+}
+
+### 6. Mettre à jour mon profil fitness
+PATCH {{host}}/api/v1/users/profile/fitness
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fitnessLevel": 2,
+  "primaryFitnessGoal": 2
+}
+
+### 7. Obtenir mon abonnement
+GET {{host}}/api/v1/users/subscription
+Authorization: Bearer {{token}}
+
+### 8. Créer/Mettre à jour mon abonnement
+POST {{host}}/api/v1/users/subscription
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "level": 2,
+  "startDate": "2024-01-01T00:00:00Z",
+  "endDate": "2024-12-31T23:59:59Z"
+}
+
+### 9. Annuler mon abonnement
+DELETE {{host}}/api/v1/users/subscription
+Authorization: Bearer {{token}}
+
+### 10. Renouveler mon abonnement
+PATCH {{host}}/api/v1/users/subscription/renew
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+"2025-12-31T23:59:59Z"
+
+### 11. Obtenir toutes mes préférences
+GET {{host}}/api/v1/users/preferences
+Authorization: Bearer {{token}}
+
+### 12. Obtenir mes préférences par catégorie
+GET {{host}}/api/v1/users/preferences/workout
+Authorization: Bearer {{token}}
+
+### 13. Créer/Mettre à jour une préférence
+POST {{host}}/api/v1/users/preferences
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category": "workout",
+  "key": "preferred_time",
+  "value": "morning"
+}
+
+### 14. Mettre à jour plusieurs préférences
+PUT {{host}}/api/v1/users/preferences
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "preferences": {
+    "workout": {
+      "preferred_time": "evening",
+      "duration": "45"
+    },
+    "nutrition": {
+      "diet_type": "balanced",
+      "calorie_goal": "2000"
+    }
+  }
+}
+
+### 15. Supprimer une préférence spécifique
+DELETE {{host}}/api/v1/users/preferences/workout/preferred_time
+Authorization: Bearer {{token}}
+
+### 16. Supprimer toutes mes préférences
+DELETE {{host}}/api/v1/users/preferences
+Authorization: Bearer {{token}}
+
+### 17. Supprimer mon profil complet
+DELETE {{host}}/api/v1/users/profile
+Authorization: Bearer {{token}}
+
+###
+# Exemples d'utilisation avec des valeurs d'énums :
+# Gender: 0=Male, 1=Female, 2=Other, 3=PreferNotToSay
+# FitnessLevel: 0=Beginner, 1=Enthousiast, 2=Advanced, 3=Athlete  
+# FitnessGoal: 1=WEIGHT_LOSS, 2=MUSCLE_GAIN, 3=STRENGTH, 4=ENDURANCE, 5=FLEXIBILITY, 6=WELLNESS, 7=CUSTOM
+# SubscriptionLevel: 0=Free, 1=Basic, 2=Premium, 3=Elite

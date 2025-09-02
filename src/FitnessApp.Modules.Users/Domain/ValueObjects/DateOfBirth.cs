@@ -12,13 +12,15 @@ public sealed class DateOfBirth : IEquatable<DateOfBirth>
 
     private DateOfBirth(DateTime value)
     {
-        Value = value.Date; // Only store date part
+        // Ensure the DateTime is stored as UTC with only the date part
+        Value = DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
         Age = CalculateAge();
     }
 
     public static DateOfBirth Create(DateTime dateOfBirth)
     {
-        dateOfBirth = dateOfBirth.Date; // Normalize to date only
+        // Normalize to date only and ensure UTC kind
+        dateOfBirth = DateTime.SpecifyKind(dateOfBirth.Date, DateTimeKind.Utc);
 
         if (dateOfBirth > DateTime.UtcNow.Date)
             throw new UserDomainException("Date of birth cannot be in the future");
