@@ -77,10 +77,8 @@ public class UserProfile
     }
 
     // Preferences Management
-    public void AddOrUpdatePreference(string category, string key, string value)
+    public void AddOrUpdatePreference(PreferenceCategory category, string key, string value)
     {
-        if (string.IsNullOrWhiteSpace(category))
-            throw new ArgumentException("Category cannot be empty", nameof(category));
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Key cannot be empty", nameof(key));
 
@@ -100,7 +98,7 @@ public class UserProfile
         SetUpdatedAt();
     }
 
-    public void RemovePreference(string category, string key)
+    public void RemovePreference(PreferenceCategory category, string key)
     {
         var preference = _preferences.FirstOrDefault(p => 
             p.Category == category && p.Key == key);
@@ -118,7 +116,7 @@ public class UserProfile
         SetUpdatedAt();
     }
 
-    public string? GetPreference(string category, string key)
+    public string? GetPreference(PreferenceCategory category, string key)
     {
         return _preferences
             .FirstOrDefault(p => p.Category == category && p.Key == key)

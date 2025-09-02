@@ -1,6 +1,7 @@
 using FitnessApp.Modules.Users.Application.Interfaces;
 using FitnessApp.SharedKernel.DTOs.Users.Requests;
 using FitnessApp.SharedKernel.DTOs.Users.Responses;
+using FitnessApp.SharedKernel.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -378,12 +379,19 @@ public class UserProfileController : ControllerBase
     [HttpGet("preferences/{category}")]
     [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
     [ProducesResponseType(404)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> GetPreferencesByCategory(string category, CancellationToken cancellationToken = default)
     {
         try
         {
+            // Parse category string to enum
+            if (!Enum.TryParse<PreferenceCategory>(category, true, out var categoryEnum))
+            {
+                return BadRequest(new { message = $"Invalid category '{category}'. Valid categories are: {string.Join(", ", Enum.GetNames<PreferenceCategory>())}" });
+            }
+
             var userId = GetCurrentUserId();
-            var preferences = await _userProfileService.GetUserPreferencesByCategoryAsync(userId, category, cancellationToken);
+            var preferences = await _userProfileService.GetUserPreferencesByCategoryAsync(userId, categoryEnum, cancellationToken);
             
             return Ok(preferences);
         }
@@ -464,12 +472,19 @@ public class UserProfileController : ControllerBase
     [HttpDelete("preferences/{category}/{key}")]
     [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
     [ProducesResponseType(404)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> DeletePreference(string category, string key, CancellationToken cancellationToken = default)
     {
         try
         {
+            // Parse category string to enum
+            if (!Enum.TryParse<PreferenceCategory>(category, true, out var categoryEnum))
+            {
+                return BadRequest(new { message = $"Invalid category '{category}'. Valid categories are: {string.Join(", ", Enum.GetNames<PreferenceCategory>())}" });
+            }
+
             var userId = GetCurrentUserId();
-            var result = await _userProfileService.DeletePreferenceAsync(userId, category, key, cancellationToken);
+            var result = await _userProfileService.DeletePreferenceAsync(userId, categoryEnum, key, cancellationToken);
             
             _logger.LogInformation("Preference deleted successfully for user {UserId}", userId);
             

@@ -1,6 +1,7 @@
 using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.Modules.Users.Domain.ValueObjects;
 using FitnessApp.SharedKernel.DTOs.Users.Responses;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Application.Mapping;
 
@@ -83,16 +84,16 @@ public static class UserProfileMappingExtensions
         );
     }
 
-    public static UserPreferencesResponse ToPreferencesByCategoryResponse(this UserProfile profile, string category)
+    public static UserPreferencesResponse ToPreferencesByCategoryResponse(this UserProfile profile, PreferenceCategory category)
     {
         var categoryPreferences = profile.Preferences
-            .Where(p => p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
+            .Where(p => p.Category == category)
             .ToDictionary(p => p.Key, p => (string?)p.Value);
 
-        var result = new Dictionary<string, IDictionary<string, string?>>
+        var result = new Dictionary<PreferenceCategory, IDictionary<string, string?>>
         {
             { category, categoryPreferences }
-        };
+        } as IDictionary<PreferenceCategory, IDictionary<string, string?>>;
 
         return new UserPreferencesResponse(
             profile.UserId,

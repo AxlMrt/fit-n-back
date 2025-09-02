@@ -75,8 +75,7 @@ public sealed record UpdateFitnessProfileRequest(
 /// </summary>
 public sealed record CreateOrUpdatePreferenceRequest(
     [Required]
-    [StringLength(50, MinimumLength = 1)]
-    string Category,
+    PreferenceCategory Category,
     
     [Required]
     [StringLength(100, MinimumLength = 1)]
@@ -91,7 +90,7 @@ public sealed record CreateOrUpdatePreferenceRequest(
 /// </summary>
 public sealed record UpdatePreferencesRequest(
     [Required]
-    IDictionary<string, IDictionary<string, string?>> Preferences
+    IDictionary<PreferenceCategory, IDictionary<string, string?>> Preferences
 );
 
 /// <summary>

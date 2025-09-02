@@ -1,4 +1,5 @@
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Repositories;
 
@@ -24,5 +25,5 @@ public interface IUserProfileRepository
     Task<IEnumerable<UserProfile>> FindBySubscriptionLevelAsync(string subscriptionLevel, CancellationToken cancellationToken = default);
     
     // Preference operations
-    Task<UserProfile> UpdatePreferenceAsync(Guid userId, string category, string key, string value, CancellationToken cancellationToken = default);
+    Task<UserProfile> UpdatePreferenceAsync(Guid userId, PreferenceCategory category, string key, string value, CancellationToken cancellationToken = default);
 }

@@ -266,7 +266,7 @@ public class UserProfileRepository : IUserProfileRepository
             .ToDictionaryAsync(x => x.Gender, x => x.Count);
     }
 
-    public async Task<UserProfile> UpdatePreferenceAsync(Guid userId, string category, string key, string value, CancellationToken cancellationToken = default)
+    public async Task<UserProfile> UpdatePreferenceAsync(Guid userId, PreferenceCategory category, string key, string value, CancellationToken cancellationToken = default)
     {
         var existingPreference = await _dbContext.Preferences
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Category == category && p.Key == key, cancellationToken);

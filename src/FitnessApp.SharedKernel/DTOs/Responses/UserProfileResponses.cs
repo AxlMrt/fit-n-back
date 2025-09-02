@@ -53,7 +53,7 @@ public sealed record SubscriptionResponse(
 /// </summary>
 public sealed record PreferenceResponse(
     Guid Id,
-    string Category,
+    PreferenceCategory Category,
     string Key,
     string? Value,
     DateTime CreatedAt,
@@ -65,7 +65,7 @@ public sealed record PreferenceResponse(
 /// </summary>
 public sealed record UserPreferencesResponse(
     Guid UserId,
-    IDictionary<string, IDictionary<string, string?>> Preferences
+    IDictionary<PreferenceCategory, IDictionary<string, string?>> Preferences
 );
 
 /// <summary>

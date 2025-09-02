@@ -66,7 +66,7 @@ public class UsersDbContext : DbContext
             b.HasKey(p => p.Id);
             
             b.Property(p => p.Category)
-             .HasMaxLength(100)
+             .HasConversion<string>()
              .IsRequired();
              
             b.Property(p => p.Key)

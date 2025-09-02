@@ -139,9 +139,7 @@ public class CreateOrUpdatePreferenceRequestValidator : AbstractValidator<Create
     public CreateOrUpdatePreferenceRequestValidator()
     {
         RuleFor(x => x.Category)
-            .NotEmpty().WithMessage("Category is required")
-            .Length(1, 50).WithMessage("Category must be between 1 and 50 characters")
-            .Matches("^[a-zA-Z0-9_-]+$").WithMessage("Category can only contain letters, numbers, underscores, and hyphens");
+            .IsInEnum().WithMessage("Category must be a valid preference category");
 
         RuleFor(x => x.Key)
             .NotEmpty().WithMessage("Key is required")

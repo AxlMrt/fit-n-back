@@ -1,4 +1,5 @@
 using FitnessApp.Modules.Users.Domain.Exceptions;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Entities;
 
@@ -9,7 +10,7 @@ public class Preference
 {
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
-    public string Category { get; private set; } = null!;
+    public PreferenceCategory Category { get; private set; }
     public string Key { get; private set; } = null!;
     public string Value { get; private set; } = null!;
     public DateTime CreatedAt { get; private set; }
@@ -18,19 +19,13 @@ public class Preference
     // EF Core constructor
     private Preference() { }
 
-    public Preference(Guid userId, string category, string key, string value)
+    public Preference(Guid userId, PreferenceCategory category, string key, string value)
     {
         if (userId == Guid.Empty)
             throw new UserDomainException("User ID is required");
 
-        if (string.IsNullOrWhiteSpace(category))
-            throw new UserDomainException("Preference category is required");
-
         if (string.IsNullOrWhiteSpace(key))
             throw new UserDomainException("Preference key is required");
-
-        if (category.Length > 50)
-            throw new UserDomainException("Preference category cannot exceed 50 characters");
 
         if (key.Length > 100)
             throw new UserDomainException("Preference key cannot exceed 100 characters");
@@ -40,7 +35,7 @@ public class Preference
 
         Id = Guid.NewGuid();
         UserId = userId;
-        Category = category.Trim();
+        Category = category;
         Key = key.Trim();
         Value = value?.Trim() ?? string.Empty;
         CreatedAt = DateTime.UtcNow;
@@ -58,17 +53,17 @@ public class Preference
     // Business query methods
     public bool IsNotificationPreference()
     {
-        return Category.Equals("notifications", StringComparison.OrdinalIgnoreCase);
+        return Category == PreferenceCategory.Notifications;
     }
 
     public bool IsWorkoutPreference()
     {
-        return Category.Equals("workout", StringComparison.OrdinalIgnoreCase);
+        return Category == PreferenceCategory.Workout;
     }
 
     public bool IsPrivacyPreference()
     {
-        return Category.Equals("privacy", StringComparison.OrdinalIgnoreCase);
+        return Category == PreferenceCategory.Privacy;
     }
 
     public T GetValueAs<T>()

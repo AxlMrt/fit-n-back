@@ -5,6 +5,7 @@ using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Domain.ValueObjects;
 using FitnessApp.SharedKernel.DTOs.Users.Requests;
 using FitnessApp.SharedKernel.DTOs.Users.Responses;
+using FitnessApp.SharedKernel.Enums;
 using FitnessApp.SharedKernel.Interfaces;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
@@ -247,7 +248,7 @@ public class UserProfileService : IUserProfileService
         return profile.ToPreferencesResponse();
     }
 
-    public async Task<UserPreferencesResponse> GetUserPreferencesByCategoryAsync(Guid userId, string category, CancellationToken cancellationToken = default)
+    public async Task<UserPreferencesResponse> GetUserPreferencesByCategoryAsync(Guid userId, PreferenceCategory category, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting preferences for user {UserId} in category {Category}", userId, category);
 
@@ -310,7 +311,7 @@ public class UserProfileService : IUserProfileService
         return profile.ToPreferencesResponse();
     }
 
-    public async Task<ProfileOperationResponse> DeletePreferenceAsync(Guid userId, string category, string key, CancellationToken cancellationToken = default)
+    public async Task<ProfileOperationResponse> DeletePreferenceAsync(Guid userId, PreferenceCategory category, string key, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Deleting preference for user {UserId} in category {Category} with key {Key}", userId, category, key);
 
