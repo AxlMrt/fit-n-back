@@ -1,12 +1,12 @@
-namespace FitnessApp.Modules.Exercises.Domain.Enums
+namespace FitnessApp.Modules.Exercises.Domain.Enums;
+public enum ExerciseType
 {
-    public enum ExerciseType
-    {
-        Strength,
-        Cardio,
-        Mobility,
-        Stretching,
-        Plyometrics,
-        Other
-    }
+    Strength,
+    Cardio,
+    Mobility,
+    Stretching,
+    Plyometrics,
+    HIIT,
+    Warmup,
+    Other
 }
