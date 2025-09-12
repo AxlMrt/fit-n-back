@@ -25,15 +25,24 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Authenticate a user with email/username and password
+    /// Authenticate a user with email/username and password.
     /// </summary>
-    /// <param name="request">Login credentials</param>
-    /// <returns>Authentication response with tokens</returns>
+    /// <param name="request">Login credentials.</param>
+    /// <remarks>
+    /// Successful response returns authentication tokens and user info. Example:
+    /// {
+    ///   "accessToken": "eyJhb...",
+    ///   "refreshToken": "def456...",
+    ///   "expiresIn": 3600
+    /// }
+    /// Error responses use: { "message": "..." }
+    /// </remarks>
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 200)] // success: auth response (tokens + user info)
+    [ProducesResponseType(typeof(object), 400)] // bad request (validation errors)
+    [ProducesResponseType(typeof(object), 401)] // unauthorized (invalid credentials)
+    [ProducesResponseType(typeof(object), 500)] // server error
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
@@ -55,15 +64,19 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Register a new user account
+    /// Register a new user account.
     /// </summary>
-    /// <param name="request">Registration details</param>
-    /// <returns>Authentication response with tokens</returns>
+    /// <param name="request">Registration details.</param>
+    /// <remarks>
+    /// On success returns created authentication data (tokens + user info).
+    /// Example success body: { "accessToken":"...", "refreshToken":"...", "userId":"..." }
+    /// </remarks>
     [HttpPost("register")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(object), 201)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 409)]
+    [ProducesResponseType(typeof(object), 201)] // created
+    [ProducesResponseType(typeof(object), 400)] // validation errors
+    [ProducesResponseType(typeof(object), 409)] // conflict: email or username already exists
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         try
@@ -91,14 +104,18 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Refresh access token using refresh token
+    /// Refresh access token using refresh token.
     /// </summary>
-    /// <param name="request">Refresh token request</param>
-    /// <returns>New authentication tokens</returns>
+    /// <param name="request">Refresh token request.</param>
+    /// <remarks>
+    /// Returns new access token and optionally a new refresh token.
+    /// </remarks>
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 200)] // success: new tokens
+    [ProducesResponseType(typeof(object), 400)] // bad request
+    [ProducesResponseType(typeof(object), 401)] // invalid/expired refresh token
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
         try
@@ -119,13 +136,17 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Logout user and invalidate tokens
+    /// Logout user and invalidate tokens.
     /// </summary>
-    /// <returns>Success message</returns>
+    /// <remarks>
+    /// Requires Authorization header with Bearer token. Returns simple success message.
+    /// </remarks>
     [HttpPost("logout")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> Logout()
     {
         try
@@ -150,12 +171,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Get current authenticated user information
+    /// Get current authenticated user information.
     /// </summary>
-    /// <returns>Authentication user data</returns>
+    /// <remarks>
+    /// Returns user profile and authentication-related metadata.
+    /// </remarks>
     [HttpGet("me")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(typeof(object), 404)]
     public async Task<IActionResult> GetAuthUser()
     {
@@ -178,13 +203,17 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Request password reset email
+    /// Request password reset email.
     /// </summary>
-    /// <param name="request">Email for password reset</param>
-    /// <returns>Success message</returns>
+    /// <param name="request">Email for password reset.</param>
+    /// <remarks>
+    /// For security the response is always 200 with a generic message to avoid disclosing whether the email exists.
+    /// </remarks>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
         try
@@ -200,14 +229,15 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Reset password using reset token
+    /// Reset password using reset token.
     /// </summary>
-    /// <param name="request">Reset password request with token</param>
-    /// <returns>Success message</returns>
+    /// <param name="request">Reset password request with token.</param>
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
     {
         try
@@ -223,14 +253,15 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Change current password
+    /// Change current password.
     /// </summary>
-    /// <param name="request">Current and new password</param>
-    /// <returns>Success message</returns>
+    /// <param name="request">Current and new password.</param>
     [HttpPut("change-password")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
         try
@@ -253,15 +284,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Update user email address
+    /// Update user email address.
     /// </summary>
-    /// <param name="request">New email address</param>
-    /// <returns>Success message</returns>
-    [HttpPut("email")]
+    /// <param name="request">New email address.</param>
+    [HttpPut("update-email")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(typeof(object), 409)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> UpdateEmail([FromBody] UpdateEmailRequest request)
     {
         try
@@ -289,15 +321,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Update username
+    /// Update username.
     /// </summary>
-    /// <param name="request">New username</param>
-    /// <returns>Success message</returns>
+    /// <param name="request">New username.</param>
     [HttpPut("username")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(typeof(object), 409)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameRequest request)
     {
         try
@@ -325,14 +358,15 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Confirm email address
+    /// Confirm email address.
     /// </summary>
-    /// <param name="request">Email confirmation token</param>
-    /// <returns>Success message</returns>
+    /// <param name="request">Email confirmation token.</param>
     [HttpPost("confirm-email")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request)
     {
         try
@@ -348,13 +382,14 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Resend email confirmation
+    /// Resend email confirmation.
     /// </summary>
-    /// <param name="request">Email to resend confirmation</param>
-    /// <returns>Success message</returns>
+    /// <param name="request">Email to resend confirmation.</param>
     [HttpPost("resend-confirmation")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> ResendEmailConfirmation([FromBody] ResendEmailConfirmationRequest request)
     {
         try
@@ -370,12 +405,14 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Get security status and settings
+    /// Get security status and settings.
     /// </summary>
-    /// <returns>Security status information</returns>
     [HttpGet("security")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> GetSecurityStatus()
     {
         try
@@ -397,12 +434,14 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Enable two-factor authentication
+    /// Enable two-factor authentication.
     /// </summary>
-    /// <returns>Success message</returns>
     [HttpPost("two-factor/enable")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> EnableTwoFactor()
     {
         try
@@ -424,12 +463,14 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Disable two-factor authentication
+    /// Disable two-factor authentication.
     /// </summary>
-    /// <returns>Success message</returns>
     [HttpPost("two-factor/disable")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> DisableTwoFactor()
     {
         try
@@ -451,12 +492,15 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Deactivate user account (admin or user themselves)
+    /// Deactivate user account (admin or user themselves).
     /// </summary>
-    /// <returns>Success message</returns>
     [HttpPost("deactivate")]
     [Authorize]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 403)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> DeactivateAccount()
     {
         try
@@ -479,13 +523,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Reactivate user account (admin only)
+    /// Reactivate user account (admin only).
     /// </summary>
-    /// <param name="userId">User ID to reactivate</param>
-    /// <returns>Success message</returns>
+    /// <param name="userId">User ID to reactivate.</param>
     [HttpPost("{userId:guid}/reactivate")]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 403)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> ReactivateAccount(Guid userId)
     {
         try
@@ -502,13 +549,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Unlock user account (admin only)
+    /// Unlock user account (admin only).
     /// </summary>
-    /// <param name="userId">User ID to unlock</param>
-    /// <returns>Success message</returns>
+    /// <param name="userId">User ID to unlock.</param>
     [HttpPost("{userId:guid}/unlock")]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 403)]
+    [ProducesResponseType(typeof(object), 500)]
     public async Task<IActionResult> UnlockAccount(Guid userId)
     {
         try
@@ -525,13 +575,13 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Check if email exists (for registration validation)
+    /// Check if email exists (for registration validation).
     /// </summary>
-    /// <param name="email">Email to check</param>
-    /// <returns>Boolean indicating if email exists</returns>
+    /// <param name="email">Email to check.</param>
     [HttpGet("exists/email")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> CheckEmailExists([FromQuery] string email)
     {
         try
@@ -547,13 +597,13 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Check if username exists (for registration validation)
+    /// Check if username exists (for registration validation).
     /// </summary>
-    /// <param name="username">Username to check</param>
-    /// <returns>Boolean indicating if username exists</returns>
+    /// <param name="username">Username to check.</param>
     [HttpGet("exists/username")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> CheckUsernameExists([FromQuery] string username)
     {
         try

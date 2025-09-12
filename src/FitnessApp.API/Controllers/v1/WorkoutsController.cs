@@ -11,6 +11,7 @@ namespace FitnessApp.Modules.Workouts.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/workouts")]
+[Produces("application/json")]
 public class WorkoutsController : ControllerBase
 {
     private readonly IWorkoutService _workoutService;
@@ -21,9 +22,12 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new workout
+    /// Create a new workout.
     /// </summary>
     [HttpPost]
+    [ProducesResponseType(typeof(CreateWorkoutDto), 201)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     public async Task<IActionResult> CreateWorkout([FromBody] CreateWorkoutDto createDto, CancellationToken cancellationToken = default)
     {
         try
@@ -33,18 +37,21 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Get workout by ID
+    /// Get workout by ID.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
     public async Task<IActionResult> GetWorkout(Guid id, CancellationToken cancellationToken = default)
     {
         var workout = await _workoutService.GetWorkoutByIdAsync(id, cancellationToken);
@@ -56,9 +63,12 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Update an existing workout
+    /// Update an existing workout.
     /// </summary>
     [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
     public async Task<IActionResult> UpdateWorkout(Guid id, [FromBody] UpdateWorkoutDto updateDto, CancellationToken cancellationToken = default)
     {
         try
@@ -68,18 +78,21 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Delete a workout
+    /// Delete a workout.
     /// </summary>
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
     public async Task<IActionResult> DeleteWorkout(Guid id, CancellationToken cancellationToken = default)
     {
         var deleted = await _workoutService.DeleteWorkoutAsync(id, cancellationToken);
@@ -91,9 +104,11 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Get workouts with filtering and pagination
+    /// Get workouts with filtering and pagination.
     /// </summary>
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> GetWorkouts([FromQuery] WorkoutQueryDto query, CancellationToken cancellationToken = default)
     {
         try
@@ -103,14 +118,15 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
     }
 
     /// <summary>
-    /// Get workouts created by a specific user
+    /// Get workouts created by a specific user.
     /// </summary>
     [HttpGet("user/{userId:guid}")]
+    [ProducesResponseType(typeof(IEnumerable<object>), 200)]
     public async Task<IActionResult> GetUserWorkouts(Guid userId, CancellationToken cancellationToken = default)
     {
         var workouts = await _workoutService.GetUserWorkoutsAsync(userId, cancellationToken);
@@ -118,9 +134,10 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Get workouts created by a specific coach
+    /// Get workouts created by a specific coach.
     /// </summary>
     [HttpGet("coach/{coachId:guid}")]
+    [ProducesResponseType(typeof(IEnumerable<object>), 200)]
     public async Task<IActionResult> GetCoachWorkouts(Guid coachId, CancellationToken cancellationToken = default)
     {
         var workouts = await _workoutService.GetCoachWorkoutsAsync(coachId, cancellationToken);
@@ -128,9 +145,11 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Duplicate an existing workout
+    /// Duplicate an existing workout.
     /// </summary>
     [HttpPost("{id:guid}/duplicate")]
+    [ProducesResponseType(typeof(object), 201)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> DuplicateWorkout(Guid id, [FromBody] DuplicateWorkoutRequest request, CancellationToken cancellationToken = default)
     {
         try
@@ -140,14 +159,17 @@ public class WorkoutsController : ControllerBase
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Deactivate a workout
+    /// Deactivate a workout.
     /// </summary>
     [HttpPost("{id:guid}/deactivate")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
     public async Task<IActionResult> DeactivateWorkout(Guid id, CancellationToken cancellationToken = default)
     {
         var deactivated = await _workoutService.DeactivateWorkoutAsync(id, cancellationToken);
@@ -159,9 +181,12 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Reactivate a workout
+    /// Reactivate a workout.
     /// </summary>
     [HttpPost("{id:guid}/reactivate")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 404)]
     public async Task<IActionResult> ReactivateWorkout(Guid id, CancellationToken cancellationToken = default)
     {
         var reactivated = await _workoutService.ReactivateWorkoutAsync(id, cancellationToken);
@@ -175,9 +200,11 @@ public class WorkoutsController : ControllerBase
     #region Workout Phases
 
     /// <summary>
-    /// Add a phase to a workout
+    /// Add a phase to a workout.
     /// </summary>
     [HttpPost("{workoutId:guid}/phases")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> AddPhaseToWorkout(Guid workoutId, [FromBody] AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default)
     {
         try
@@ -187,18 +214,20 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Update a workout phase
+    /// Update a workout phase.
     /// </summary>
     [HttpPut("{workoutId:guid}/phases/{phaseId:guid}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> UpdateWorkoutPhase(Guid workoutId, Guid phaseId, [FromBody] UpdateWorkoutPhaseDto updateDto, CancellationToken cancellationToken = default)
     {
         try
@@ -208,18 +237,20 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Remove a phase from a workout
+    /// Remove a phase from a workout.
     /// </summary>
     [HttpDelete("{workoutId:guid}/phases/{phaseId:guid}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> RemovePhaseFromWorkout(Guid workoutId, Guid phaseId, CancellationToken cancellationToken = default)
     {
         try
@@ -229,14 +260,16 @@ public class WorkoutsController : ControllerBase
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Move a workout phase to a new order position
+    /// Move a workout phase to a new order position.
     /// </summary>
     [HttpPut("{workoutId:guid}/phases/{phaseId:guid}/move")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> MoveWorkoutPhase(Guid workoutId, Guid phaseId, [FromBody] MovePhaseRequest request, CancellationToken cancellationToken = default)
     {
         try
@@ -246,7 +279,7 @@ public class WorkoutsController : ControllerBase
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
@@ -255,9 +288,11 @@ public class WorkoutsController : ControllerBase
     #region Phase Exercises
 
     /// <summary>
-    /// Add an exercise to a workout phase
+    /// Add an exercise to a workout phase.
     /// </summary>
     [HttpPost("{workoutId:guid}/phases/{phaseId:guid}/exercises")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> AddExerciseToPhase(Guid workoutId, Guid phaseId, [FromBody] AddWorkoutExerciseDto exerciseDto, CancellationToken cancellationToken = default)
     {
         try
@@ -267,18 +302,20 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Update an exercise in a workout phase
+    /// Update an exercise in a workout phase.
     /// </summary>
     [HttpPut("{workoutId:guid}/phases/{phaseId:guid}/exercises/{exerciseId:guid}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> UpdatePhaseExercise(Guid workoutId, Guid phaseId, Guid exerciseId, [FromBody] UpdateWorkoutExerciseDto updateDto, CancellationToken cancellationToken = default)
     {
         try
@@ -288,18 +325,20 @@ public class WorkoutsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = "Validation failed", Errors = ex.Errors });
+            return BadRequest(new { Message = "Validation failed", ex.Errors });
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Remove an exercise from a workout phase
+    /// Remove an exercise from a workout phase.
     /// </summary>
     [HttpDelete("{workoutId:guid}/phases/{phaseId:guid}/exercises/{exerciseId:guid}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> RemoveExerciseFromPhase(Guid workoutId, Guid phaseId, Guid exerciseId, CancellationToken cancellationToken = default)
     {
         try
@@ -309,14 +348,16 @@ public class WorkoutsController : ControllerBase
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     /// <summary>
-    /// Move an exercise within a phase to a new order position
+    /// Move an exercise within a phase to a new order position.
     /// </summary>
     [HttpPut("{workoutId:guid}/phases/{phaseId:guid}/exercises/{exerciseId:guid}/move")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(typeof(object), 400)]
     public async Task<IActionResult> MovePhaseExercise(Guid workoutId, Guid phaseId, Guid exerciseId, [FromBody] MoveExerciseRequest request, CancellationToken cancellationToken = default)
     {
         try
@@ -326,7 +367,7 @@ public class WorkoutsController : ControllerBase
         }
         catch (WorkoutDomainException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 

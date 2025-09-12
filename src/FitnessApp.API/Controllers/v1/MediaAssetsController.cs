@@ -3,12 +3,14 @@ using FitnessApp.Modules.Content.Application.Interfaces;
 using FitnessApp.Modules.Content.Application.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using FitnessApp.Modules.Authorization.Policies;
+using FitnessApp.SharedKernel.DTOs.Requests;
 
 namespace FitnessApp.API.Controllers.v1;
 
 [ApiController]
 [Authorize]
 [Route("api/v1/content/assets")]
+[Produces("application/json")]
 public class MediaAssetsController : ControllerBase
 {
     private readonly IMediaAssetService _service;
@@ -20,18 +22,34 @@ public class MediaAssetsController : ControllerBase
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
+    /// <summary>
+    /// Upload a media asset for an exercise.
+    /// </summary>
+    /// <remarks>
+    /// Accepts multipart/form-data. Returns the created asset id and Location header.
+    /// </remarks>
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
-    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] Guid exerciseId, [FromForm] string? description)
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(object), 201)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 403)]
+    public async Task<IActionResult> Upload([FromForm] MediaAssetUploadRequest request)
     {
-        if (file == null || file.Length == 0) return BadRequest("No file provided");
+        if (request.File == null || request.File.Length == 0) return BadRequest("No file provided");
 
-        await using var stream = file.OpenReadStream();
-        var id = await _service.UploadAsync(stream, file.FileName, file.ContentType ?? "application/octet-stream", exerciseId, description);
+        await using var stream = request.File.OpenReadStream();
+        var id = await _service.UploadAsync(stream, request.File.FileName, request.File.ContentType ?? "application/octet-stream", request.ExerciseId, request.Description);
         return CreatedAtAction(nameof(GetById), new { id }, new { id });
     }
 
+    /// <summary>
+    /// Get media assets for a given exercise.
+    /// </summary>
     [HttpGet("by-exercise/{exerciseId:guid}")]
+    [ProducesResponseType(typeof(IEnumerable<MediaAssetResponse>), 200)]
+    [ProducesResponseType(typeof(object), 401)]
     public async Task<IActionResult> GetByExercise(Guid exerciseId)
     {
         var assets = await _service.GetByExerciseIdAsync(exerciseId);
@@ -39,7 +57,13 @@ public class MediaAssetsController : ControllerBase
         return Ok(list);
     }
 
+    /// <summary>
+    /// Get media asset by id.
+    /// </summary>
     [HttpGet("{id:guid}", Name = "GetById")]
+    [ProducesResponseType(typeof(MediaAssetResponse), 200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(object), 401)]
     public async Task<IActionResult> GetById(Guid id)
     {
         var asset = await _repository.GetByIdAsync(id);
@@ -48,7 +72,13 @@ public class MediaAssetsController : ControllerBase
         return Ok(dto);
     }
 
+    /// <summary>
+    /// Download a media asset file.
+    /// </summary>
     [HttpGet("{id:guid}/download")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(object), 401)]
     public async Task<IActionResult> Download(Guid id)
     {
         var asset = await _repository.GetByIdAsync(id);
@@ -57,8 +87,15 @@ public class MediaAssetsController : ControllerBase
         return File(stream, asset.ContentType ?? "application/octet-stream", Path.GetFileName(asset.Key));
     }
 
+    /// <summary>
+    /// Delete a media asset.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 403)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var asset = await _repository.GetByIdAsync(id);
@@ -68,7 +105,12 @@ public class MediaAssetsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// List assets by exercise (alias of GetByExercise).
+    /// </summary>
     [HttpGet("exercises/{exerciseId:guid}/assets")]
+    [ProducesResponseType(typeof(IEnumerable<MediaAssetResponse>), 200)]
+    [ProducesResponseType(typeof(object), 401)]
     public async Task<IActionResult> ListByExercise(Guid exerciseId)
     {
         var assets = await _service.GetByExerciseIdAsync(exerciseId);

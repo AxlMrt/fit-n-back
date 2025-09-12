@@ -32,11 +32,13 @@ public class UserProfileController : ControllerBase
     #region Profile Management
 
     /// <summary>
-    /// Get the current user's profile
+    /// Get the current user's profile.
     /// </summary>
-    /// <returns>User profile information</returns>
+    /// <returns>User profile information.</returns>
     [HttpGet("profile")]
     [ProducesResponseType(typeof(UserProfileResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetProfile(CancellationToken cancellationToken = default)
     {
@@ -53,12 +55,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Get a user profile summary by user ID
+    /// Get a user profile summary by user ID.
     /// </summary>
     /// <param name="userId">User ID</param>
     /// <returns>User profile summary</returns>
     [HttpGet("{userId:guid}/profile/summary")]
     [ProducesResponseType(typeof(UserProfileSummaryResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetProfileSummary(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -73,14 +77,15 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new user profile
+    /// Create a new user profile.
     /// </summary>
     /// <param name="request">Profile creation request</param>
     /// <returns>Created profile</returns>
     [HttpPost("profile")]
     [ProducesResponseType(typeof(UserProfileResponse), 201)]
-    [ProducesResponseType(400)]
-    [ProducesResponseType(409)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(object), 409)]
     public async Task<IActionResult> CreateProfile([FromBody] CreateUserProfileRequest request, CancellationToken cancellationToken = default)
     {
         try
@@ -107,13 +112,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Update personal information
+    /// Update personal information.
     /// </summary>
     /// <param name="request">Personal info update request</param>
     /// <returns>Updated profile</returns>
     [HttpPatch("profile/personal")]
     [ProducesResponseType(typeof(UserProfileResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdatePersonalInfo([FromBody] UpdatePersonalInfoRequest request, CancellationToken cancellationToken = default)
     {
@@ -138,13 +144,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Update physical measurements
+    /// Update physical measurements.
     /// </summary>
     /// <param name="request">Physical measurements update request</param>
     /// <returns>Updated profile</returns>
     [HttpPatch("profile/measurements")]
     [ProducesResponseType(typeof(UserProfileResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdatePhysicalMeasurements([FromBody] UpdatePhysicalMeasurementsRequest request, CancellationToken cancellationToken = default)
     {
@@ -169,13 +176,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Update fitness profile
+    /// Update fitness profile.
     /// </summary>
     /// <param name="request">Fitness profile update request</param>
     /// <returns>Updated profile</returns>
     [HttpPatch("profile/fitness")]
     [ProducesResponseType(typeof(UserProfileResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdateFitnessProfile([FromBody] UpdateFitnessProfileRequest request, CancellationToken cancellationToken = default)
     {
@@ -200,11 +208,13 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Delete the current user's profile
+    /// Delete the current user's profile.
     /// </summary>
     /// <returns>Deletion confirmation</returns>
     [HttpDelete("profile")]
     [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteProfile(CancellationToken cancellationToken = default)
     {
@@ -233,11 +243,13 @@ public class UserProfileController : ControllerBase
     #region Subscription Management
 
     /// <summary>
-    /// Get the current user's subscription
+    /// Get the current user's subscription.
     /// </summary>
     /// <returns>Subscription information</returns>
     [HttpGet("subscription")]
     [ProducesResponseType(typeof(SubscriptionResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetSubscription(CancellationToken cancellationToken = default)
     {
@@ -254,13 +266,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Update or create subscription
+    /// Update or create subscription.
     /// </summary>
     /// <param name="request">Subscription update request</param>
     /// <returns>Updated subscription</returns>
     [HttpPost("subscription")]
     [ProducesResponseType(typeof(SubscriptionResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdateSubscription([FromBody] UpdateSubscriptionRequest request, CancellationToken cancellationToken = default)
     {
@@ -285,12 +298,13 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Cancel the current user's subscription
+    /// Cancel the current user's subscription.
     /// </summary>
     /// <returns>Cancellation confirmation</returns>
     [HttpDelete("subscription")]
     [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> CancelSubscription(CancellationToken cancellationToken = default)
     {
@@ -315,13 +329,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Renew the current user's subscription
+    /// Renew the current user's subscription.
     /// </summary>
     /// <param name="newEndDate">New subscription end date</param>
     /// <returns>Renewed subscription</returns>
     [HttpPatch("subscription/renew")]
     [ProducesResponseType(typeof(SubscriptionResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> RenewSubscription([FromBody] DateTime newEndDate, CancellationToken cancellationToken = default)
     {
@@ -350,11 +365,13 @@ public class UserProfileController : ControllerBase
     #region Preferences Management
 
     /// <summary>
-    /// Get all user preferences
+    /// Get all user preferences.
     /// </summary>
     /// <returns>User preferences grouped by category</returns>
     [HttpGet("preferences")]
     [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetPreferences(CancellationToken cancellationToken = default)
     {
@@ -372,14 +389,14 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Get user preferences by category
+    /// Get user preferences by category.
     /// </summary>
     /// <param name="category">Preference category</param>
-    /// <returns>User preferences for the specified category</returns>
     [HttpGet("preferences/{category}")]
     [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
-    [ProducesResponseType(400)]
     public async Task<IActionResult> GetPreferencesByCategory(string category, CancellationToken cancellationToken = default)
     {
         try
@@ -402,13 +419,13 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Create or update a preference
+    /// Create or update a preference.
     /// </summary>
     /// <param name="request">Preference create/update request</param>
-    /// <returns>Created/updated preference</returns>
     [HttpPost("preferences")]
     [ProducesResponseType(typeof(PreferenceResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> CreateOrUpdatePreference([FromBody] CreateOrUpdatePreferenceRequest request, CancellationToken cancellationToken = default)
     {
@@ -433,13 +450,12 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Update multiple preferences at once
+    /// Update multiple preferences at once.
     /// </summary>
-    /// <param name="request">Preferences update request</param>
-    /// <returns>Updated preferences</returns>
     [HttpPut("preferences")]
     [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request, CancellationToken cancellationToken = default)
     {
@@ -464,15 +480,13 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a specific preference
+    /// Delete a specific preference.
     /// </summary>
-    /// <param name="category">Preference category</param>
-    /// <param name="key">Preference key</param>
-    /// <returns>Deletion confirmation</returns>
     [HttpDelete("preferences/{category}/{key}")]
     [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
-    [ProducesResponseType(400)]
     public async Task<IActionResult> DeletePreference(string category, string key, CancellationToken cancellationToken = default)
     {
         try
@@ -497,11 +511,12 @@ public class UserProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Clear all preferences
+    /// Clear all preferences.
     /// </summary>
-    /// <returns>Clearing confirmation</returns>
     [HttpDelete("preferences")]
     [ProducesResponseType(typeof(ProfileOperationResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> ClearPreferences(CancellationToken cancellationToken = default)
     {
