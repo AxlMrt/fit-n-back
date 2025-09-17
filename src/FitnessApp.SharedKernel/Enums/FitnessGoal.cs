@@ -1,12 +1,31 @@
+using System.ComponentModel;
+
 namespace FitnessApp.SharedKernel.Enums;
 
+/// <summary>
+/// Represents the user's main fitness goal
+/// </summary>
+[Flags]
 public enum FitnessGoal
 {
-    WEIGHT_LOSS = 1,
-    MUSCLE_GAIN = 2,
-    STRENGTH = 3,
-    ENDURANCE = 4,
-    FLEXIBILITY = 5,
-    WELLNESS = 6,
-    CUSTOM = 7,
+    [Description("Weight loss")]
+    Weight_Loss = 1 << 0,
+
+    [Description("Muscle gain")]
+    Muscle_Gain = 1 << 1,
+
+    [Description("Strength")]
+    Strength = 1 << 2,
+
+    [Description("Endurance")]
+    Endurance = 1 << 3,
+
+    [Description("Flexibility")]
+    Flexibility = 1 << 4,
+
+    [Description("Wellness")]
+    Wellness = 1 << 5,
+
+    [Description("Custom goal")]
+    Custom = 1 << 6
 }

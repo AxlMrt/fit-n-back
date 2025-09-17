@@ -1,50 +1,28 @@
+using System.ComponentModel;
+
 namespace FitnessApp.SharedKernel.Enums;
 
 /// <summary>
-/// Defines the valid categories for user preferences.
-/// Each category groups related preference settings.
+/// Defines the valid categories for user preferences. Each category groups related preference settings.
 /// </summary>
+[Flags]
 public enum PreferenceCategory
 {
-    /// <summary>
-    /// General application settings
-    /// Keys: theme, language, timezone
-    /// </summary>
-    General,
+    [Description("General application settings")]
+    General = 1 << 0,
 
-    /// <summary>
-    /// Notification preferences
-    /// Keys: email, push, workout_reminders, goal_updates
-    /// </summary>
-    Notifications,
+    [Description("Notification preferences")]
+    Notifications = 1 << 1,
 
-    /// <summary>
-    /// Workout-related preferences
-    /// Keys: default_duration, rest_time, difficulty_level, preferred_equipment
-    /// </summary>
-    Workout,
+    [Description("Workout-related preferences")]
+    Workout = 1 << 2,
 
-    /// <summary>
-    /// Privacy and sharing settings
-    /// Keys: profile_visibility, share_workouts, share_progress
-    /// </summary>
-    Privacy,
+    [Description("Privacy and sharing settings")]
+    Privacy = 1 << 3,
 
-    /// <summary>
-    /// Unit measurement preferences
-    /// Keys: weight_unit (kg/lbs), distance_unit (m/miles), temperature_unit (c/f)
-    /// </summary>
-    Units,
+    [Description("Unit measurement preferences")]
+    Units = 1 << 4,
 
-    /// <summary>
-    /// Goal tracking preferences
-    /// Keys: weekly_goal, monthly_goal, reminder_frequency
-    /// </summary>
-    Goals,
-
-    /// <summary>
-    /// Display and UI preferences
-    /// Keys: dashboard_layout, chart_type, date_format
-    /// </summary>
-    Display
+    [Description("Goal tracking preferences")]
+    Goals = 1 << 5
 }
