@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using FitnessApp.Modules.Authorization.Policies;
-using FitnessApp.Modules.Exercises.Application.DTOs;
 using FitnessApp.Modules.Exercises.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using FluentValidation;
 using FitnessApp.Modules.Exercises.Domain.Exceptions;
+using FitnessApp.SharedKernel.DTOs.Responses;
+using FitnessApp.SharedKernel.DTOs.Requests;
 
 namespace FitnessApp.API.Controllers.v1;
 
@@ -31,10 +32,10 @@ public class ExercisesController : ControllerBase
     /// Returns a paged list of exercises. Query supports paging, filtering and sorting.
     /// </remarks>
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResultDto<ExerciseListDto>), 200)]
+    [ProducesResponseType(typeof(PagedResult<ExerciseListDto>), 200)]
     [ProducesResponseType(typeof(object), 400)]
     [ProducesResponseType(typeof(object), 401)]
-    public async Task<ActionResult<PagedResultDto<ExerciseListDto>>> GetExercises([FromQuery] ExerciseQueryDto query)
+    public async Task<ActionResult<PagedResult<ExerciseListDto>>> GetExercises([FromQuery] ExerciseQueryDto query)
     {
         try
         {
