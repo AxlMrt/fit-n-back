@@ -1,11 +1,12 @@
 using FluentValidation;
-using FitnessApp.Modules.Exercises.Application.DTOs;
 using FitnessApp.Modules.Exercises.Application.Interfaces;
 using FitnessApp.Modules.Exercises.Application.Services;
 using FitnessApp.Modules.Exercises.Application.Validators;
+using FitnessApp.Modules.Exercises.Application.Mapping;
 using FitnessApp.Modules.Exercises.Domain.Repositories;
 using FitnessApp.Modules.Exercises.Infrastructure.Persistence;
 using FitnessApp.Modules.Exercises.Infrastructure.Repositories;
+using FitnessApp.SharedKernel.DTOs.Requests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -35,8 +36,11 @@ public static class ExercisesModule
         services.AddScoped<IValidator<UpdateExerciseDto>, UpdateExerciseDtoValidator>();
         services.AddScoped<IValidator<ExerciseQueryDto>, ExerciseQueryDtoValidator>();
 
-        // AutoMapper if you choose to use it later
-        // services.AddAutoMapper(typeof(ExerciseMappingProfile));
+        // AutoMapper
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddProfile<ExerciseMappingProfile>();
+        });
 
         return services;
     }

@@ -23,7 +23,7 @@ namespace FitnessApp.Modules.Exercises.Infrastructure.Migrations
                     ImageContentId = table.Column<Guid>(type: "uuid", nullable: true),
                     VideoContentId = table.Column<Guid>(type: "uuid", nullable: true),
                     Difficulty = table.Column<int>(type: "integer", nullable: false),
-                    Equipment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Equipment = table.Column<int>(type: "integer", nullable: false),
                     Instructions = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

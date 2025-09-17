@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FitnessApp.Modules.Exercises.Infrastructure.Migrations
 {
     [DbContext(typeof(ExercisesDbContext))]
-    [Migration("20250825125528_ExercisesMigrations")]
+    [Migration("20250916130151_ExercisesMigrations")]
     partial class ExercisesMigrations
     {
         /// <inheritdoc />
@@ -41,10 +41,8 @@ namespace FitnessApp.Modules.Exercises.Infrastructure.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Equipment")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                    b.Property<int>("Equipment")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("ImageContentId")
                         .HasColumnType("uuid");

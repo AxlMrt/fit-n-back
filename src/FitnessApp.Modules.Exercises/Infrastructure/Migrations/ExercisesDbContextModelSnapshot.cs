@@ -38,10 +38,8 @@ namespace FitnessApp.Modules.Exercises.Infrastructure.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Equipment")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                    b.Property<int>("Equipment")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("ImageContentId")
                         .HasColumnType("uuid");
