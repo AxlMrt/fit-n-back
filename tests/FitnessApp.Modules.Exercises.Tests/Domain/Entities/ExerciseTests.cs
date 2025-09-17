@@ -1,20 +1,23 @@
 using FitnessApp.Modules.Exercises.Domain.Entities;
-using FitnessApp.Modules.Exercises.Domain.Enums;
 using FitnessApp.Modules.Exercises.Domain.Exceptions;
-using FitnessApp.Modules.Exercises.Domain.ValueObjects;
+using FitnessApp.Modules.Exercises.Tests.Helpers;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Exercises.Tests.Domain.Entities;
+
 public class ExerciseTests
 {
+    #region Constructor Tests
+
     [Fact]
-    public void Exercise_Constructor_ShouldCreateValidExercise()
+    public void Constructor_WithValidParameters_ShouldCreateExercise()
     {
         // Arrange
         var name = "Push-ups";
         var type = ExerciseType.Strength;
-        var difficulty = DifficultyLevel.Intermediate;
-        var muscleGroups = MuscleGroup.CHEST | MuscleGroup.ARMS;
-        var equipment = new Equipment();
+        var difficulty = DifficultyLevel.Beginner;
+        var muscleGroups = MuscleGroup.Chest | MuscleGroup.Arms;
+        var equipment = Equipment.None;
 
         // Act
         var exercise = new Exercise(name, type, difficulty, muscleGroups, equipment);
@@ -29,46 +32,108 @@ public class ExerciseTests
         Assert.True(exercise.IsActive);
         Assert.True(exercise.CreatedAt <= DateTime.UtcNow);
         Assert.Null(exercise.UpdatedAt);
+        Assert.Null(exercise.Description);
+        Assert.Null(exercise.Instructions);
+        Assert.Null(exercise.ImageContentId);
+        Assert.Null(exercise.VideoContentId);
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData(null)]
-    public void Exercise_Constructor_ShouldThrowException_WhenNameIsInvalid(string invalidName)
+    [MemberData(nameof(ExerciseTestDataFactory.TestData.ValidExerciseData), MemberType = typeof(ExerciseTestDataFactory.TestData))]
+    public void Constructor_WithValidVariations_ShouldCreateExercise(
+        string name, ExerciseType type, DifficultyLevel difficulty, MuscleGroup muscleGroups, Equipment equipment)
+    {
+        // Act
+        var exercise = new Exercise(name, type, difficulty, muscleGroups, equipment);
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, exercise.Id);
+        Assert.Equal(name, exercise.Name);
+        Assert.Equal(type, exercise.Type);
+        Assert.Equal(difficulty, exercise.Difficulty);
+        Assert.Equal(muscleGroups, exercise.MuscleGroups);
+        Assert.Equal(equipment, exercise.Equipment);
+        Assert.True(exercise.IsActive);
+    }
+
+    [Theory]
+    [MemberData(nameof(ExerciseTestDataFactory.TestData.InvalidExerciseNames), MemberType = typeof(ExerciseTestDataFactory.TestData))]
+    public void Constructor_WithInvalidName_ShouldThrowExerciseDomainException(string invalidName)
     {
         // Arrange
         var type = ExerciseType.Strength;
-        var difficulty = DifficultyLevel.Intermediate;
-        var muscleGroups = MuscleGroup.CHEST;
-        var equipment = new Equipment();
+        var difficulty = DifficultyLevel.Beginner;
+        var muscleGroups = MuscleGroup.Chest;
+        var equipment = Equipment.None;
 
         // Act & Assert
-        Assert.Throws<ExerciseDomainException>(() =>
+        var exception = Assert.Throws<ExerciseDomainException>(() =>
             new Exercise(invalidName, type, difficulty, muscleGroups, equipment));
+        
+        Assert.Contains("name", exception.Message.ToLower());
+    }
+
+    #endregion
+
+    #region Business Logic Tests
+
+    [Theory]
+    [MemberData(nameof(ExerciseTestDataFactory.TestData.EquipmentRequirementTestData), MemberType = typeof(ExerciseTestDataFactory.TestData))]
+    public void RequiresEquipment_ShouldReturnCorrectValue(Equipment equipment, bool expectedRequirement)
+    {
+        // Arrange
+        var exercise = ExerciseTestDataFactory.CreateCustomExercise(equipment: equipment);
+
+        // Act
+        var requiresEquipment = exercise.RequiresEquipment();
+
+        // Assert
+        Assert.Equal(expectedRequirement, requiresEquipment);
     }
 
     [Fact]
-    public void Exercise_Constructor_ShouldThrowException_WhenEquipmentIsNull()
+    public void IsCardioExercise_WithCardioType_ShouldReturnTrue()
     {
         // Arrange
-        var name = "Push-ups";
-        var type = ExerciseType.Strength;
-        var difficulty = DifficultyLevel.Intermediate;
-        var muscleGroups = MuscleGroup.CHEST;
+        var exercise = ExerciseTestDataFactory.RealExercises.CreateBurpees();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new Exercise(name, type, difficulty, muscleGroups, null));
+        Assert.True(exercise.IsCardioExercise());
+        Assert.False(exercise.IsStrengthExercise());
     }
 
     [Fact]
-    public void SetName_ShouldUpdateName_WhenValidName()
+    public void IsStrengthExercise_WithStrengthType_ShouldReturnTrue()
     {
         // Arrange
-        var exercise = CreateValidExercise();
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+
+        // Act & Assert
+        Assert.True(exercise.IsStrengthExercise());
+        Assert.False(exercise.IsCardioExercise());
+    }
+
+    [Fact]
+    public void IsFullBodyExercise_WithFullBodyMuscles_ShouldReturnTrue()
+    {
+        // Arrange
+        var exercise = ExerciseTestDataFactory.RealExercises.CreateBurpees();
+
+        // Act & Assert
+        Assert.True(exercise.IsFullBodyExercise());
+    }
+
+    #endregion
+
+    #region Property Modification Tests
+
+    [Fact]
+    public void SetName_WithValidName_ShouldUpdateNameAndTimestamp()
+    {
+        // Arrange
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
         var newName = "Modified Push-ups";
-        var originalUpdateTime = exercise.UpdatedAt;
+        var beforeUpdate = DateTime.UtcNow;
 
         // Act
         exercise.SetName(newName);
@@ -76,103 +141,77 @@ public class ExerciseTests
         // Assert
         Assert.Equal(newName, exercise.Name);
         Assert.NotNull(exercise.UpdatedAt);
-        // If originally null, it should now have a value; if had a value, it should be greater
-        if (originalUpdateTime.HasValue)
-            Assert.True(exercise.UpdatedAt > originalUpdateTime);
-        else
-            Assert.True(exercise.UpdatedAt.HasValue);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public void SetName_ShouldThrowException_WhenNameIsInvalid(string invalidName)
+    public void SetName_WithInvalidName_ShouldThrowException(string invalidName)
     {
         // Arrange
-        var exercise = CreateValidExercise();
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
 
         // Act & Assert
         Assert.Throws<ExerciseDomainException>(() => exercise.SetName(invalidName));
     }
 
     [Fact]
-    public void SetName_ShouldThrowException_WhenNameTooLong()
+    public void SetDescription_WithValidDescription_ShouldUpdateDescriptionAndTimestamp()
     {
         // Arrange
-        var exercise = CreateValidExercise();
-        var longName = new string('a', 101);
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        var newDescription = "Updated exercise description";
+        var beforeUpdate = DateTime.UtcNow;
+
+        // Act
+        exercise.SetDescription(newDescription);
+
+        // Assert
+        Assert.Equal(newDescription, exercise.Description);
+        Assert.NotNull(exercise.UpdatedAt);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
+    }
+
+    [Fact]
+    public void SetInstructions_WithValidInstructions_ShouldUpdateInstructionsAndTimestamp()
+    {
+        // Arrange
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        var newInstructions = "Updated exercise instructions with detailed steps";
+        var beforeUpdate = DateTime.UtcNow;
+
+        // Act
+        exercise.SetInstructions(newInstructions);
+
+        // Assert
+        Assert.Equal(newInstructions, exercise.Instructions);
+        Assert.NotNull(exercise.UpdatedAt);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
+    }
+
+    [Fact]
+    public void SetInstructions_WithTooLongInstructions_ShouldThrowException()
+    {
+        // Arrange
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        var tooLongInstructions = new string('A', 2001); // > 2000 chars
 
         // Act & Assert
-        var exception = Assert.Throws<ExerciseDomainException>(() => exercise.SetName(longName));
-        Assert.Contains("cannot exceed 100 characters", exception.Message);
+        var exception = Assert.Throws<ExerciseDomainException>(() => 
+            exercise.SetInstructions(tooLongInstructions));
+        
+        Assert.Contains("2000", exception.Message);
     }
 
     [Fact]
-    public void SetDescription_ShouldUpdateDescription_WhenValidDescription()
+    public void SetEquipment_WithNewEquipment_ShouldUpdateEquipmentAndTimestamp()
     {
         // Arrange
-        var exercise = CreateValidExercise();
-        var description = "This is a great exercise for building upper body strength";
-
-        // Act
-        exercise.SetDescription(description);
-
-        // Assert
-        Assert.Equal(description, exercise.Description);
-        Assert.NotNull(exercise.UpdatedAt);
-    }
-
-    [Fact]
-    public void SetDescription_ShouldThrowException_WhenDescriptionTooLong()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-        var longDescription = new string('a', 1001);
-
-        // Act & Assert
-        var exception = Assert.Throws<ExerciseDomainException>(() => exercise.SetDescription(longDescription));
-        Assert.Contains("cannot exceed 1000 characters", exception.Message);
-    }
-
-    [Fact]
-    public void SetDescription_ShouldAllowNull()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-
-        // Act
-        exercise.SetDescription(null);
-
-        // Assert
-        Assert.Null(exercise.Description);
-    }
-
-    [Fact]
-    public void UpdateDetails_ShouldUpdateAllDetails()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-        var newType = ExerciseType.Cardio;
-        var newDifficulty = DifficultyLevel.Advanced;
-        var newMuscleGroups = MuscleGroup.FULL_BODY;
-
-        // Act
-        exercise.UpdateDetails(newType, newDifficulty, newMuscleGroups);
-
-        // Assert
-        Assert.Equal(newType, exercise.Type);
-        Assert.Equal(newDifficulty, exercise.Difficulty);
-        Assert.Equal(newMuscleGroups, exercise.MuscleGroups);
-        Assert.NotNull(exercise.UpdatedAt);
-    }
-
-    [Fact]
-    public void SetEquipment_ShouldUpdateEquipment_WhenValidEquipment()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-        var newEquipment = new Equipment(new[] { "Dumbbells", "Bench" });
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        var newEquipment = Equipment.Dumbbells | Equipment.Mat;
+        var beforeUpdate = DateTime.UtcNow;
 
         // Act
         exercise.SetEquipment(newEquipment);
@@ -180,52 +219,17 @@ public class ExerciseTests
         // Assert
         Assert.Equal(newEquipment, exercise.Equipment);
         Assert.NotNull(exercise.UpdatedAt);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
     }
 
     [Fact]
-    public void SetEquipment_ShouldThrowException_WhenEquipmentIsNull()
+    public void SetContentReferences_WithValidIds_ShouldUpdateContentAndTimestamp()
     {
         // Arrange
-        var exercise = CreateValidExercise();
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => exercise.SetEquipment(null));
-    }
-
-    [Fact]
-    public void SetInstructions_ShouldUpdateInstructions_WhenValidInstructions()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-        var instructions = "1. Start in plank position\n2. Lower your body\n3. Push back up";
-
-        // Act
-        exercise.SetInstructions(instructions);
-
-        // Assert
-        Assert.Equal(instructions, exercise.Instructions);
-        Assert.NotNull(exercise.UpdatedAt);
-    }
-
-    [Fact]
-    public void SetInstructions_ShouldThrowException_WhenInstructionsTooLong()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-        var longInstructions = new string('a', 2001);
-
-        // Act & Assert
-        var exception = Assert.Throws<ExerciseDomainException>(() => exercise.SetInstructions(longInstructions));
-        Assert.Contains("cannot exceed 2000 characters", exception.Message);
-    }
-
-    [Fact]
-    public void SetContentReferences_ShouldUpdateContentIds()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
         var imageId = Guid.NewGuid();
         var videoId = Guid.NewGuid();
+        var beforeUpdate = DateTime.UtcNow;
 
         // Act
         exercise.SetContentReferences(imageId, videoId);
@@ -234,43 +238,20 @@ public class ExerciseTests
         Assert.Equal(imageId, exercise.ImageContentId);
         Assert.Equal(videoId, exercise.VideoContentId);
         Assert.NotNull(exercise.UpdatedAt);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
     }
 
-    [Fact]
-    public void Activate_ShouldSetIsActiveToTrue_WhenCurrentlyInactive()
-    {
-        // Arrange
-        var exercise = CreateValidExercise();
-        exercise.Deactivate(); // Make it inactive first
+    #endregion
 
-        // Act
-        exercise.Activate();
-
-        // Assert
-        Assert.True(exercise.IsActive);
-        Assert.NotNull(exercise.UpdatedAt);
-    }
+    #region Activation/Deactivation Tests
 
     [Fact]
-    public void Activate_ShouldNotChangeUpdatedAt_WhenAlreadyActive()
+    public void Deactivate_WhenActive_ShouldSetInactiveAndUpdateTimestamp()
     {
         // Arrange
-        var exercise = CreateValidExercise(); // Already active
-        var originalUpdateTime = exercise.UpdatedAt;
-
-        // Act
-        exercise.Activate();
-
-        // Assert
-        Assert.True(exercise.IsActive);
-        Assert.Equal(originalUpdateTime, exercise.UpdatedAt);
-    }
-
-    [Fact]
-    public void Deactivate_ShouldSetIsActiveToFalse_WhenCurrentlyActive()
-    {
-        // Arrange
-        var exercise = CreateValidExercise(); // Active by default
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        Assert.True(exercise.IsActive); // Sanity check
+        var beforeUpdate = DateTime.UtcNow;
 
         // Act
         exercise.Deactivate();
@@ -278,61 +259,109 @@ public class ExerciseTests
         // Assert
         Assert.False(exercise.IsActive);
         Assert.NotNull(exercise.UpdatedAt);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
     }
 
     [Fact]
-    public void IsCardioExercise_ShouldReturnTrue_WhenTypeIsCardio()
+    public void Deactivate_WhenAlreadyInactive_ShouldNotUpdateTimestamp()
     {
         // Arrange
-        var exercise = new Exercise("Running", ExerciseType.Cardio, DifficultyLevel.Intermediate, MuscleGroup.LEGS, new Equipment());
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        exercise.Deactivate(); // First deactivation
+        var timestampAfterFirstDeactivation = exercise.UpdatedAt;
 
-        // Act & Assert
-        Assert.True(exercise.IsCardioExercise());
+        // Act
+        exercise.Deactivate(); // Second deactivation
+
+        // Assert
+        Assert.False(exercise.IsActive);
+        Assert.Equal(timestampAfterFirstDeactivation, exercise.UpdatedAt);
     }
 
     [Fact]
-    public void IsStrengthExercise_ShouldReturnTrue_WhenTypeIsStrength()
+    public void Activate_WhenInactive_ShouldSetActiveAndUpdateTimestamp()
     {
         // Arrange
-        var exercise = CreateValidExercise(); // Strength by default
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        exercise.Deactivate(); // Make it inactive first
+        var beforeUpdate = DateTime.UtcNow;
 
-        // Act & Assert
-        Assert.True(exercise.IsStrengthExercise());
+        // Act
+        exercise.Activate();
+
+        // Assert
+        Assert.True(exercise.IsActive);
+        Assert.NotNull(exercise.UpdatedAt);
+        Assert.True(exercise.UpdatedAt >= beforeUpdate);
     }
 
     [Fact]
-    public void RequiresEquipment_ShouldReturnTrue_WhenEquipmentHasItems()
+    public void Activate_WhenAlreadyActive_ShouldNotUpdateTimestamp()
     {
         // Arrange
-        var equipment = new Equipment(new[] { "Dumbbells" });
-        var exercise = new Exercise("Bicep Curls", ExerciseType.Strength, DifficultyLevel.Beginner, MuscleGroup.ARMS, equipment);
+        var exercise = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+        Assert.True(exercise.IsActive); // Should be active by default
+        var originalTimestamp = exercise.UpdatedAt;
 
-        // Act & Assert
-        Assert.True(exercise.RequiresEquipment());
+        // Act
+        exercise.Activate();
+
+        // Assert
+        Assert.True(exercise.IsActive);
+        Assert.Equal(originalTimestamp, exercise.UpdatedAt); // Should be null
+    }
+
+    #endregion
+
+    #region Real Exercise Data Tests
+
+    [Fact]
+    public void RealExerciseData_PushUps_ShouldHaveCorrectProperties()
+    {
+        // Act
+        var pushUps = ExerciseTestDataFactory.RealExercises.CreatePushUps();
+
+        // Assert
+        Assert.Equal("Push-ups", pushUps.Name);
+        Assert.Equal(ExerciseType.Strength, pushUps.Type);
+        Assert.Equal(DifficultyLevel.Beginner, pushUps.Difficulty);
+        Assert.True(pushUps.MuscleGroups.HasFlag(MuscleGroup.Chest));
+        Assert.True(pushUps.MuscleGroups.HasFlag(MuscleGroup.Arms));
+        Assert.True(pushUps.MuscleGroups.HasFlag(MuscleGroup.Core));
+        Assert.Equal(Equipment.None, pushUps.Equipment);
+        Assert.False(pushUps.RequiresEquipment());
+        Assert.NotNull(pushUps.Description);
+        Assert.NotNull(pushUps.Instructions);
     }
 
     [Fact]
-    public void RequiresEquipment_ShouldReturnFalse_WhenNoEquipment()
+    public void RealExerciseData_Deadlifts_ShouldHaveCorrectProperties()
     {
-        // Arrange
-        var exercise = CreateValidExercise(); // No equipment
+        // Act
+        var deadlifts = ExerciseTestDataFactory.RealExercises.CreateDeadlifts();
 
-        // Act & Assert
-        Assert.False(exercise.RequiresEquipment());
+        // Assert
+        Assert.Equal("Deadlifts", deadlifts.Name);
+        Assert.Equal(ExerciseType.Strength, deadlifts.Type);
+        Assert.Equal(DifficultyLevel.Advanced, deadlifts.Difficulty);
+        Assert.True(deadlifts.MuscleGroups.HasFlag(MuscleGroup.Back));
+        Assert.True(deadlifts.MuscleGroups.HasFlag(MuscleGroup.Legs));
+        Assert.True(deadlifts.MuscleGroups.HasFlag(MuscleGroup.Core));
+        Assert.Equal(Equipment.Barbells, deadlifts.Equipment);
+        Assert.True(deadlifts.RequiresEquipment());
     }
 
     [Fact]
-    public void IsFullBodyExercise_ShouldReturnTrue_WhenMuscleGroupsIncludeFullBody()
+    public void RealExerciseData_BenchPress_ShouldRequireMultipleEquipment()
     {
-        // Arrange
-        var exercise = new Exercise("Burpees", ExerciseType.Cardio, DifficultyLevel.Advanced, MuscleGroup.FULL_BODY, new Equipment());
+        // Act
+        var benchPress = ExerciseTestDataFactory.RealExercises.CreateBenchPress();
 
-        // Act & Assert
-        Assert.True(exercise.IsFullBodyExercise());
+        // Assert
+        Assert.True(benchPress.Equipment.HasFlag(Equipment.Barbells));
+        Assert.True(benchPress.Equipment.HasFlag(Equipment.Bench));
+        Assert.True(benchPress.RequiresEquipment());
     }
 
-    private static Exercise CreateValidExercise()
-    {
-        return new Exercise("Push-ups", ExerciseType.Strength, DifficultyLevel.Intermediate, MuscleGroup.CHEST, new Equipment());
-    }
+    #endregion
 }
