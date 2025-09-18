@@ -28,6 +28,9 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -46,8 +49,9 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("integer");
 
-                    b.Property<double>("EstimatedDuration")
-                        .HasColumnType("double precision");
+                    b.Property<int>("EstimatedDurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("estimated_duration_minutes");
 
                     b.Property<Guid?>("ImageContentId")
                         .HasColumnType("uuid");
@@ -62,9 +66,6 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("RequiredEquipment")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
@@ -73,25 +74,26 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_workouts_created_at");
 
-                    b.HasIndex("CreatedByCoachId");
+                    b.HasIndex("CreatedByCoachId")
+                        .HasDatabaseName("ix_workouts_created_by_coach");
 
-                    b.HasIndex("CreatedByUserId");
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_workouts_created_by_user");
 
-                    b.HasIndex("Difficulty");
+                    b.HasIndex("Difficulty")
+                        .HasDatabaseName("ix_workouts_difficulty");
 
-                    b.HasIndex("IsActive");
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_workouts_is_active");
 
-                    b.HasIndex("Name");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_workouts_name");
 
-                    b.HasIndex("RequiredEquipment");
-
-                    b.HasIndex("Type");
-
-                    b.HasIndex("IsActive", "CreatedAt");
-
-                    b.HasIndex("Type", "Difficulty");
+                    b.HasIndex("Type")
+                        .HasDatabaseName("ix_workouts_type");
 
                     b.ToTable("workouts", "workouts");
                 });
@@ -101,30 +103,67 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("Distance")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("double precision")
+                        .HasColumnName("distance_meters");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ExerciseName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("Reps")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RestSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("rest_seconds");
+
+                    b.Property<int?>("Sets")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("Weight")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("double precision")
+                        .HasColumnName("weight_kg");
 
                     b.Property<Guid>("WorkoutPhaseId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExerciseId");
+                    b.HasIndex("ExerciseId")
+                        .HasDatabaseName("ix_workout_exercises_exercise_id");
 
-                    b.HasIndex("Order");
+                    b.HasIndex("Order")
+                        .HasDatabaseName("ix_workout_exercises_order");
 
-                    b.HasIndex("WorkoutPhaseId");
+                    b.HasIndex("WorkoutPhaseId")
+                        .HasDatabaseName("ix_workout_exercises_phase_id");
+
+                    b.HasIndex("WorkoutPhaseId", "ExerciseId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_workout_exercises_phase_exercise");
 
                     b.HasIndex("WorkoutPhaseId", "Order")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_workout_exercises_phase_order");
 
                     b.ToTable("workout_exercises", "workouts");
                 });
@@ -138,8 +177,9 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<double>("EstimatedDuration")
-                        .HasColumnType("double precision");
+                    b.Property<int>("EstimatedDurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("estimated_duration_minutes");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -157,14 +197,18 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Order");
+                    b.HasIndex("Order")
+                        .HasDatabaseName("ix_workout_phases_order");
 
-                    b.HasIndex("Type");
+                    b.HasIndex("Type")
+                        .HasDatabaseName("ix_workout_phases_type");
 
-                    b.HasIndex("WorkoutId");
+                    b.HasIndex("WorkoutId")
+                        .HasDatabaseName("ix_workout_phases_workout_id");
 
                     b.HasIndex("WorkoutId", "Order")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_workout_phases_workout_order");
 
                     b.ToTable("workout_phases", "workouts");
                 });
@@ -175,48 +219,6 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                         .WithMany("Exercises")
                         .HasForeignKey("WorkoutPhaseId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.OwnsOne("FitnessApp.Modules.Workouts.Domain.ValueObjects.ExerciseParameters", "Parameters", b1 =>
-                        {
-                            b1.Property<Guid>("WorkoutExerciseId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<long?>("Duration")
-                                .HasColumnType("bigint")
-                                .HasColumnName("duration_seconds");
-
-                            b1.Property<string>("Notes")
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)")
-                                .HasColumnName("notes");
-
-                            b1.Property<int?>("Reps")
-                                .HasColumnType("integer")
-                                .HasColumnName("reps");
-
-                            b1.Property<long?>("RestTime")
-                                .HasColumnType("bigint")
-                                .HasColumnName("rest_time_seconds");
-
-                            b1.Property<int?>("Sets")
-                                .HasColumnType("integer")
-                                .HasColumnName("sets");
-
-                            b1.Property<double?>("Weight")
-                                .HasPrecision(5, 2)
-                                .HasColumnType("double precision")
-                                .HasColumnName("weight");
-
-                            b1.HasKey("WorkoutExerciseId");
-
-                            b1.ToTable("workout_exercises", "workouts");
-
-                            b1.WithOwner()
-                                .HasForeignKey("WorkoutExerciseId");
-                        });
-
-                    b.Navigation("Parameters")
                         .IsRequired();
 
                     b.Navigation("WorkoutPhase");

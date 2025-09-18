@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
 
 namespace FitnessApp.Modules.Workouts.Infrastructure.Persistence.Configurations;
 
@@ -22,58 +21,56 @@ internal class WorkoutExerciseConfiguration : IEntityTypeConfiguration<WorkoutEx
         builder.Property(e => e.ExerciseId)
             .IsRequired();
 
-        builder.Property(e => e.ExerciseName)
-            .IsRequired()
-            .HasMaxLength(100);
+        builder.Property(e => e.Sets);
+
+        builder.Property(e => e.Reps);
+
+        builder.Property(e => e.DurationSeconds)
+            .HasColumnName("duration_seconds");
+
+        builder.Property(e => e.Distance)
+            .HasPrecision(10, 2)
+            .HasColumnName("distance_meters");
+
+        builder.Property(e => e.Weight)
+            .HasPrecision(5, 2)
+            .HasColumnName("weight_kg");
+
+        builder.Property(e => e.RestSeconds)
+            .HasColumnName("rest_seconds");
+
+        builder.Property(e => e.Notes)
+            .HasMaxLength(500);
 
         builder.Property(e => e.Order)
             .IsRequired();
 
-        // Configure ExerciseParameters as owned type
-        builder.OwnsOne(e => e.Parameters, parameters =>
-        {
-            parameters.Property(p => p.Reps)
-                .HasColumnName("reps");
-
-            parameters.Property(p => p.Sets)
-                .HasColumnName("sets");
-
-            parameters.Property(p => p.Duration)
-                .HasColumnName("duration_seconds")
-                .HasConversion(
-                    duration => duration.HasValue ? (long)duration.Value.TotalSeconds : (long?)null,
-                    seconds => seconds.HasValue ? TimeSpan.FromSeconds(seconds.Value) : (TimeSpan?)null);
-
-            parameters.Property(p => p.Weight)
-                .HasColumnName("weight")
-                .HasPrecision(5, 2); // Up to 999.99 kg
-
-            parameters.Property(p => p.RestTime)
-                .HasColumnName("rest_time_seconds")
-                .HasConversion(
-                    restTime => restTime.HasValue ? (long)restTime.Value.TotalSeconds : (long?)null,
-                    seconds => seconds.HasValue ? TimeSpan.FromSeconds(seconds.Value) : (TimeSpan?)null);
-
-            parameters.Property(p => p.Notes)
-                .HasColumnName("notes")
-                .HasMaxLength(500);
-        });
-
-        // Foreign keys
-        builder.Property<Guid>("WorkoutPhaseId")
+        // Foreign key
+        builder.Property(e => e.WorkoutPhaseId)
             .IsRequired();
 
-        // Navigation properties
+        // Relationships
         builder.HasOne(e => e.WorkoutPhase)
             .WithMany(p => p.Exercises)
-            .HasForeignKey("WorkoutPhaseId")
+            .HasForeignKey(e => e.WorkoutPhaseId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Indexes
-        builder.HasIndex("WorkoutPhaseId");
-        builder.HasIndex(e => e.ExerciseId);
-        builder.HasIndex(e => e.Order);
-        builder.HasIndex("WorkoutPhaseId", "Order")
-            .IsUnique();
+        builder.HasIndex(e => e.WorkoutPhaseId)
+            .HasDatabaseName("ix_workout_exercises_phase_id");
+
+        builder.HasIndex(e => e.ExerciseId)
+            .HasDatabaseName("ix_workout_exercises_exercise_id");
+
+        builder.HasIndex(e => e.Order)
+            .HasDatabaseName("ix_workout_exercises_order");
+
+        builder.HasIndex(e => new { e.WorkoutPhaseId, e.Order })
+            .IsUnique()
+            .HasDatabaseName("ix_workout_exercises_phase_order");
+
+        builder.HasIndex(e => new { e.WorkoutPhaseId, e.ExerciseId })
+            .IsUnique()
+            .HasDatabaseName("ix_workout_exercises_phase_exercise");
     }
 }

@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
 using FitnessApp.Modules.Workouts.Domain.Repositories;
 using FitnessApp.Modules.Workouts.Infrastructure.Persistence;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Infrastructure.Repositories;
 
@@ -86,13 +86,154 @@ public class WorkoutRepository : IWorkoutRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<Workout>> GetWorkoutsByEquipmentAsync(EquipmentType equipment, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Workout>> GetWorkoutsByCategoryAsync(WorkoutCategory category, CancellationToken cancellationToken = default)
     {
         return await _context.Workouts
-            .Where(w => (w.RequiredEquipment & equipment) == equipment && w.IsActive)
+            .Where(w => w.Category == category && w.IsActive)
             .OrderBy(w => w.Name)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IEnumerable<Workout>> GetWorkoutsByCategoryAndDifficultyAsync(WorkoutCategory category, DifficultyLevel difficulty, CancellationToken cancellationToken = default)
+    {
+        return await _context.Workouts
+            .Where(w => w.Category == category && w.Difficulty == difficulty && w.IsActive)
+            .OrderBy(w => w.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Workout>> GetTemplateWorkoutsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Workouts
+            .Where(w => w.Type == WorkoutType.Template && w.IsActive)
+            .OrderBy(w => w.Category)
+            .ThenBy(w => w.Difficulty)
+            .ThenBy(w => w.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Workout>> SearchWorkoutsAsync(string searchTerm, WorkoutCategory? category = null, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Workouts.Where(w => w.IsActive);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.ToLower();
+            query = query.Where(w => w.Name.ToLower().Contains(searchTerm) || 
+                                   (!string.IsNullOrEmpty(w.Description) && w.Description.ToLower().Contains(searchTerm)));
+        }
+
+        if (category.HasValue)
+        {
+            query = query.Where(w => w.Category == category.Value);
+        }
+
+        return await query
+            .OrderBy(w => w.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Workout>> GetWorkoutsWithFiltersAsync(
+        WorkoutType? type = null,
+        WorkoutCategory? category = null,
+        DifficultyLevel? difficulty = null,
+        int? minDuration = null,
+        int? maxDuration = null,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Workouts.AsQueryable();
+
+        if (!includeInactive)
+        {
+            query = query.Where(w => w.IsActive);
+        }
+
+        if (type.HasValue)
+        {
+            query = query.Where(w => w.Type == type.Value);
+        }
+
+        if (category.HasValue)
+        {
+            query = query.Where(w => w.Category == category.Value);
+        }
+
+        if (difficulty.HasValue)
+        {
+            query = query.Where(w => w.Difficulty == difficulty.Value);
+        }
+
+        if (minDuration.HasValue)
+        {
+            query = query.Where(w => w.EstimatedDurationMinutes >= minDuration.Value);
+        }
+
+        if (maxDuration.HasValue)
+        {
+            query = query.Where(w => w.EstimatedDurationMinutes <= maxDuration.Value);
+        }
+
+        return await query
+            .OrderBy(w => w.Category)
+            .ThenBy(w => w.Difficulty)
+            .ThenBy(w => w.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<(IEnumerable<Workout> Workouts, int TotalCount)> GetPagedAsync(
+        int pageNumber = 1,
+        int pageSize = 10,
+        WorkoutType? type = null,
+        WorkoutCategory? category = null,
+        DifficultyLevel? difficulty = null,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Workouts.Where(w => w.IsActive);
+
+        if (type.HasValue)
+        {
+            query = query.Where(w => w.Type == type.Value);
+        }
+
+        if (category.HasValue)
+        {
+            query = query.Where(w => w.Category == category.Value);
+        }
+
+        if (difficulty.HasValue)
+        {
+            query = query.Where(w => w.Difficulty == difficulty.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.ToLower();
+            query = query.Where(w => w.Name.ToLower().Contains(searchTerm) || 
+                                   (!string.IsNullOrEmpty(w.Description) && w.Description.ToLower().Contains(searchTerm)));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(w => w.Category)
+            .ThenBy(w => w.Difficulty)
+            .ThenBy(w => w.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    // public async Task<IEnumerable<Workout>> GetWorkoutsByEquipmentAsync(EquipmentType equipment, CancellationToken cancellationToken = default)
+    // {
+    //     return await _context.Workouts
+    //         .Where(w => (w.RequiredEquipment & equipment) == equipment && w.IsActive)
+    //         .OrderBy(w => w.Name)
+    //         .ToListAsync(cancellationToken);
+    // }
 
     public async Task<IEnumerable<Workout>> GetUserCreatedWorkoutsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -113,7 +254,7 @@ public class WorkoutRepository : IWorkoutRepository
     public async Task<IEnumerable<Workout>> GetWorkoutsWithFiltersAsync(
         WorkoutType? type = null,
         DifficultyLevel? difficulty = null,
-        EquipmentType? equipment = null,
+        //EquipmentType? equipment = null,
         int? maxDurationMinutes = null,
         int? minDurationMinutes = null,
         bool activeOnly = true,
@@ -130,14 +271,14 @@ public class WorkoutRepository : IWorkoutRepository
         if (difficulty.HasValue)
             query = query.Where(w => w.Difficulty == difficulty.Value);
 
-        if (equipment.HasValue)
-            query = query.Where(w => (w.RequiredEquipment & equipment.Value) == equipment.Value);
+        // if (equipment.HasValue)
+        //     query = query.Where(w => (w.RequiredEquipment & equipment.Value) == equipment.Value);
 
         if (maxDurationMinutes.HasValue)
-            query = query.Where(w => w.EstimatedDuration.Value.TotalMinutes <= maxDurationMinutes.Value);
+            query = query.Where(w => w.EstimatedDurationMinutes <= maxDurationMinutes.Value);
 
         if (minDurationMinutes.HasValue)
-            query = query.Where(w => w.EstimatedDuration.Value.TotalMinutes >= minDurationMinutes.Value);
+            query = query.Where(w => w.EstimatedDurationMinutes >= minDurationMinutes.Value);
 
         return await query
             .OrderBy(w => w.Name)
@@ -159,7 +300,7 @@ public class WorkoutRepository : IWorkoutRepository
         int pageSize,
         WorkoutType? type = null,
         DifficultyLevel? difficulty = null,
-        EquipmentType? equipment = null,
+        // EquipmentType? equipment = null,
         string? searchTerm = null,
         CancellationToken cancellationToken = default)
     {
@@ -174,8 +315,8 @@ public class WorkoutRepository : IWorkoutRepository
         if (difficulty.HasValue)
             query = query.Where(w => w.Difficulty == difficulty.Value);
 
-        if (equipment.HasValue)
-            query = query.Where(w => (w.RequiredEquipment & equipment.Value) == equipment.Value);
+        // if (equipment.HasValue)
+        //     query = query.Where(w => (w.RequiredEquipment & equipment.Value) == equipment.Value);
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {

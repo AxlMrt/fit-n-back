@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Infrastructure.Persistence.Configurations;
 
@@ -35,16 +34,9 @@ internal class WorkoutConfiguration : IEntityTypeConfiguration<Workout>
             .IsRequired()
             .HasConversion<int>();
 
-        // Duration value object conversion
-        builder.Property(w => w.EstimatedDuration)
+        builder.Property(w => w.EstimatedDurationMinutes)
             .IsRequired()
-            .HasConversion(
-                duration => duration.Value.TotalMinutes,
-                minutes => Duration.FromMinutes((int)minutes));
-
-        builder.Property(w => w.RequiredEquipment)
-            .IsRequired()
-            .HasConversion<int>();
+            .HasColumnName("estimated_duration_minutes");
 
         builder.Property(w => w.IsActive)
             .IsRequired()
@@ -52,34 +44,47 @@ internal class WorkoutConfiguration : IEntityTypeConfiguration<Workout>
 
         builder.Property(w => w.ImageContentId);
 
+        // User/Coach references
         builder.Property(w => w.CreatedByUserId);
-
         builder.Property(w => w.CreatedByCoachId);
 
+        // Audit properties
         builder.Property(w => w.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         builder.Property(w => w.UpdatedAt);
 
-        // Navigation properties
+        // Relationships
         builder.HasMany(w => w.Phases)
             .WithOne(p => p.Workout)
             .HasForeignKey("WorkoutId")
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Indexes
-        builder.HasIndex(w => w.Name);
-        builder.HasIndex(w => w.Type);
-        builder.HasIndex(w => w.Difficulty);
-        builder.HasIndex(w => w.RequiredEquipment);
-        builder.HasIndex(w => w.CreatedByUserId);
-        builder.HasIndex(w => w.CreatedByCoachId);
-        builder.HasIndex(w => w.CreatedAt);
-        builder.HasIndex(w => w.IsActive);
+        // Computed properties (ignored)
+        builder.Ignore(w => w.PhaseCount);
+        builder.Ignore(w => w.TotalExercises);
 
-        // Composite indexes
-        builder.HasIndex(w => new { w.Type, w.Difficulty });
-        builder.HasIndex(w => new { w.IsActive, w.CreatedAt });
+        // Indexes
+        builder.HasIndex(w => w.Name)
+            .HasDatabaseName("ix_workouts_name");
+
+        builder.HasIndex(w => w.Type)
+            .HasDatabaseName("ix_workouts_type");
+
+        builder.HasIndex(w => w.Difficulty)
+            .HasDatabaseName("ix_workouts_difficulty");
+
+        builder.HasIndex(w => w.CreatedByUserId)
+            .HasDatabaseName("ix_workouts_created_by_user");
+
+        builder.HasIndex(w => w.CreatedByCoachId)
+            .HasDatabaseName("ix_workouts_created_by_coach");
+
+        builder.HasIndex(w => w.IsActive)
+            .HasDatabaseName("ix_workouts_is_active");
+
+        builder.HasIndex(w => w.CreatedAt)
+            .HasDatabaseName("ix_workouts_created_at");
     }
 }

@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="15.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
@@ -16,7 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FitnessApp.SharedKernel\FitnessApp.SharedKernel.csproj" />
-    <ProjectReference Include="..\FitnessApp.Modules.Exercises\FitnessApp.Modules.Exercises.csproj" />
   </ItemGroup>
 
 </Project>

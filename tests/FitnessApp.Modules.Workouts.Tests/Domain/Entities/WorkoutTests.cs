@@ -1,272 +1,259 @@
-using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
-using FitnessApp.Modules.Workouts.Domain.Exceptions;
 using FluentAssertions;
+using FitnessApp.Modules.Workouts.Domain.Entities;
+using FitnessApp.Modules.Workouts.Domain.Exceptions;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Tests.Domain.Entities;
 
 public class WorkoutTests
 {
     [Fact]
-    public void Constructor_ValidData_ShouldCreateWorkout()
+    public void Workout_Creation_ShouldSucceed_WithValidData()
     {
         // Arrange
         var name = "Test Workout";
-        var type = WorkoutType.Fixed;
+        var type = WorkoutType.Template;
+        var category = WorkoutCategory.Cardio;
         var difficulty = DifficultyLevel.Intermediate;
-        var estimatedDuration = Duration.FromMinutes(30);
-        var equipment = EquipmentType.None;
-        var userId = Guid.NewGuid();
+        var estimatedDuration = 45;
 
         // Act
-        var workout = new Workout(name, type, difficulty, estimatedDuration, equipment, userId);
+        var workout = new Workout(name, type, category, difficulty, estimatedDuration);
 
         // Assert
+        workout.Should().NotBeNull();
         workout.Name.Should().Be(name);
         workout.Type.Should().Be(type);
+        workout.Category.Should().Be(category);
         workout.Difficulty.Should().Be(difficulty);
-        workout.EstimatedDuration.Should().Be(estimatedDuration);
-        workout.RequiredEquipment.Should().Be(equipment);
-        workout.CreatedByUserId.Should().Be(userId);
+        workout.EstimatedDurationMinutes.Should().Be(estimatedDuration);
         workout.IsActive.Should().BeTrue();
         workout.Phases.Should().BeEmpty();
-        workout.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Theory]
     [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_InvalidName_ShouldThrowException(string invalidName)
+    [InlineData("  ")]
+    public void Workout_Creation_ShouldThrowException_WithInvalidName(string invalidName)
     {
-        // Act & Assert
-        var act = () => new Workout(invalidName, WorkoutType.Fixed, 
-            DifficultyLevel.Beginner, Duration.FromMinutes(30), EquipmentType.None, Guid.NewGuid());
-        
-        act.Should().Throw<WorkoutDomainException>()
-           .WithMessage("*name*");
+        // Arrange & Act & Assert
+        var act = () => new Workout(invalidName, WorkoutType.Template, WorkoutCategory.Cardio, DifficultyLevel.Beginner, 30);
+        act.Should().Throw<WorkoutDomainException>();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(301)]
+    public void Workout_Creation_ShouldThrowException_WithInvalidDuration(int invalidDuration)
+    {
+        // Arrange & Act & Assert
+        var act = () => new Workout("Test", WorkoutType.Template, WorkoutCategory.Cardio, DifficultyLevel.Beginner, invalidDuration);
+        act.Should().Throw<WorkoutDomainException>();
     }
 
     [Fact]
-    public void Constructor_NullDuration_ShouldThrowException()
-    {
-        // Act & Assert
-        var act = () => new Workout("Name", WorkoutType.Fixed, 
-            DifficultyLevel.Beginner, null!, EquipmentType.None, Guid.NewGuid());
-        
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void AddPhase_ValidPhase_ShouldAddPhase()
+    public void UpdateDetails_ShouldSucceed_WithValidData()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
-        var phaseType = WorkoutPhaseType.WarmUp;
-        var phaseName = "Warm Up";
-        var phaseDuration = Duration.FromMinutes(10);
+        var workout = CreateValidWorkout();
+        var newName = "Updated Workout";
+        var newDescription = "Updated description";
+        var newDifficulty = DifficultyLevel.Advanced;
+        var newDuration = 60;
 
         // Act
-        var phase = workout.AddPhase(phaseType, phaseName, phaseDuration);
+        workout.UpdateDetails(newName, newDescription, newDifficulty, newDuration);
+
+        // Assert
+        workout.Name.Should().Be(newName);
+        workout.Description.Should().Be(newDescription);
+        workout.Difficulty.Should().Be(newDifficulty);
+        workout.EstimatedDurationMinutes.Should().Be(newDuration);
+    }
+
+    [Fact]
+    public void AddPhase_ShouldSucceed_WithValidPhase()
+    {
+        // Arrange
+        var workout = CreateValidWorkout();
+
+        // Act
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", 10);
 
         // Assert
         workout.Phases.Should().HaveCount(1);
-        workout.Phases.First().Should().Be(phase);
-        phase.Type.Should().Be(phaseType);
-        phase.Name.Should().Be(phaseName);
-        phase.EstimatedDuration.Should().Be(phaseDuration);
-        workout.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        var phase = workout.Phases.First();
+        phase.Type.Should().Be(WorkoutPhaseType.WarmUp);
+        phase.Name.Should().Be("Warm Up");
+        phase.EstimatedDurationMinutes.Should().Be(10);
     }
 
     [Fact]
-    public void RemovePhase_ExistingPhase_ShouldRemovePhase()
+    public void AddPhase_ShouldThrowException_WithDuplicatePhaseType()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
-        var phase = workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", Duration.FromMinutes(10));
+        var workout = CreateValidWorkout();
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", 10);
+
+        // Act & Assert
+        var act = () => workout.AddPhase(WorkoutPhaseType.WarmUp, "Another Warm Up", 5);
+        act.Should().Throw<WorkoutDomainException>();
+    }
+
+    [Fact]
+    public void RemovePhase_ShouldSucceed_WithExistingPhase()
+    {
+        // Arrange
+        var workout = CreateValidWorkout();
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", 10);
 
         // Act
-        workout.RemovePhase(phase.Id);
+        workout.RemovePhase(WorkoutPhaseType.WarmUp);
 
         // Assert
         workout.Phases.Should().BeEmpty();
     }
 
     [Fact]
-    public void RemovePhase_NonExistentPhase_ShouldThrowException()
+    public void RemovePhase_ShouldThrowException_WithNonExistentPhase()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
-        var nonExistentId = Guid.NewGuid();
+        var workout = CreateValidWorkout();
 
         // Act & Assert
-        var act = () => workout.RemovePhase(nonExistentId);
-        
-        act.Should().Throw<WorkoutDomainException>()
-           .WithMessage("*not found*");
+        var act = () => workout.RemovePhase(WorkoutPhaseType.WarmUp);
+        act.Should().Throw<WorkoutDomainException>();
     }
 
     [Fact]
-    public void Deactivate_ActiveWorkout_ShouldDeactivate()
+    public void MovePhase_ShouldSucceed_WithValidOrder()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
+        var workout = CreateValidWorkout();
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Phase 1", 10);
+        workout.AddPhase(WorkoutPhaseType.MainEffort, "Phase 2", 20);
+        workout.AddPhase(WorkoutPhaseType.Stretching, "Phase 3", 10);
+
+        // Act
+        workout.MovePhase(WorkoutPhaseType.Stretching, 1);
+
+        // Assert
+        var orderedPhases = workout.Phases.OrderBy(p => p.Order).ToList();
+        orderedPhases[0].Type.Should().Be(WorkoutPhaseType.Stretching);
+        orderedPhases[1].Type.Should().Be(WorkoutPhaseType.WarmUp);
+        orderedPhases[2].Type.Should().Be(WorkoutPhaseType.MainEffort);
+    }
+
+    [Fact]
+    public void Deactivate_ShouldSetIsActiveToFalse()
+    {
+        // Arrange
+        var workout = CreateValidWorkout();
 
         // Act
         workout.Deactivate();
 
         // Assert
         workout.IsActive.Should().BeFalse();
-        workout.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
-    public void Reactivate_InactiveWorkout_ShouldReactivate()
+    public void Activate_ShouldSetIsActiveToTrue()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
+        var workout = CreateValidWorkout();
         workout.Deactivate();
 
         // Act
-        workout.Reactivate();
+        workout.Activate();
 
         // Assert
         workout.IsActive.Should().BeTrue();
-        workout.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
-    public void UpdateName_ValidName_ShouldUpdateWorkout()
+    public void SetImageContent_ShouldSucceed_WithValidContentId()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
-        var newName = "Updated Workout";
+        var workout = CreateValidWorkout();
+        var contentId = Guid.NewGuid();
 
         // Act
-        workout.UpdateName(newName);
+        workout.SetImageContent(contentId);
 
         // Assert
-        workout.Name.Should().Be(newName);
-        workout.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        workout.ImageContentId.Should().Be(contentId);
     }
 
     [Fact]
-    public void UpdateDifficulty_ValidDifficulty_ShouldUpdateWorkout()
+    public void SetImageContent_ShouldSucceed_WithNull()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
-        var newDifficulty = DifficultyLevel.Advanced;
+        var workout = CreateValidWorkout();
+        var contentId = Guid.NewGuid();
+        workout.SetImageContent(contentId);
 
         // Act
-        workout.UpdateDifficulty(newDifficulty);
+        workout.SetImageContent(null);
 
         // Assert
-        workout.Difficulty.Should().Be(newDifficulty);
-        workout.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        workout.ImageContentId.Should().BeNull();
     }
 
     [Fact]
-    public void UpdateRequiredEquipment_ValidEquipment_ShouldUpdateWorkout()
+    public void CreateUserWorkout_ShouldSucceed_WithValidData()
     {
         // Arrange
-        var workout = CreateSampleWorkout();
-        var newEquipment = EquipmentType.FreeWeights;
+        var name = "User Workout";
+        var difficulty = DifficultyLevel.Beginner;
+        var duration = 30;
+        var userId = Guid.NewGuid();
 
         // Act
-        workout.UpdateRequiredEquipment(newEquipment);
+        var workout = Workout.CreateUserWorkout(name, WorkoutCategory.Strength, difficulty, duration, userId);
 
         // Assert
-        workout.RequiredEquipment.Should().Be(newEquipment);
-        workout.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-    }
-
-    [Fact]
-    public void CalculateActualDuration_WithPhases_ShouldReturnCorrectDuration()
-    {
-        // Arrange
-        var workout = CreateSampleWorkout();
-        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", Duration.FromMinutes(10));
-        workout.AddPhase(WorkoutPhaseType.MainEffort, "Main", Duration.FromMinutes(30));
-
-        // Act
-        var totalDuration = workout.CalculateActualDuration();
-
-        // Assert
-        totalDuration.TotalMinutes.Should().Be(40);
-    }
-
-    [Fact]
-    public void CalculateActualDuration_NoPhases_ShouldReturnMinimumDuration()
-    {
-        // Arrange
-        var workout = CreateSampleWorkout();
-
-        // Act
-        var totalDuration = workout.CalculateActualDuration();
-
-        // Assert
-        totalDuration.TotalMinutes.Should().Be(1); // Minimum 1 minute when no phases
-    }
-
-    [Fact]
-    public void CreateUserWorkout_ShouldCreateWorkoutWithUserType()
-    {
-        // Arrange & Act
-        var workout = Workout.CreateUserWorkout(
-            "User Workout",
-            DifficultyLevel.Beginner,
-            Duration.FromMinutes(20),
-            EquipmentType.Mat,
-            Guid.NewGuid());
-
-        // Assert
+        workout.Should().NotBeNull();
+        workout.Name.Should().Be(name);
         workout.Type.Should().Be(WorkoutType.UserCreated);
-        workout.CreatedByUserId.Should().NotBeNull();
+        workout.Difficulty.Should().Be(difficulty);
+        workout.EstimatedDurationMinutes.Should().Be(duration);
+        workout.CreatedByUserId.Should().Be(userId);
         workout.CreatedByCoachId.Should().BeNull();
     }
 
     [Fact]
-    public void CreateCoachWorkout_ShouldCreateWorkoutWithCoachType()
+    public void CreateCoachWorkout_ShouldSucceed_WithValidData()
     {
-        // Arrange & Act
-        var workout = Workout.CreateCoachWorkout(
-            "Coach Workout",
-            DifficultyLevel.Advanced,
-            Duration.FromMinutes(60),
-            EquipmentType.GymEquipment,
-            Guid.NewGuid());
+        // Arrange
+        var name = "Coach Workout";
+        var difficulty = DifficultyLevel.Advanced;
+        var duration = 60;
+        var coachId = Guid.NewGuid();
+
+        // Act
+        var workout = Workout.CreateCoachWorkout(name, WorkoutCategory.HIIT, difficulty, duration, coachId);
 
         // Assert
-        workout.Type.Should().Be(WorkoutType.Fixed);
-        workout.CreatedByCoachId.Should().NotBeNull();
+        workout.Should().NotBeNull();
+        workout.Name.Should().Be(name);
+        workout.Type.Should().Be(WorkoutType.Template);
+        workout.Category.Should().Be(WorkoutCategory.HIIT);
+        workout.Difficulty.Should().Be(difficulty);
+        workout.EstimatedDurationMinutes.Should().Be(duration);
+        workout.CreatedByCoachId.Should().Be(coachId);
         workout.CreatedByUserId.Should().BeNull();
     }
 
-    [Fact]
-    public void IsCreatedByUser_WithMatchingUserId_ShouldReturnTrue()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var workout = Workout.CreateUserWorkout(
-            "Test",
-            DifficultyLevel.Beginner,
-            Duration.FromMinutes(20),
-            EquipmentType.None,
-            userId);
-
-        // Act & Assert
-        workout.IsCreatedByUser(userId).Should().BeTrue();
-        workout.IsCreatedByUser(Guid.NewGuid()).Should().BeFalse();
-    }
-
-    private static Workout CreateSampleWorkout()
+    private static Workout CreateValidWorkout()
     {
         return new Workout(
             "Test Workout",
-            WorkoutType.Fixed, 
+            WorkoutType.Template,
+            WorkoutCategory.Mixed,
             DifficultyLevel.Intermediate,
-            Duration.FromMinutes(30),
-            EquipmentType.None, 
-            Guid.NewGuid());
+            45
+        );
     }
 }

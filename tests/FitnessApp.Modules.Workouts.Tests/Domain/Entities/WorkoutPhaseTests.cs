@@ -1,166 +1,87 @@
-using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
-using FitnessApp.Modules.Workouts.Domain.Exceptions;
 using FluentAssertions;
+using FitnessApp.Modules.Workouts.Domain.Entities;
+using FitnessApp.Modules.Workouts.Domain.Exceptions;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Tests.Domain.Entities;
 
 public class WorkoutPhaseTests
 {
     [Fact]
-    public void Constructor_ValidData_ShouldCreatePhase()
+    public void WorkoutPhase_Creation_ShouldSucceed_WithValidData()
     {
         // Arrange
         var type = WorkoutPhaseType.WarmUp;
         var name = "Warm Up Phase";
-        var duration = Duration.FromMinutes(10);
-        var order = 0;
+        var estimatedDuration = 10;
+        var order = 1;
 
         // Act
-        var phase = new WorkoutPhase(type, name, duration, order);
+        var phase = new WorkoutPhase(type, name, estimatedDuration, order);
 
         // Assert
+        phase.Should().NotBeNull();
         phase.Type.Should().Be(type);
         phase.Name.Should().Be(name);
-        phase.EstimatedDuration.Should().Be(duration);
+        phase.EstimatedDurationMinutes.Should().Be(estimatedDuration);
         phase.Order.Should().Be(order);
         phase.Exercises.Should().BeEmpty();
     }
 
     [Theory]
     [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_InvalidName_ShouldThrowException(string invalidName)
+    [InlineData("  ")]
+    public void WorkoutPhase_Creation_ShouldThrowException_WithInvalidName(string invalidName)
     {
-        // Act & Assert
-        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, invalidName, Duration.FromMinutes(10), 0);
-        
-        act.Should().Throw<WorkoutDomainException>()
-           .WithMessage("*name*");
+        // Arrange & Act & Assert
+        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, invalidName, 10, 1);
+        act.Should().Throw<WorkoutDomainException>();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(181)]
+    public void WorkoutPhase_Creation_ShouldThrowException_WithInvalidDuration(int invalidDuration)
+    {
+        // Arrange & Act & Assert
+        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", invalidDuration, 1);
+        act.Should().Throw<WorkoutDomainException>();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void WorkoutPhase_Creation_ShouldThrowException_WithInvalidOrder(int invalidOrder)
+    {
+        // Arrange & Act & Assert
+        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", 10, invalidOrder);
+        act.Should().Throw<WorkoutDomainException>();
     }
 
     [Fact]
-    public void Constructor_NegativeOrder_ShouldThrowException()
-    {
-        // Act & Assert
-        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", Duration.FromMinutes(10), -1);
-        
-        act.Should().Throw<WorkoutDomainException>()
-           .WithMessage("*Order*");
-    }
-
-    [Fact]
-    public void Constructor_NullDuration_ShouldThrowException()
-    {
-        // Act & Assert
-        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", null!, 0);
-        
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void SetDescription_ValidDescription_ShouldSetDescription()
+    public void UpdateDetails_ShouldSucceed_WithValidData()
     {
         // Arrange
-        var phase = CreateSamplePhase();
-        var description = "Test description";
+        var phase = CreateValidPhase();
+        var newName = "Updated Phase";
+        var newDescription = "Updated description";
+        var newDuration = 15;
 
         // Act
-        phase.SetDescription(description);
+        phase.UpdateDetails(newName, newDescription, newDuration);
 
         // Assert
-        phase.Description.Should().Be(description);
+        phase.Name.Should().Be(newName);
+        phase.Description.Should().Be(newDescription);
+        phase.EstimatedDurationMinutes.Should().Be(newDuration);
     }
 
     [Fact]
-    public void SetDescription_NullDescription_ShouldSetToNull()
+    public void UpdateOrder_ShouldSucceed_WithValidOrder()
     {
         // Arrange
-        var phase = CreateSamplePhase();
-
-        // Act
-        phase.SetDescription(null);
-
-        // Assert
-        phase.Description.Should().BeNull();
-    }
-
-    [Fact]
-    public void AddExercise_ValidExercise_ShouldAddExercise()
-    {
-        // Arrange
-        var phase = CreateSamplePhase();
-        var exerciseId = Guid.NewGuid();
-        var exerciseName = "Push-ups";
-        var parameters = new ExerciseParameters(reps: 10, sets: 3, restTime: TimeSpan.FromSeconds(60));
-
-        // Act
-        var exercise = phase.AddExercise(exerciseId, exerciseName, parameters);
-
-        // Assert
-        phase.Exercises.Should().HaveCount(1);
-        phase.Exercises.First().Should().Be(exercise);
-        exercise.ExerciseId.Should().Be(exerciseId);
-        exercise.ExerciseName.Should().Be(exerciseName);
-        exercise.Parameters.Should().Be(parameters);
-        exercise.Order.Should().Be(0);
-    }
-
-    [Fact]
-    public void RemoveExercise_ExistingExercise_ShouldRemoveExercise()
-    {
-        // Arrange
-        var phase = CreateSamplePhase();
-        var parameters = new ExerciseParameters();
-        var exercise = phase.AddExercise(Guid.NewGuid(), "Test", parameters);
-
-        // Act
-        phase.RemoveExercise(exercise.Id);
-
-        // Assert
-        phase.Exercises.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void RemoveExercise_NonExistentExercise_ShouldThrowException()
-    {
-        // Arrange
-        var phase = CreateSamplePhase();
-        var nonExistentId = Guid.NewGuid();
-
-        // Act & Assert
-        var act = () => phase.RemoveExercise(nonExistentId);
-        
-        act.Should().Throw<WorkoutDomainException>()
-           .WithMessage("*not found*");
-    }
-
-    [Fact]
-    public void MoveExercise_ValidPosition_ShouldMoveExercise()
-    {
-        // Arrange
-        var phase = CreateSamplePhase();
-        var emptyParams = new ExerciseParameters();
-        var exercise1 = phase.AddExercise(Guid.NewGuid(), "Exercise 1", emptyParams);
-        var exercise2 = phase.AddExercise(Guid.NewGuid(), "Exercise 2", emptyParams);
-        var exercise3 = phase.AddExercise(Guid.NewGuid(), "Exercise 3", emptyParams);
-
-        // Act - Move exercise1 to position 2
-        phase.MoveExercise(exercise1.Id, 2);
-
-        // Assert
-        var exercises = phase.Exercises.OrderBy(e => e.Order).ToList();
-        exercises[0].Should().Be(exercise2);
-        exercises[1].Should().Be(exercise3);
-        exercises[2].Should().Be(exercise1);
-    }
-
-    [Fact]
-    public void UpdateOrder_ValidOrder_ShouldUpdateOrder()
-    {
-        // Arrange
-        var phase = CreateSamplePhase();
+        var phase = CreateValidPhase();
         var newOrder = 5;
 
         // Act
@@ -170,38 +91,132 @@ public class WorkoutPhaseTests
         phase.Order.Should().Be(newOrder);
     }
 
-    [Fact]
-    public void CalculateTotalDuration_WithExercises_ShouldCalculateCorrectDuration()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    public void UpdateOrder_ShouldThrowException_WithInvalidOrder(int invalidOrder)
     {
         // Arrange
-        var phase = CreateSamplePhase();
-        
-        // Add exercise with duration
-        phase.AddExercise(Guid.NewGuid(), "Exercise 1", new ExerciseParameters(
-            duration: TimeSpan.FromSeconds(30),
-            sets: 3,
-            restTime: TimeSpan.FromSeconds(60)));
+        var phase = CreateValidPhase();
 
-        // Add exercise with reps (should estimate duration)
-        phase.AddExercise(Guid.NewGuid(), "Exercise 2", new ExerciseParameters(
-            reps: 10,
-            sets: 2,
-            restTime: TimeSpan.FromSeconds(45)));
-
-        // Act
-        var totalDuration = phase.CalculateTotalDuration();
-
-        // Assert
-        // Should calculate total duration based on exercises
-        totalDuration.Value.TotalSeconds.Should().BeGreaterThan(0);
+        // Act & Assert
+        var act = () => phase.UpdateOrder(invalidOrder);
+        act.Should().Throw<WorkoutDomainException>();
     }
 
-    private static WorkoutPhase CreateSamplePhase()
+    [Fact]
+    public void AddExercise_ShouldSucceed_WithValidExercise()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var exerciseId = Guid.NewGuid();
+
+        // Act
+        phase.AddExercise(exerciseId, 3, 10, 60);
+
+        // Assert
+        phase.Exercises.Should().HaveCount(1);
+        var exercise = phase.Exercises.First();
+        exercise.ExerciseId.Should().Be(exerciseId);
+        exercise.Sets.Should().Be(3);
+        exercise.Reps.Should().Be(10);
+        exercise.RestSeconds.Should().Be(60);
+        exercise.Order.Should().Be(1);
+    }
+
+    [Fact]
+    public void AddExercise_ShouldThrowException_WithDuplicateExercise()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var exerciseId = Guid.NewGuid();
+        phase.AddExercise(exerciseId, 3, 10, 60);
+
+        // Act & Assert
+        var act = () => phase.AddExercise(exerciseId, 3, 12, 60);
+        act.Should().Throw<WorkoutDomainException>();
+    }
+
+    [Fact]
+    public void RemoveExercise_ShouldSucceed_WithExistingExercise()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var exerciseId = Guid.NewGuid();
+        phase.AddExercise(exerciseId, 3, 10, 60);
+
+        // Act
+        phase.RemoveExercise(exerciseId);
+
+        // Assert
+        phase.Exercises.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RemoveExercise_ShouldThrowException_WithNonExistentExercise()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var nonExistentExerciseId = Guid.NewGuid();
+
+        // Act & Assert
+        var act = () => phase.RemoveExercise(nonExistentExerciseId);
+        act.Should().Throw<WorkoutDomainException>();
+    }
+
+    [Fact]
+    public void MoveExercise_ShouldSucceed_WithValidOrder()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var exercise1Id = Guid.NewGuid();
+        var exercise2Id = Guid.NewGuid();
+        var exercise3Id = Guid.NewGuid();
+        
+        phase.AddExercise(exercise1Id, 3, 10, 60);
+        phase.AddExercise(exercise2Id, 3, 12, 60);
+        phase.AddExercise(exercise3Id, 3, 15, 60);
+
+        // Act
+        phase.MoveExercise(exercise3Id, 1);
+
+        // Assert
+        var orderedExercises = phase.Exercises.OrderBy(e => e.Order).ToList();
+        orderedExercises[0].ExerciseId.Should().Be(exercise3Id);
+        orderedExercises[1].ExerciseId.Should().Be(exercise1Id);
+        orderedExercises[2].ExerciseId.Should().Be(exercise2Id);
+    }
+
+    [Fact]
+    public void HasExercise_ShouldReturnTrue_WithExistingExercise()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var exerciseId = Guid.NewGuid();
+        phase.AddExercise(exerciseId, 3, 10, 60);
+
+        // Act & Assert
+        phase.HasExercise(exerciseId).Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasExercise_ShouldReturnFalse_WithNonExistentExercise()
+    {
+        // Arrange
+        var phase = CreateValidPhase();
+        var nonExistentExerciseId = Guid.NewGuid();
+
+        // Act & Assert
+        phase.HasExercise(nonExistentExerciseId).Should().BeFalse();
+    }
+
+    private static WorkoutPhase CreateValidPhase()
     {
         return new WorkoutPhase(
             WorkoutPhaseType.MainEffort,
-            "Main Effort",
-            Duration.FromMinutes(20),
-            0);
+            "Test Phase",
+            30,
+            1
+        );
     }
 }

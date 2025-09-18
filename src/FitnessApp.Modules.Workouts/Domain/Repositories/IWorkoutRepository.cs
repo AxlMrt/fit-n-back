@@ -1,5 +1,5 @@
 using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Domain.Repositories;
 
@@ -18,8 +18,11 @@ public interface IWorkoutRepository
     // Query operations
     Task<IEnumerable<Workout>> GetActiveWorkoutsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<Workout>> GetWorkoutsByTypeAsync(WorkoutType type, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Workout>> GetWorkoutsByCategoryAsync(WorkoutCategory category, CancellationToken cancellationToken = default);
     Task<IEnumerable<Workout>> GetWorkoutsByDifficultyAsync(DifficultyLevel difficulty, CancellationToken cancellationToken = default);
-    Task<IEnumerable<Workout>> GetWorkoutsByEquipmentAsync(EquipmentType equipment, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Workout>> GetWorkoutsByCategoryAndDifficultyAsync(WorkoutCategory category, DifficultyLevel difficulty, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Workout>> GetTemplateWorkoutsAsync(CancellationToken cancellationToken = default);
+    // Task<IEnumerable<Workout>> GetWorkoutsByEquipmentAsync(EquipmentType equipment, CancellationToken cancellationToken = default);
     
     // User-specific operations
     Task<IEnumerable<Workout>> GetUserCreatedWorkoutsAsync(Guid userId, CancellationToken cancellationToken = default);
@@ -28,12 +31,15 @@ public interface IWorkoutRepository
     // Advanced queries
     Task<IEnumerable<Workout>> GetWorkoutsWithFiltersAsync(
         WorkoutType? type = null,
+        WorkoutCategory? category = null,
         DifficultyLevel? difficulty = null,
-        EquipmentType? equipment = null,
         int? maxDurationMinutes = null,
         int? minDurationMinutes = null,
         bool activeOnly = true,
         CancellationToken cancellationToken = default);
+    
+    // Search and recommendations
+    Task<IEnumerable<Workout>> SearchWorkoutsAsync(string searchTerm, WorkoutCategory? category = null, CancellationToken cancellationToken = default);
     
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -43,8 +49,9 @@ public interface IWorkoutRepository
         int page,
         int pageSize,
         WorkoutType? type = null,
+        WorkoutCategory? category = null,
         DifficultyLevel? difficulty = null,
-        EquipmentType? equipment = null,
+        //EquipmentType? equipment = null,
         string? searchTerm = null,
         CancellationToken cancellationToken = default);
 }

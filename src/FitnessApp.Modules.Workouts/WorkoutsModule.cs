@@ -1,15 +1,12 @@
-﻿using FluentValidation;
-using FitnessApp.Modules.Workouts.Application.DTOs;
-using FitnessApp.Modules.Workouts.Application.Interfaces;
+﻿using FitnessApp.Modules.Workouts.Application.Interfaces;
 using FitnessApp.Modules.Workouts.Application.Services;
-using FitnessApp.Modules.Workouts.Application.Validators;
 using FitnessApp.Modules.Workouts.Domain.Repositories;
 using FitnessApp.Modules.Workouts.Infrastructure.Persistence;
 using FitnessApp.Modules.Workouts.Infrastructure.Repositories;
+using FitnessApp.Modules.Workouts.Application.Mapping;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace FitnessApp.Modules.Workouts;
 
@@ -32,20 +29,12 @@ public static class WorkoutsModule
 
         // Application services
         services.AddScoped<IWorkoutService, WorkoutService>();
-        services.AddScoped<IWorkoutAuthorizationService, WorkoutAuthorizationService>();
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
-        
-        // Add HttpContextAccessor for CurrentUserService
+
+        // Add HttpContextAccessor
         services.AddHttpContextAccessor();
 
-        // FluentValidation validators
-        services.AddScoped<IValidator<CreateWorkoutDto>, CreateWorkoutDtoValidator>();
-        services.AddScoped<IValidator<UpdateWorkoutDto>, UpdateWorkoutDtoValidator>();
-        services.AddScoped<IValidator<AddWorkoutPhaseDto>, AddWorkoutPhaseDtoValidator>();
-        services.AddScoped<IValidator<UpdateWorkoutPhaseDto>, UpdateWorkoutPhaseDtoValidator>();
-        services.AddScoped<IValidator<AddWorkoutExerciseDto>, AddWorkoutExerciseDtoValidator>();
-        services.AddScoped<IValidator<UpdateWorkoutExerciseDto>, UpdateWorkoutExerciseDtoValidator>();
-        services.AddScoped<IValidator<WorkoutQueryDto>, WorkoutQueryDtoValidator>();
+        // AutoMapper
+        services.AddAutoMapper(cfg => cfg.AddProfile<WorkoutMappingProfile>());
 
         return services;
     }

@@ -1,6 +1,5 @@
-using FitnessApp.Modules.Workouts.Domain.Enums;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
 using FitnessApp.Modules.Workouts.Domain.Exceptions;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Domain.Entities;
 
@@ -11,24 +10,30 @@ public class WorkoutPhase
 {
     private readonly List<WorkoutExercise> _exercises = [];
     
-    private WorkoutPhase() { } // For EF Core
+    private WorkoutPhase() { }
 
     public WorkoutPhase(
         WorkoutPhaseType type, 
         string name, 
-        Duration estimatedDuration, 
+        int estimatedDurationMinutes, 
         int order)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new WorkoutDomainException("Phase name is required");
             
-        if (order < 0)
-            throw new WorkoutDomainException("Order cannot be negative");
+        if (name.Length > 100)
+            throw new WorkoutDomainException("Phase name cannot exceed 100 characters");
+            
+        if (order < 1)
+            throw new WorkoutDomainException("Order must be at least 1");
+
+        if (estimatedDurationMinutes <= 0 || estimatedDurationMinutes > 180)
+            throw new WorkoutDomainException("Phase duration must be between 1 and 180 minutes");
 
         Id = Guid.NewGuid();
         Type = type;
         Name = name.Trim();
-        EstimatedDuration = estimatedDuration ?? throw new ArgumentNullException(nameof(estimatedDuration));
+        EstimatedDurationMinutes = estimatedDurationMinutes;
         Order = order;
     }
 
@@ -36,7 +41,7 @@ public class WorkoutPhase
     public WorkoutPhaseType Type { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
-    public Duration EstimatedDuration { get; private set; } = null!;
+    public int EstimatedDurationMinutes { get; private set; }
     public int Order { get; private set; }
 
     // Navigation properties
@@ -44,91 +49,173 @@ public class WorkoutPhase
     public Workout Workout { get; private set; } = null!;
     public IReadOnlyList<WorkoutExercise> Exercises => _exercises.AsReadOnly();
 
-    // Business methods
-    public void SetDescription(string? description)
-    {
-        Description = description?.Trim();
-    }
+    // Computed properties
+    public int ExerciseCount => _exercises.Count;
 
-    public void UpdateEstimatedDuration(Duration duration)
-    {
-        EstimatedDuration = duration ?? throw new ArgumentNullException(nameof(duration));
-    }
+    #region Exercise Management
 
-    public void UpdateOrder(int order)
+    // Signature principale avec tous les paramètres
+    public void AddExercise(Guid exerciseId, int? sets = null, int? reps = null, 
+        int? durationSeconds = null, double? distance = null, double? weight = null, int? restSeconds = null)
     {
-        if (order < 0)
-            throw new WorkoutDomainException("Order cannot be negative");
-            
-        Order = order;
-    }
+        if (_exercises.Any(e => e.ExerciseId == exerciseId))
+            throw new WorkoutDomainException($"Exercise {exerciseId} already exists in this phase");
 
-    public WorkoutExercise AddExercise(
-        Guid exerciseId, 
-        string exerciseName, 
-        ExerciseParameters parameters)
-    {
-        var nextOrder = _exercises.Count > 0 ? _exercises.Max(e => e.Order) + 1 : 0;
-        var workoutExercise = new WorkoutExercise(exerciseId, exerciseName, parameters, nextOrder);
+        var nextOrder = _exercises.Count + 1;
+        var workoutExercise = new WorkoutExercise(exerciseId, sets, reps, durationSeconds, 
+            distance, weight, restSeconds, nextOrder);
         _exercises.Add(workoutExercise);
+    }
+
+    // Surcharge pour compatibilité avec les tests (sets, reps, restSeconds)
+    public void AddExercise(Guid exerciseId, int sets, int reps, int? restSeconds)
+    {
+        if (_exercises.Any(e => e.ExerciseId == exerciseId))
+            throw new WorkoutDomainException($"Exercise {exerciseId} already exists in this phase");
+
+        var nextOrder = _exercises.Count + 1;
+        var workoutExercise = new WorkoutExercise(exerciseId, sets, reps, restSeconds, nextOrder);
+        _exercises.Add(workoutExercise);
+    }
+
+    // Méthode de convenance pour les exercices basés sur répétitions
+    public void AddRepBasedExercise(Guid exerciseId, int sets, int reps, int? restSeconds = null)
+    {
+        AddExercise(exerciseId, sets, reps, null, null, null, restSeconds);
+    }
+
+    // Méthode de convenance pour les exercices basés sur le temps
+    public void AddTimeBasedExercise(Guid exerciseId, int durationSeconds, int? restSeconds = null)
+    {
+        AddExercise(exerciseId, null, null, durationSeconds, null, null, restSeconds);
+    }
+
+    // Méthode de convenance pour les exercices basés sur la distance
+    public void AddDistanceBasedExercise(Guid exerciseId, double distanceMeters, int? restSeconds = null)
+    {
+        AddExercise(exerciseId, null, null, null, distanceMeters, null, restSeconds);
+    }
+
+    // Méthode de convenance pour les exercices basés sur la distance (cardio)
+    public void AddDistanceBasedExercise(Guid exerciseId, double distanceMeters)
+    {
+        AddExercise(exerciseId, null, null, null, distanceMeters, null, null);
+    }
+
+    // Méthode de convenance pour les exercices de musculation avec poids
+    public void AddWeightBasedExercise(Guid exerciseId, int sets, int reps, double weight, int? restSeconds = null)
+    {
+        AddExercise(exerciseId, sets, reps, null, null, weight, restSeconds);
+    }
+
+    public void RemoveExercise(Guid exerciseId)
+    {
+        var exercise = _exercises.FirstOrDefault(e => e.ExerciseId == exerciseId);
+        if (exercise == null)
+            throw new WorkoutDomainException($"Exercise {exerciseId} not found in this phase");
+
+        _exercises.Remove(exercise);
+        UpdateExerciseOrders();
+    }
+
+    public void MoveExercise(Guid exerciseId, int newOrder)
+    {
+        var exercise = _exercises.FirstOrDefault(e => e.ExerciseId == exerciseId);
+        if (exercise == null)
+            throw new WorkoutDomainException($"Exercise {exerciseId} not found in this phase");
+
+        if (newOrder < 1 || newOrder > _exercises.Count)
+            throw new WorkoutDomainException($"Order must be between 1 and {_exercises.Count}");
+
+        var currentOrder = exercise.Order;
         
-        return workoutExercise;
-    }
+        // If no change needed, return
+        if (currentOrder == newOrder)
+            return;
 
-    public void RemoveExercise(Guid workoutExerciseId)
-    {
-        var exercise = _exercises.FirstOrDefault(e => e.Id == workoutExerciseId);
-        if (exercise == null)
-            throw new WorkoutDomainException($"Exercise with ID {workoutExerciseId} not found in this phase");
-
-        _exercises.Remove(exercise);
-        ReorderExercises();
-    }
-
-    public void MoveExercise(Guid workoutExerciseId, int newOrder)
-    {
-        var exercise = _exercises.FirstOrDefault(e => e.Id == workoutExerciseId);
-        if (exercise == null)
-            throw new WorkoutDomainException($"Exercise with ID {workoutExerciseId} not found in this phase");
-
-        if (newOrder < 0 || newOrder >= _exercises.Count)
-            throw new WorkoutDomainException("Invalid exercise order position");
-
-        _exercises.Remove(exercise);
-        _exercises.Insert(newOrder, exercise);
-        ReorderExercises();
-    }
-
-    private void ReorderExercises()
-    {
-        for (int i = 0; i < _exercises.Count; i++)
+        // Temporarily set the exercise order to be able to sort properly
+        exercise.UpdateOrder(newOrder);
+        
+        // Adjust orders of other exercises
+        foreach (var otherExercise in _exercises.Where(e => e != exercise))
         {
-            _exercises[i].UpdateOrder(i);
+            if (currentOrder < newOrder)
+            {
+                // Moving down: shift exercises up
+                if (otherExercise.Order > currentOrder && otherExercise.Order <= newOrder)
+                {
+                    otherExercise.UpdateOrder(otherExercise.Order - 1);
+                }
+            }
+            else
+            {
+                // Moving up: shift exercises down
+                if (otherExercise.Order >= newOrder && otherExercise.Order < currentOrder)
+                {
+                    otherExercise.UpdateOrder(otherExercise.Order + 1);
+                }
+            }
         }
     }
 
-    public Duration CalculateTotalDuration()
+    private void UpdateExerciseOrders()
+    {
+        var orderedExercises = _exercises.OrderBy(e => e.Order).ToList();
+        for (int i = 0; i < orderedExercises.Count; i++)
+        {
+            orderedExercises[i].UpdateOrder(i + 1);
+        }
+    }
+
+    #endregion
+
+    #region Update Methods
+
+    public void UpdateDetails(string name, string? description = null, int? estimatedDurationMinutes = null)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            if (name.Length > 100)
+                throw new WorkoutDomainException("Phase name cannot exceed 100 characters");
+            Name = name.Trim();
+        }
+
+        Description = description?.Trim();
+
+        if (estimatedDurationMinutes.HasValue)
+        {
+            if (estimatedDurationMinutes.Value <= 0 || estimatedDurationMinutes.Value > 180)
+                throw new WorkoutDomainException("Phase duration must be between 1 and 180 minutes");
+            EstimatedDurationMinutes = estimatedDurationMinutes.Value;
+        }
+    }
+
+    public void UpdateOrder(int newOrder)
+    {
+        if (newOrder < 1)
+            throw new WorkoutDomainException("Order must be at least 1");
+        Order = newOrder;
+    }
+
+    #endregion
+
+    #region Business Methods
+
+    public WorkoutExercise? GetExercise(Guid exerciseId) =>
+        _exercises.FirstOrDefault(e => e.ExerciseId == exerciseId);
+
+    public bool HasExercise(Guid exerciseId) =>
+        _exercises.Any(e => e.ExerciseId == exerciseId);
+
+    public int CalculateEstimatedTotalMinutes()
     {
         if (!_exercises.Any())
-            return EstimatedDuration;
+            return EstimatedDurationMinutes;
 
-        var totalDuration = TimeSpan.Zero;
-        
-        foreach (var exercise in _exercises)
-        {
-            if (exercise.Parameters.Duration.HasValue)
-            {
-                var sets = exercise.Parameters.Sets ?? 1;
-                totalDuration += exercise.Parameters.Duration.Value * sets;
-            }
-            
-            if (exercise.Parameters.RestTime.HasValue)
-            {
-                var sets = exercise.Parameters.Sets ?? 1;
-                totalDuration += exercise.Parameters.RestTime.Value * (sets - 1); // Rest between sets
-            }
-        }
-
-        return totalDuration > TimeSpan.Zero ? new Duration(totalDuration) : EstimatedDuration;
+        // Base phase duration + exercise-specific time calculations
+        var exerciseTime = _exercises.Sum(e => e.EstimateTimeMinutes());
+        return Math.Max(EstimatedDurationMinutes, exerciseTime);
     }
+
+    #endregion
 }

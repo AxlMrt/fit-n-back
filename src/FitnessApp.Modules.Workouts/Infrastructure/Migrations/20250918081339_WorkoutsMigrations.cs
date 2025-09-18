@@ -23,9 +23,9 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Type = table.Column<int>(type: "integer", nullable: false),
+                    Category = table.Column<int>(type: "integer", nullable: false),
                     Difficulty = table.Column<int>(type: "integer", nullable: false),
-                    EstimatedDuration = table.Column<double>(type: "double precision", nullable: false),
-                    RequiredEquipment = table.Column<int>(type: "integer", nullable: false),
+                    estimated_duration_minutes = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     ImageContentId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -47,7 +47,7 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                     Type = table.Column<int>(type: "integer", nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    EstimatedDuration = table.Column<double>(type: "double precision", nullable: false),
+                    estimated_duration_minutes = table.Column<int>(type: "integer", nullable: false),
                     Order = table.Column<int>(type: "integer", nullable: false),
                     WorkoutId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
@@ -70,14 +70,16 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ExerciseId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ExerciseName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    reps = table.Column<int>(type: "integer", nullable: true),
-                    sets = table.Column<int>(type: "integer", nullable: true),
-                    duration_seconds = table.Column<long>(type: "bigint", nullable: true),
-                    weight = table.Column<double>(type: "double precision", precision: 5, scale: 2, nullable: true),
-                    rest_time_seconds = table.Column<long>(type: "bigint", nullable: true),
-                    notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Sets = table.Column<int>(type: "integer", nullable: true),
+                    Reps = table.Column<int>(type: "integer", nullable: true),
+                    duration_seconds = table.Column<int>(type: "integer", nullable: true),
+                    distance_meters = table.Column<double>(type: "double precision", precision: 10, scale: 2, nullable: true),
+                    weight_kg = table.Column<double>(type: "double precision", precision: 5, scale: 2, nullable: true),
+                    rest_seconds = table.Column<int>(type: "integer", nullable: true),
+                    Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Order = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     WorkoutPhaseId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
@@ -93,114 +95,103 @@ namespace FitnessApp.Modules.Workouts.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_exercises_ExerciseId",
+                name: "ix_workout_exercises_exercise_id",
                 schema: "workouts",
                 table: "workout_exercises",
                 column: "ExerciseId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_exercises_Order",
+                name: "ix_workout_exercises_order",
                 schema: "workouts",
                 table: "workout_exercises",
                 column: "Order");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_exercises_WorkoutPhaseId",
+                name: "ix_workout_exercises_phase_exercise",
+                schema: "workouts",
+                table: "workout_exercises",
+                columns: new[] { "WorkoutPhaseId", "ExerciseId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_workout_exercises_phase_id",
                 schema: "workouts",
                 table: "workout_exercises",
                 column: "WorkoutPhaseId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_exercises_WorkoutPhaseId_Order",
+                name: "ix_workout_exercises_phase_order",
                 schema: "workouts",
                 table: "workout_exercises",
                 columns: new[] { "WorkoutPhaseId", "Order" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_phases_Order",
+                name: "ix_workout_phases_order",
                 schema: "workouts",
                 table: "workout_phases",
                 column: "Order");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_phases_Type",
+                name: "ix_workout_phases_type",
                 schema: "workouts",
                 table: "workout_phases",
                 column: "Type");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_phases_WorkoutId",
+                name: "ix_workout_phases_workout_id",
                 schema: "workouts",
                 table: "workout_phases",
                 column: "WorkoutId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workout_phases_WorkoutId_Order",
+                name: "ix_workout_phases_workout_order",
                 schema: "workouts",
                 table: "workout_phases",
                 columns: new[] { "WorkoutId", "Order" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_CreatedAt",
+                name: "ix_workouts_created_at",
                 schema: "workouts",
                 table: "workouts",
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_CreatedByCoachId",
+                name: "ix_workouts_created_by_coach",
                 schema: "workouts",
                 table: "workouts",
                 column: "CreatedByCoachId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_CreatedByUserId",
+                name: "ix_workouts_created_by_user",
                 schema: "workouts",
                 table: "workouts",
                 column: "CreatedByUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_Difficulty",
+                name: "ix_workouts_difficulty",
                 schema: "workouts",
                 table: "workouts",
                 column: "Difficulty");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_IsActive",
+                name: "ix_workouts_is_active",
                 schema: "workouts",
                 table: "workouts",
                 column: "IsActive");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_IsActive_CreatedAt",
-                schema: "workouts",
-                table: "workouts",
-                columns: new[] { "IsActive", "CreatedAt" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_workouts_Name",
+                name: "ix_workouts_name",
                 schema: "workouts",
                 table: "workouts",
                 column: "Name");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workouts_RequiredEquipment",
-                schema: "workouts",
-                table: "workouts",
-                column: "RequiredEquipment");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_workouts_Type",
+                name: "ix_workouts_type",
                 schema: "workouts",
                 table: "workouts",
                 column: "Type");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_workouts_Type_Difficulty",
-                schema: "workouts",
-                table: "workouts",
-                columns: new[] { "Type", "Difficulty" });
         }
 
         /// <inheritdoc />

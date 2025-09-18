@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Infrastructure.Persistence.Configurations;
 
@@ -31,24 +30,21 @@ internal class WorkoutPhaseConfiguration : IEntityTypeConfiguration<WorkoutPhase
         builder.Property(p => p.Description)
             .HasMaxLength(500);
 
-        // Duration value object conversion
-        builder.Property(p => p.EstimatedDuration)
+        builder.Property(p => p.EstimatedDurationMinutes)
             .IsRequired()
-            .HasConversion(
-                duration => duration.Value.TotalMinutes,
-                minutes => Duration.FromMinutes((int)minutes));
+            .HasColumnName("estimated_duration_minutes");
 
         builder.Property(p => p.Order)
             .IsRequired();
 
-        // Foreign keys
-        builder.Property<Guid>("WorkoutId")
+        // Foreign key
+        builder.Property(p => p.WorkoutId)
             .IsRequired();
 
-        // Navigation properties
+        // Relationships
         builder.HasOne(p => p.Workout)
             .WithMany(w => w.Phases)
-            .HasForeignKey("WorkoutId")
+            .HasForeignKey(p => p.WorkoutId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(p => p.Exercises)
@@ -56,11 +52,21 @@ internal class WorkoutPhaseConfiguration : IEntityTypeConfiguration<WorkoutPhase
             .HasForeignKey("WorkoutPhaseId")
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Computed properties (ignored)
+        builder.Ignore(p => p.ExerciseCount);
+
         // Indexes
-        builder.HasIndex("WorkoutId");
-        builder.HasIndex(p => p.Type);
-        builder.HasIndex(p => p.Order);
-        builder.HasIndex("WorkoutId", "Order")
-            .IsUnique();
+        builder.HasIndex(p => p.WorkoutId)
+            .HasDatabaseName("ix_workout_phases_workout_id");
+
+        builder.HasIndex(p => p.Type)
+            .HasDatabaseName("ix_workout_phases_type");
+
+        builder.HasIndex(p => p.Order)
+            .HasDatabaseName("ix_workout_phases_order");
+
+        builder.HasIndex(p => new { p.WorkoutId, p.Order })
+            .IsUnique()
+            .HasDatabaseName("ix_workout_phases_workout_order");
     }
 }

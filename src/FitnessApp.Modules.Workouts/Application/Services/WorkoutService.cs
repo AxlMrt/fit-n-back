@@ -1,354 +1,235 @@
-using FitnessApp.Modules.Workouts.Application.DTOs;
+using AutoMapper;
 using FitnessApp.Modules.Workouts.Application.Interfaces;
 using FitnessApp.Modules.Workouts.Domain.Entities;
-using FitnessApp.Modules.Workouts.Domain.Enums;
 using FitnessApp.Modules.Workouts.Domain.Repositories;
-using FitnessApp.Modules.Workouts.Domain.ValueObjects;
 using FitnessApp.Modules.Workouts.Domain.Exceptions;
+using FitnessApp.SharedKernel.DTOs.Requests;
+using FitnessApp.SharedKernel.DTOs.Responses;
+using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Workouts.Application.Services;
 
 /// <summary>
-/// Service implementation for workout operations
+/// Service implementing comprehensive workout operations with proper domain logic
 /// </summary>
 public class WorkoutService : IWorkoutService
 {
     private readonly IWorkoutRepository _workoutRepository;
-    private readonly IWorkoutAuthorizationService _authorizationService;
-    private readonly ICurrentUserService _currentUserService;
+    private readonly IMapper _mapper;
 
-    public WorkoutService(
-        IWorkoutRepository workoutRepository, 
-        IWorkoutAuthorizationService authorizationService,
-        ICurrentUserService currentUserService)
+    public WorkoutService(IWorkoutRepository workoutRepository, IMapper mapper)
     {
         _workoutRepository = workoutRepository ?? throw new ArgumentNullException(nameof(workoutRepository));
-        _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
-        _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
     }
 
-    public async Task<WorkoutDto> CreateWorkoutAsync(CreateWorkoutDto createDto, CancellationToken cancellationToken = default)
+    #region Basic CRUD Operations
+
+    public async Task<WorkoutDto> CreateWorkoutAsync(CreateWorkoutDto createWorkoutDto, CancellationToken cancellationToken = default)
     {
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanCreateWorkoutAsync(currentUserId, cancellationToken);
-
-        var duration = Duration.FromMinutes(createDto.EstimatedDurationMinutes);
+        ArgumentNullException.ThrowIfNull(createWorkoutDto);
         
-        // Ensure the user can only create workouts for themselves
-        var createdByUserId = currentUserId;
-        var createdByCoachId = createDto.CreatedByCoachId;
-
-        // If user tries to create for another user, deny
-        if (createDto.CreatedByUserId.HasValue && createDto.CreatedByUserId != currentUserId)
-        {
-            throw new WorkoutDomainException("You can only create workouts for yourself");
-        }
-
-        var workout = new Workout(
-            createDto.Name,
-            createDto.Type,
-            createDto.Difficulty,
-            duration,
-            createDto.RequiredEquipment,
-            createdByUserId,
-            createdByCoachId);
-
-        if (!string.IsNullOrWhiteSpace(createDto.Description))
-        {
-            workout.SetDescription(createDto.Description);
-        }
-
+        var workout = _mapper.Map<Workout>(createWorkoutDto);
+        
         // Add phases if provided
-        if (createDto.Phases != null)
+        foreach (var phaseDto in createWorkoutDto.Phases)
         {
-            foreach (var phaseDto in createDto.Phases)
+            workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
+            
+            var phase = workout.GetPhase(phaseDto.Type);
+            if (phase != null)
             {
-                var phaseDuration = Duration.FromMinutes(phaseDto.EstimatedDurationMinutes);
-                var phase = workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDuration);
-                
-                if (!string.IsNullOrWhiteSpace(phaseDto.Description))
+                foreach (var exerciseDto in phaseDto.Exercises)
                 {
-                    phase.SetDescription(phaseDto.Description);
-                }
-
-                // Add exercises if provided
-                if (phaseDto.Exercises != null)
-                {
-                    foreach (var exerciseDto in phaseDto.Exercises)
-                    {
-                        var parameters = CreateExerciseParameters(exerciseDto);
-                        phase.AddExercise(exerciseDto.ExerciseId, exerciseDto.ExerciseName, parameters);
-                    }
+                    phase.AddExercise(
+                        exerciseDto.ExerciseId,
+                        exerciseDto.Sets,
+                        exerciseDto.Reps,
+                        exerciseDto.DurationSeconds);
                 }
             }
         }
 
-        await _workoutRepository.AddAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
+        var createdWorkout = await _workoutRepository.AddAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(createdWorkout);
     }
 
     public async Task<WorkoutDto?> GetWorkoutByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
-        if (workout == null)
-            return null;
+        return workout != null ? _mapper.Map<WorkoutDto>(workout) : null;
+    }
 
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanViewWorkoutAsync(workout, currentUserId, cancellationToken);
-
-        return MapToWorkoutDto(workout);
+    public async Task<IEnumerable<WorkoutDto>> GetWorkoutsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetByIdsAsync(ids, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutDto>>(workouts);
     }
 
     public async Task<WorkoutDto> UpdateWorkoutAsync(Guid id, UpdateWorkoutDto updateDto, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(updateDto);
+
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (workout == null)
             throw new WorkoutDomainException($"Workout with ID {id} not found");
 
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanModifyWorkoutAsync(workout, currentUserId, cancellationToken);
-
-        if (!string.IsNullOrEmpty(updateDto.Name))
-            workout.UpdateName(updateDto.Name);
-
-        if (updateDto.Description is not null)
-            workout.SetDescription(updateDto.Description);
-
-        if (updateDto.Difficulty.HasValue)
-            workout.UpdateDifficulty(updateDto.Difficulty.Value);
-
-        if (updateDto.RequiredEquipment.HasValue)
-            workout.UpdateRequiredEquipment(updateDto.RequiredEquipment.Value);
-
-        if (updateDto.ImageContentId.HasValue)
-            workout.SetImageContent(updateDto.ImageContentId);
+        workout.UpdateDetails(
+            updateDto.Name ?? workout.Name,
+            updateDto.Description,
+            updateDto.Difficulty,
+            updateDto.EstimatedDurationMinutes);
 
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
     public async Task<bool> DeleteWorkoutAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
-        if (workout == null)
+        var exists = await _workoutRepository.ExistsAsync(id, cancellationToken);
+        if (!exists)
             return false;
-
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanDeleteWorkoutAsync(workout, currentUserId, cancellationToken);
 
         await _workoutRepository.DeleteAsync(id, cancellationToken);
         return true;
     }
 
-    public async Task<WorkoutPagedResultDto> GetWorkoutsAsync(WorkoutQueryDto query, CancellationToken cancellationToken = default)
+    #endregion
+
+    #region Query and Filtering Operations
+
+    public async Task<IEnumerable<WorkoutListDto>> GetActiveWorkoutsAsync(CancellationToken cancellationToken = default)
     {
-        var (workouts, totalCount) = await _workoutRepository.GetPagedAsync(
-            query.Page,
-            query.PageSize,
-            query.Type,
-            query.Difficulty,
-            query.Equipment,
-            query.SearchTerm,
-            cancellationToken);
-
-        var workoutSummaries = workouts.Select(MapToWorkoutSummaryDto).ToList();
-        var totalPages = (int)Math.Ceiling((double)totalCount / query.PageSize);
-
-        return new WorkoutPagedResultDto(workoutSummaries, totalCount, query.Page, query.PageSize, totalPages);
+        var workouts = await _workoutRepository.GetActiveWorkoutsAsync(cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
     }
 
-    public async Task<IEnumerable<WorkoutSummaryDto>> GetUserWorkoutsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<WorkoutListDto>> GetWorkoutsByTypeAsync(WorkoutType type, CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetWorkoutsByTypeAsync(type, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    public async Task<IEnumerable<WorkoutListDto>> GetWorkoutsByCategoryAsync(WorkoutCategory category, CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetWorkoutsByCategoryAsync(category, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    public async Task<IEnumerable<WorkoutListDto>> GetWorkoutsByDifficultyAsync(DifficultyLevel difficulty, CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetWorkoutsByDifficultyAsync(difficulty, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    public async Task<IEnumerable<WorkoutListDto>> GetWorkoutsByCategoryAndDifficultyAsync(WorkoutCategory category, DifficultyLevel difficulty, CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetWorkoutsByCategoryAndDifficultyAsync(category, difficulty, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    public async Task<IEnumerable<WorkoutListDto>> GetTemplateWorkoutsAsync(CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetTemplateWorkoutsAsync(cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    public async Task<IEnumerable<WorkoutListDto>> SearchWorkoutsAsync(string searchTerm, WorkoutCategory? category = null, CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.SearchWorkoutsAsync(searchTerm, category, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    public async Task<IEnumerable<WorkoutListDto>> GetWorkoutsWithAdvancedFiltersAsync(
+        WorkoutType? type = null,
+        WorkoutCategory? category = null,
+        DifficultyLevel? difficulty = null,
+        int? minDurationMinutes = null,
+        int? maxDurationMinutes = null,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var workouts = await _workoutRepository.GetWorkoutsWithFiltersAsync(
+            type, category, difficulty, maxDurationMinutes, minDurationMinutes, !includeInactive, cancellationToken);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+    }
+
+    #endregion
+
+    #region User and Coach Specific Operations
+
+    public async Task<IEnumerable<WorkoutListDto>> GetUserWorkoutsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var workouts = await _workoutRepository.GetUserCreatedWorkoutsAsync(userId, cancellationToken);
-        return workouts.Select(MapToWorkoutSummaryDto);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
     }
 
-    public async Task<IEnumerable<WorkoutSummaryDto>> GetCoachWorkoutsAsync(Guid coachId, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<WorkoutListDto>> GetCoachWorkoutsAsync(Guid coachId, CancellationToken cancellationToken = default)
     {
         var workouts = await _workoutRepository.GetCoachCreatedWorkoutsAsync(coachId, cancellationToken);
-        return workouts.Select(MapToWorkoutSummaryDto);
+        return _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
     }
 
-    public async Task<WorkoutDto> AddPhaseToWorkoutAsync(Guid workoutId, AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default)
+    #endregion
+
+    #region Pagination and Statistics
+
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
-        if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
-
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanModifyWorkoutAsync(workout, currentUserId, cancellationToken);
-
-        var duration = Duration.FromMinutes(phaseDto.EstimatedDurationMinutes);
-        var phase = workout.AddPhase(phaseDto.Type, phaseDto.Name, duration);
-        
-        if (!string.IsNullOrWhiteSpace(phaseDto.Description))
-        {
-            phase.SetDescription(phaseDto.Description);
-        }
-
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
+        return await _workoutRepository.ExistsAsync(id, cancellationToken);
     }
 
-    public async Task<WorkoutDto> UpdateWorkoutPhaseAsync(Guid workoutId, Guid phaseId, UpdateWorkoutPhaseDto updateDto, CancellationToken cancellationToken = default)
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
     {
-        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
-        if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
-
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanModifyWorkoutAsync(workout, currentUserId, cancellationToken);
-
-        var phase = workout.GetPhaseById(phaseId);
-        if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
-
-        if (updateDto.EstimatedDurationMinutes.HasValue)
-        {
-            var duration = Duration.FromMinutes(updateDto.EstimatedDurationMinutes.Value);
-            phase.UpdateEstimatedDuration(duration);
-        }
-
-        if (updateDto.Description is not null)
-            phase.SetDescription(updateDto.Description);
-
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
+        return await _workoutRepository.CountAsync(cancellationToken);
     }
 
-    public async Task<WorkoutDto> RemovePhaseFromWorkoutAsync(Guid workoutId, Guid phaseId, CancellationToken cancellationToken = default)
+    public async Task<(IEnumerable<WorkoutListDto> Workouts, int TotalCount)> GetPagedWorkoutsAsync(
+        int page, int pageSize, WorkoutType? type = null, WorkoutCategory? category = null, DifficultyLevel? difficulty = null,
+        string? searchTerm = null, CancellationToken cancellationToken = default)
     {
-        var workout = await GetWorkoutAndEnsureCanModifyAsync(workoutId, cancellationToken);
-
-        workout.RemovePhase(phaseId);
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
+        var (workouts, totalCount) = await _workoutRepository.GetPagedAsync(page, pageSize, type, category, difficulty, searchTerm, cancellationToken);
+        var workoutDtos = _mapper.Map<IEnumerable<WorkoutListDto>>(workouts);
+        return (workoutDtos, totalCount);
     }
 
-    public async Task<WorkoutDto> MoveWorkoutPhaseAsync(Guid workoutId, Guid phaseId, int newOrder, CancellationToken cancellationToken = default)
+    #endregion
+
+    #region Workout Management Operations
+
+    public async Task<WorkoutDto> DuplicateWorkoutAsync(Guid id, string newName, CancellationToken cancellationToken = default)
     {
-        var workout = await GetWorkoutAndEnsureCanModifyAsync(workoutId, cancellationToken);
-
-        workout.MovePhase(phaseId, newOrder);
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
-    }
-
-    public async Task<WorkoutDto> AddExerciseToPhaseAsync(Guid workoutId, Guid phaseId, AddWorkoutExerciseDto exerciseDto, CancellationToken cancellationToken = default)
-    {
-        var workout = await GetWorkoutAndEnsureCanModifyAsync(workoutId, cancellationToken);
-
-        var phase = workout.GetPhaseById(phaseId);
-        if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
-
-        var parameters = CreateExerciseParameters(exerciseDto);
-        phase.AddExercise(exerciseDto.ExerciseId, exerciseDto.ExerciseName, parameters);
-
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
-    }
-
-    public async Task<WorkoutDto> UpdatePhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, UpdateWorkoutExerciseDto updateDto, CancellationToken cancellationToken = default)
-    {
-        var workout = await GetWorkoutAndEnsureCanModifyAsync(workoutId, cancellationToken);
-
-        var phase = workout.GetPhaseById(phaseId);
-        if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
-
-        var exercise = phase.Exercises.FirstOrDefault(e => e.Id == exerciseId);
-        if (exercise == null)
-            throw new WorkoutDomainException($"Exercise with ID {exerciseId} not found in phase");
-
-        var parameters = CreateExerciseParameters(updateDto, exercise.Parameters);
-        exercise.UpdateParameters(parameters);
-
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
-    }
-
-    public async Task<WorkoutDto> RemoveExerciseFromPhaseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, CancellationToken cancellationToken = default)
-    {
-        var workout = await GetWorkoutAndEnsureCanModifyAsync(workoutId, cancellationToken);
-
-        var phase = workout.GetPhaseById(phaseId);
-        if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
-
-        phase.RemoveExercise(exerciseId);
-
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
-    }
-
-    public async Task<WorkoutDto> MovePhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, int newOrder, CancellationToken cancellationToken = default)
-    {
-        var workout = await GetWorkoutAndEnsureCanModifyAsync(workoutId, cancellationToken);
-
-        var phase = workout.GetPhaseById(phaseId);
-        if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
-
-        phase.MoveExercise(exerciseId, newOrder);
-
-        await _workoutRepository.UpdateAsync(workout, cancellationToken);
-        return MapToWorkoutDto(workout);
-    }
-
-    public async Task<WorkoutDto> DuplicateWorkoutAsync(Guid workoutId, string newName, CancellationToken cancellationToken = default)
-    {
-        var originalWorkout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        var originalWorkout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (originalWorkout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw new WorkoutDomainException($"Workout with ID {id} not found");
 
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        
-        // User must be able to view the original workout to duplicate it
-        await _authorizationService.EnsureCanViewWorkoutAsync(originalWorkout, currentUserId, cancellationToken);
-        
-        // User must be able to create workouts
-        await _authorizationService.EnsureCanCreateWorkoutAsync(currentUserId, cancellationToken);
-
-        // Create the duplicated workout with current user as owner
-        var duplicatedWorkout = new Workout(
-            newName,
-            WorkoutType.UserCreated, // Always create as user-created when duplicating
-            originalWorkout.Difficulty,
-            originalWorkout.EstimatedDuration,
-            originalWorkout.RequiredEquipment,
-            currentUserId, // Set current user as creator
-            null); // No coach ID for user-created workouts
-
-        if (!string.IsNullOrWhiteSpace(originalWorkout.Description))
+        // Create a simple duplicate using the mapper
+        var createDto = new CreateWorkoutDto
         {
-            duplicatedWorkout.SetDescription(originalWorkout.Description);
-        }
-
-        // Duplicate phases and exercises
-        foreach (var originalPhase in originalWorkout.Phases.OrderBy(p => p.Order))
-        {
-            var duplicatedPhase = duplicatedWorkout.AddPhase(
-                originalPhase.Type,
-                originalPhase.Name,
-                originalPhase.EstimatedDuration);
-
-            if (!string.IsNullOrWhiteSpace(originalPhase.Description))
+            Name = newName,
+            Description = originalWorkout.Description,
+            Type = originalWorkout.Type,
+            Category = originalWorkout.Category,
+            Difficulty = originalWorkout.Difficulty,
+            EstimatedDurationMinutes = originalWorkout.EstimatedDurationMinutes,
+            Phases = originalWorkout.Phases.Select(p => new CreateWorkoutPhaseDto
             {
-                duplicatedPhase.SetDescription(originalPhase.Description);
-            }
+                Type = p.Type,
+                Name = p.Name,
+                EstimatedDurationMinutes = p.EstimatedDurationMinutes,
+                Exercises = p.Exercises.Select(e => new CreateWorkoutExerciseDto
+                {
+                    ExerciseId = e.ExerciseId,
+                    Sets = e.Sets,
+                    Reps = e.Reps,
+                    DurationSeconds = e.DurationSeconds,
+                    RestTimeSeconds = e.RestSeconds,
+                    Notes = e.Notes
+                }).ToList()
+            }).ToList()
+        };
 
-            foreach (var originalExercise in originalPhase.Exercises.OrderBy(e => e.Order))
-            {
-                duplicatedPhase.AddExercise(
-                    originalExercise.ExerciseId,
-                    originalExercise.ExerciseName,
-                    originalExercise.Parameters);
-            }
-        }
-
-        await _workoutRepository.AddAsync(duplicatedWorkout, cancellationToken);
-        return MapToWorkoutDto(duplicatedWorkout);
+        return await CreateWorkoutAsync(createDto, cancellationToken);
     }
 
     public async Task<bool> DeactivateWorkoutAsync(Guid id, CancellationToken cancellationToken = default)
@@ -356,9 +237,6 @@ public class WorkoutService : IWorkoutService
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (workout == null)
             return false;
-
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanModifyWorkoutAsync(workout, currentUserId, cancellationToken);
 
         workout.Deactivate();
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -371,125 +249,149 @@ public class WorkoutService : IWorkoutService
         if (workout == null)
             return false;
 
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanModifyWorkoutAsync(workout, currentUserId, cancellationToken);
-
-        workout.Reactivate();
+        workout.Activate();
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         return true;
     }
 
-    #region Private Helper Methods
+    #endregion
 
-    /// <summary>
-    /// Helper method to get workout and ensure current user can modify it
-    /// </summary>
-    private async Task<Workout> GetWorkoutAndEnsureCanModifyAsync(Guid workoutId, CancellationToken cancellationToken)
+    #region Workout Phase Management
+
+    public async Task<WorkoutDto> AddPhaseToWorkoutAsync(Guid workoutId, AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default)
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
             throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
 
-        var currentUserId = _currentUserService.GetCurrentUserId();
-        await _authorizationService.EnsureCanModifyWorkoutAsync(workout, currentUserId, cancellationToken);
-
-        return workout;
+        workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static ExerciseParameters CreateExerciseParameters(CreateWorkoutExerciseDto dto)
+    public async Task<WorkoutDto> UpdateWorkoutPhaseAsync(Guid workoutId, Guid phaseId, UpdateWorkoutPhaseDto updateDto, CancellationToken cancellationToken = default)
     {
-        return new ExerciseParameters(
-            dto.Reps,
-            dto.Sets,
-            dto.DurationSeconds.HasValue ? TimeSpan.FromSeconds(dto.DurationSeconds.Value) : null,
-            dto.Weight,
-            dto.RestTimeSeconds.HasValue ? TimeSpan.FromSeconds(dto.RestTimeSeconds.Value) : null,
-            dto.Notes);
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description, updateDto.EstimatedDurationMinutes);
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static ExerciseParameters CreateExerciseParameters(AddWorkoutExerciseDto dto)
+    public async Task<WorkoutDto> RemovePhaseFromWorkoutAsync(Guid workoutId, Guid phaseId, CancellationToken cancellationToken = default)
     {
-        return new ExerciseParameters(
-            dto.Reps,
-            dto.Sets,
-            dto.DurationSeconds.HasValue ? TimeSpan.FromSeconds(dto.DurationSeconds.Value) : null,
-            dto.Weight,
-            dto.RestTimeSeconds.HasValue ? TimeSpan.FromSeconds(dto.RestTimeSeconds.Value) : null,
-            dto.Notes);
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        workout.RemovePhase(phase.Type);
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static ExerciseParameters CreateExerciseParameters(UpdateWorkoutExerciseDto dto, ExerciseParameters existing)
+    public async Task<WorkoutDto> MoveWorkoutPhaseAsync(Guid workoutId, Guid phaseId, int newOrder, CancellationToken cancellationToken = default)
     {
-        return new ExerciseParameters(
-            dto.Reps ?? existing.Reps,
-            dto.Sets ?? existing.Sets,
-            dto.DurationSeconds.HasValue ? TimeSpan.FromSeconds(dto.DurationSeconds.Value) : existing.Duration,
-            dto.Weight ?? existing.Weight,
-            dto.RestTimeSeconds.HasValue ? TimeSpan.FromSeconds(dto.RestTimeSeconds.Value) : existing.RestTime,
-            dto.Notes ?? existing.Notes);
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        workout.MovePhase(phase.Type, newOrder);
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static WorkoutDto MapToWorkoutDto(Workout workout)
+    #endregion
+
+    #region Workout Exercise Management
+
+    public async Task<WorkoutDto> AddExerciseToPhaseAsync(Guid workoutId, Guid phaseId, AddWorkoutExerciseDto exerciseDto, CancellationToken cancellationToken = default)
     {
-        return new WorkoutDto(
-            workout.Id,
-            workout.Name,
-            workout.Description,
-            workout.Type,
-            workout.Difficulty,
-            workout.EstimatedDuration.TotalMinutes,
-            workout.RequiredEquipment,
-            workout.IsActive,
-            workout.ImageContentId,
-            workout.CreatedByUserId,
-            workout.CreatedByCoachId,
-            workout.CreatedAt,
-            workout.UpdatedAt,
-            workout.Phases.OrderBy(p => p.Order).Select(MapToWorkoutPhaseDto).ToList());
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        phase.AddExercise(
+            exerciseDto.ExerciseId,
+            exerciseDto.Sets,
+            exerciseDto.Reps,
+            exerciseDto.DurationSeconds);
+
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static WorkoutPhaseDto MapToWorkoutPhaseDto(WorkoutPhase phase)
+    public async Task<WorkoutDto> UpdatePhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, UpdateWorkoutExerciseDto updateDto, CancellationToken cancellationToken = default)
     {
-        return new WorkoutPhaseDto(
-            phase.Id,
-            phase.Type,
-            phase.Name,
-            phase.Description,
-            phase.EstimatedDuration.TotalMinutes,
-            phase.Order,
-            phase.Exercises.OrderBy(e => e.Order).Select(MapToWorkoutExerciseDto).ToList());
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        var exercise = phase.GetExercise(exerciseId);
+        if (exercise == null)
+            throw new WorkoutDomainException($"Exercise with ID {exerciseId} not found");
+
+        if (updateDto.Sets.HasValue || updateDto.Reps.HasValue)
+        {
+            exercise.UpdateParameters(
+                updateDto.Sets ?? exercise.Sets ?? 1,
+                updateDto.Reps ?? exercise.Reps ?? 1,
+                updateDto.DurationSeconds);
+        }
+
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static WorkoutExerciseDto MapToWorkoutExerciseDto(WorkoutExercise exercise)
+    public async Task<WorkoutDto> RemoveExerciseFromPhaseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, CancellationToken cancellationToken = default)
     {
-        return new WorkoutExerciseDto(
-            exercise.Id,
-            exercise.ExerciseId,
-            exercise.ExerciseName,
-            exercise.Parameters.Reps,
-            exercise.Parameters.Sets,
-            exercise.Parameters.Duration?.TotalSeconds > 0 ? (int)exercise.Parameters.Duration.Value.TotalSeconds : null,
-            exercise.Parameters.Weight,
-            exercise.Parameters.RestTime?.TotalSeconds > 0 ? (int)exercise.Parameters.RestTime.Value.TotalSeconds : null,
-            exercise.Parameters.Notes,
-            exercise.Order);
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        phase.RemoveExercise(exerciseId);
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
-    private static WorkoutSummaryDto MapToWorkoutSummaryDto(Workout workout)
+    public async Task<WorkoutDto> MovePhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, int newOrder, CancellationToken cancellationToken = default)
     {
-        return new WorkoutSummaryDto(
-            workout.Id,
-            workout.Name,
-            workout.Description,
-            workout.Type,
-            workout.Difficulty,
-            workout.EstimatedDuration.TotalMinutes,
-            workout.RequiredEquipment,
-            workout.IsActive,
-            workout.ImageContentId,
-            workout.Phases.Count,
-            workout.GetTotalExerciseCount(),
-            workout.CreatedAt);
+        var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
+        if (workout == null)
+            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+
+        var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
+        if (phase == null)
+            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+
+        phase.MoveExercise(exerciseId, newOrder);
+        await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        return _mapper.Map<WorkoutDto>(workout);
     }
 
     #endregion
