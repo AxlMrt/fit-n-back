@@ -203,6 +203,18 @@ public class Workout
         return Math.Max(1, totalMinutes); // Ensure at least 1 minute
     }
 
+    public void SetType(WorkoutType type)
+    {
+        Type = type;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetCreatedBy(Guid userId)
+    {
+        CreatedByUserId = userId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     #endregion
 
     #region Factory Methods

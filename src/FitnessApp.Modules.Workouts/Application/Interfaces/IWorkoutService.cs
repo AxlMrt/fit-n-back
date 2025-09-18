@@ -1,4 +1,3 @@
-using FitnessApp.Modules.Workouts.Domain.Entities;
 using FitnessApp.SharedKernel.DTOs.Requests;
 using FitnessApp.SharedKernel.DTOs.Responses;
 using FitnessApp.SharedKernel.Enums;
@@ -12,11 +11,19 @@ public interface IWorkoutService
 {
     #region Basic CRUD Operations
     
-    Task<WorkoutDto> CreateWorkoutAsync(CreateWorkoutDto createWorkoutDto, CancellationToken cancellationToken = default);
+    // User operations (UserCreated workouts only)
+    Task<WorkoutDto> CreateUserWorkoutAsync(CreateWorkoutDto createWorkoutDto, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> UpdateUserWorkoutAsync(Guid id, UpdateWorkoutDto updateDto, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteUserWorkoutAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+    
+    // Admin operations (Template workouts and all workouts)
+    Task<WorkoutDto> CreateTemplateWorkoutAsync(CreateWorkoutDto createWorkoutDto, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> UpdateWorkoutAsAdminAsync(Guid id, UpdateWorkoutDto updateDto, CancellationToken cancellationToken = default);
+    Task<bool> DeleteWorkoutAsAdminAsync(Guid id, CancellationToken cancellationToken = default);
+    
+    // General read operations (accessible to all)
     Task<WorkoutDto?> GetWorkoutByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<WorkoutDto>> GetWorkoutsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> UpdateWorkoutAsync(Guid id, UpdateWorkoutDto updateDto, CancellationToken cancellationToken = default);
-    Task<bool> DeleteWorkoutAsync(Guid id, CancellationToken cancellationToken = default);
 
     #endregion
 
@@ -61,27 +68,44 @@ public interface IWorkoutService
 
     #region Workout Management Operations
     
-    Task<WorkoutDto> DuplicateWorkoutAsync(Guid id, string newName, CancellationToken cancellationToken = default);
-    Task<bool> DeactivateWorkoutAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<bool> ReactivateWorkoutAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> DuplicateUserWorkoutAsync(Guid id, string newName, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> DuplicateWorkoutAsAdminAsync(Guid id, string newName, CancellationToken cancellationToken = default);
+    Task<bool> DeactivateUserWorkoutAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> ReactivateUserWorkoutAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> DeactivateWorkoutAsAdminAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<bool> ReactivateWorkoutAsAdminAsync(Guid id, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Workout Phase Management
     
-    Task<WorkoutDto> AddPhaseToWorkoutAsync(Guid workoutId, AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> UpdateWorkoutPhaseAsync(Guid workoutId, Guid phaseId, UpdateWorkoutPhaseDto updateDto, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> RemovePhaseFromWorkoutAsync(Guid workoutId, Guid phaseId, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> MoveWorkoutPhaseAsync(Guid workoutId, Guid phaseId, int newOrder, CancellationToken cancellationToken = default);
+    // User operations (own workouts only)
+    Task<WorkoutDto> AddPhaseToUserWorkoutAsync(Guid workoutId, AddWorkoutPhaseDto phaseDto, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> UpdateUserWorkoutPhaseAsync(Guid workoutId, Guid phaseId, UpdateWorkoutPhaseDto updateDto, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> RemovePhaseFromUserWorkoutAsync(Guid workoutId, Guid phaseId, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> MoveUserWorkoutPhaseAsync(Guid workoutId, Guid phaseId, int newOrder, Guid userId, CancellationToken cancellationToken = default);
+    
+    // Admin operations (all workouts)
+    Task<WorkoutDto> AddPhaseToWorkoutAsAdminAsync(Guid workoutId, AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> UpdateWorkoutPhaseAsAdminAsync(Guid workoutId, Guid phaseId, UpdateWorkoutPhaseDto updateDto, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> RemovePhaseFromWorkoutAsAdminAsync(Guid workoutId, Guid phaseId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> MoveWorkoutPhaseAsAdminAsync(Guid workoutId, Guid phaseId, int newOrder, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Workout Exercise Management
     
-    Task<WorkoutDto> AddExerciseToPhaseAsync(Guid workoutId, Guid phaseId, AddWorkoutExerciseDto exerciseDto, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> UpdatePhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, UpdateWorkoutExerciseDto updateDto, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> RemoveExerciseFromPhaseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, CancellationToken cancellationToken = default);
-    Task<WorkoutDto> MovePhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, int newOrder, CancellationToken cancellationToken = default);
+    // User operations (own workouts only)
+    Task<WorkoutDto> AddExerciseToUserPhaseAsync(Guid workoutId, Guid phaseId, AddWorkoutExerciseDto exerciseDto, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> UpdateUserPhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, UpdateWorkoutExerciseDto updateDto, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> RemoveExerciseFromUserPhaseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, Guid userId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> MoveUserPhaseExerciseAsync(Guid workoutId, Guid phaseId, Guid exerciseId, int newOrder, Guid userId, CancellationToken cancellationToken = default);
+    
+    // Admin operations (all workouts)
+    Task<WorkoutDto> AddExerciseToPhaseAsAdminAsync(Guid workoutId, Guid phaseId, AddWorkoutExerciseDto exerciseDto, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> UpdatePhaseExerciseAsAdminAsync(Guid workoutId, Guid phaseId, Guid exerciseId, UpdateWorkoutExerciseDto updateDto, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> RemoveExerciseFromPhaseAsAdminAsync(Guid workoutId, Guid phaseId, Guid exerciseId, CancellationToken cancellationToken = default);
+    Task<WorkoutDto> MovePhaseExerciseAsAdminAsync(Guid workoutId, Guid phaseId, Guid exerciseId, int newOrder, CancellationToken cancellationToken = default);
 
     #endregion
 }

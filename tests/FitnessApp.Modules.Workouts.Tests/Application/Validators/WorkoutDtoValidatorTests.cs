@@ -66,7 +66,6 @@ public class CreateWorkoutDtoValidatorTests
                         new CreateWorkoutExerciseDto
                         {
                             ExerciseId = Guid.NewGuid(),
-                            ExerciseName = "Push-ups",
                             Reps = 12,
                             Sets = 3
                         }
