@@ -3,6 +3,7 @@ using FitnessApp.Modules.Exercises;
 using FitnessApp.Modules.Authentication;
 using FitnessApp.Modules.Content;
 using FitnessApp.Modules.Workouts;
+using FitnessApp.Modules.Tracking;
 
 namespace FitnessApp.API.Extensions;
 public static class ModuleExtensions
@@ -15,6 +16,7 @@ public static class ModuleExtensions
         services.AddAuthenticationModule(connectionString!);
         services.AddContentModule(connectionString!, configuration);
         services.AddWorkoutsModule(connectionString!);
+        services.AddTrackingModule(configuration);
 
         return services;
     }

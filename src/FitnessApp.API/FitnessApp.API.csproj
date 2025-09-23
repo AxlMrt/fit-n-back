@@ -22,6 +22,7 @@
     <ProjectReference Include="..\FitnessApp.Modules.Exercises\FitnessApp.Modules.Exercises.csproj" />
     <ProjectReference Include="..\FitnessApp.Modules.Content\FitnessApp.Modules.Content.csproj" />
     <ProjectReference Include="..\FitnessApp.Modules.Workouts\FitnessApp.Modules.Workouts.csproj" />
+    <ProjectReference Include="..\FitnessApp.Modules.Tracking\FitnessApp.Modules.Tracking.csproj" />
   </ItemGroup>
 
 </Project>
