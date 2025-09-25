@@ -501,8 +501,8 @@ public class TrackingService : ITrackingService
     {
         var trends = new List<MetricTrendDto>();
         
-        // Get trends for common metric types
-        var metricTypes = new[] { UserMetricType.Weight, UserMetricType.BodyFatPercentage, UserMetricType.MuscleMass };
+        // Get trends for simplified metric types (focus on what matters)
+        var metricTypes = new[] { UserMetricType.Weight, UserMetricType.PersonalRecord };
         
         foreach (var metricType in metricTypes)
         {

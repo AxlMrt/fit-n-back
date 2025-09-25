@@ -20,7 +20,6 @@ public class UsersDbContext : DbContext
         {
             b.HasKey(u => u.UserId);
             
-            // Configure value objects
             b.OwnsOne(u => u.Name, n =>
             {
                 n.Property(fn => fn.FirstName).HasColumnName("FirstName").HasMaxLength(100);
@@ -39,12 +38,10 @@ public class UsersDbContext : DbContext
                 pm.Property(p => p.BMI).HasColumnName("BMI").HasPrecision(4, 2);
             });
             
-            // Configure enum properties
             b.Property(u => u.Gender).HasConversion<string>();
             b.Property(u => u.FitnessLevel).HasConversion<string>();
             b.Property(u => u.PrimaryFitnessGoal).HasConversion<string>();
 
-            // Configure Subscription as owned entity
             b.OwnsOne(u => u.Subscription, s =>
             {
                 s.Property(sub => sub.Level).HasColumnName("SubscriptionLevel").HasConversion<string>();
@@ -52,18 +49,14 @@ public class UsersDbContext : DbContext
                 s.Property(sub => sub.EndDate).HasColumnName("SubscriptionEndDate");
             });
 
-            // Configure relationships
-            b.HasMany(u => u.Preferences)
-             .WithOne()
-             .HasForeignKey(p => p.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
-
             b.HasIndex(u => u.CreatedAt);
         });
 
         modelBuilder.Entity<Preference>(b =>
         {
             b.HasKey(p => p.Id);
+            
+            b.Property(p => p.UserId).IsRequired();
             
             b.Property(p => p.Category)
              .HasConversion<string>()

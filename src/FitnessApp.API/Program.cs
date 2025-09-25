@@ -40,3 +40,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Classe Program publique pour les tests
+public partial class Program { }

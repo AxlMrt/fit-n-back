@@ -2,9 +2,6 @@ using FitnessApp.Modules.Users.Domain.Exceptions;
 
 namespace FitnessApp.Modules.Users.Domain.ValueObjects;
 
-/// <summary>
-/// Value Object representing physical measurements with validation.
-/// </summary>
 public sealed class PhysicalMeasurements : IEquatable<PhysicalMeasurements>
 {
     public decimal? HeightCm { get; }

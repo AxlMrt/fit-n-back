@@ -31,29 +31,11 @@ public enum UserMetricType
     [Description("Body weight in kg")]
     Weight = 0,
 
-    [Description("Body fat percentage")]
-    BodyFatPercentage = 1,
+    [Description("Height in cm")]
+    Height = 1,
 
-    [Description("Muscle mass in kg")]
-    MuscleMass = 2,
-
-    [Description("Personal record for a specific exercise")]
-    PersonalRecord = 3,
-
-    [Description("Resting heart rate")]
-    RestingHeartRate = 4,
-
-    [Description("Blood pressure")]
-    BloodPressure = 5,
-
-    [Description("Body measurements (waist, chest, etc.)")]
-    BodyMeasurement = 6,
-
-    [Description("VO2 Max measurement")]
-    VO2Max = 7,
-
-    [Description("Other custom metric")]
-    Other = 99
+    [Description("Personal record for exercise performance")]
+    PersonalRecord = 2
 }
 
 /// <summary>

@@ -3,9 +3,6 @@ using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Entities;
 
-/// <summary>
-/// Entity representing a user preference key-value pair.
-/// </summary>
 public class Preference
 {
     public Guid Id { get; private set; }
@@ -16,7 +13,6 @@ public class Preference
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
-    // EF Core constructor
     private Preference() { }
 
     public Preference(Guid userId, PreferenceCategory category, string key, string value)
@@ -50,7 +46,6 @@ public class Preference
         UpdatedAt = DateTime.UtcNow;
     }
 
-    // Business query methods
     public bool IsNotificationPreference()
     {
         return Category == PreferenceCategory.Notifications;

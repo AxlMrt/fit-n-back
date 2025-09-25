@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Testing Framework -->
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    
+    <!-- ASP.NET Core Testing -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+    
+    <!-- TestContainers for PostgreSQL -->
+    <PackageReference Include="Testcontainers.PostgreSql" Version="3.10.0" />
+    
+    <!-- Assertions and Mocking -->
+    <PackageReference Include="FluentAssertions" Version="6.12.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    
+    <!-- JSON Testing -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.7" />
+    <PackageReference Include="System.Text.Json" Version="9.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+  </ItemGroup>
+
+  <!-- Project References -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FitnessApp.API\FitnessApp.API.csproj" />
+    <ProjectReference Include="..\..\src\FitnessApp.SharedKernel\FitnessApp.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\FitnessApp.Modules.Authentication\FitnessApp.Modules.Authentication.csproj" />
+    <ProjectReference Include="..\..\src\FitnessApp.Modules.Users\FitnessApp.Modules.Users.csproj" />
+    <ProjectReference Include="..\..\src\FitnessApp.Modules.Tracking\FitnessApp.Modules.Tracking.csproj" />
+    <ProjectReference Include="..\..\src\FitnessApp.Modules.Workouts\FitnessApp.Modules.Workouts.csproj" />
+    <ProjectReference Include="..\..\src\FitnessApp.Modules.Exercises\FitnessApp.Modules.Exercises.csproj" />
+  </ItemGroup>
+
+</Project>

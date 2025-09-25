@@ -8,10 +8,6 @@ using System.Security.Claims;
 
 namespace FitnessApp.API.Controllers.v1;
 
-/// <summary>
-/// Controller for managing user profiles, preferences, and subscriptions.
-/// Handles profile data separate from authentication.
-/// </summary>
 [ApiController]
 [Route("api/v1/users")]
 [Authorize]
@@ -19,14 +15,14 @@ namespace FitnessApp.API.Controllers.v1;
 public class UserProfileController : ControllerBase
 {
     private readonly IUserProfileService _userProfileService;
-    private readonly ILogger<UserProfileController> _logger;
+    private readonly IUserPreferenceService _userPreferenceService;
 
     public UserProfileController(
         IUserProfileService userProfileService,
-        ILogger<UserProfileController> logger)
+        IUserPreferenceService userPreferenceService)
     {
         _userProfileService = userProfileService ?? throw new ArgumentNullException(nameof(userProfileService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _userPreferenceService = userPreferenceService ?? throw new ArgumentNullException(nameof(userPreferenceService));
     }
 
     #region Profile Management
@@ -100,13 +96,10 @@ public class UserProfileController : ControllerBase
 
             var profile = await _userProfileService.CreateUserProfileAsync(userId, request, cancellationToken);
             
-            _logger.LogInformation("Profile created successfully for user {UserId}", userId);
-            
             return CreatedAtAction(nameof(GetProfile), new { }, profile);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating profile for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -128,8 +121,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var profile = await _userProfileService.UpdatePersonalInfoAsync(userId, request, cancellationToken);
             
-            _logger.LogInformation("Personal info updated successfully for user {UserId}", userId);
-            
             return Ok(profile);
         }
         catch (InvalidOperationException ex)
@@ -138,7 +129,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating personal info for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -160,8 +150,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var profile = await _userProfileService.UpdatePhysicalMeasurementsAsync(userId, request, cancellationToken);
             
-            _logger.LogInformation("Physical measurements updated successfully for user {UserId}", userId);
-            
             return Ok(profile);
         }
         catch (InvalidOperationException ex)
@@ -170,7 +158,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating physical measurements for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -192,8 +179,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var profile = await _userProfileService.UpdateFitnessProfileAsync(userId, request, cancellationToken);
             
-            _logger.LogInformation("Fitness profile updated successfully for user {UserId}", userId);
-            
             return Ok(profile);
         }
         catch (InvalidOperationException ex)
@@ -202,7 +187,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating fitness profile for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -223,8 +207,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var result = await _userProfileService.DeleteUserProfileAsync(userId, cancellationToken);
             
-            _logger.LogInformation("Profile deleted successfully for user {UserId}", userId);
-            
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -233,7 +215,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting profile for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -282,8 +263,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var subscription = await _userProfileService.UpdateSubscriptionAsync(userId, request, cancellationToken);
             
-            _logger.LogInformation("Subscription updated successfully for user {UserId}", userId);
-            
             return Ok(subscription);
         }
         catch (InvalidOperationException ex)
@@ -292,7 +271,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating subscription for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -313,8 +291,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var result = await _userProfileService.CancelSubscriptionAsync(userId, cancellationToken);
             
-            _logger.LogInformation("Subscription cancelled successfully for user {UserId}", userId);
-            
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -323,7 +299,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error cancelling subscription for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -345,8 +320,6 @@ public class UserProfileController : ControllerBase
             var userId = GetCurrentUserId();
             var subscription = await _userProfileService.RenewSubscriptionAsync(userId, newEndDate, cancellationToken);
             
-            _logger.LogInformation("Subscription renewed successfully for user {UserId}", userId);
-            
             return Ok(subscription);
         }
         catch (InvalidOperationException ex)
@@ -355,7 +328,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error renewing subscription for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -378,7 +350,7 @@ public class UserProfileController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var preferences = await _userProfileService.GetUserPreferencesAsync(userId, cancellationToken);
+            var preferences = await _userPreferenceService.GetUserPreferencesAsync(userId, cancellationToken);
             
             return Ok(preferences);
         }
@@ -408,7 +380,7 @@ public class UserProfileController : ControllerBase
             }
 
             var userId = GetCurrentUserId();
-            var preferences = await _userProfileService.GetUserPreferencesByCategoryAsync(userId, categoryEnum, cancellationToken);
+            var preferences = await _userPreferenceService.GetUserPreferencesByCategoryAsync(userId, categoryEnum, cancellationToken);
             
             return Ok(preferences);
         }
@@ -432,9 +404,7 @@ public class UserProfileController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var preference = await _userProfileService.CreateOrUpdatePreferenceAsync(userId, request, cancellationToken);
-            
-            _logger.LogInformation("Preference created/updated successfully for user {UserId}", userId);
+            var preference = await _userPreferenceService.CreateOrUpdatePreferenceAsync(userId, request, cancellationToken);
             
             return Ok(preference);
         }
@@ -444,7 +414,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating/updating preference for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -462,9 +431,7 @@ public class UserProfileController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var preferences = await _userProfileService.UpdatePreferencesAsync(userId, request, cancellationToken);
-            
-            _logger.LogInformation("Multiple preferences updated successfully for user {UserId}", userId);
+            var preferences = await _userPreferenceService.UpdatePreferencesAsync(userId, request, cancellationToken);
             
             return Ok(preferences);
         }
@@ -474,7 +441,6 @@ public class UserProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating preferences for user");
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -498,9 +464,7 @@ public class UserProfileController : ControllerBase
             }
 
             var userId = GetCurrentUserId();
-            var result = await _userProfileService.DeletePreferenceAsync(userId, categoryEnum, key, cancellationToken);
-            
-            _logger.LogInformation("Preference deleted successfully for user {UserId}", userId);
+            var result = await _userPreferenceService.DeletePreferenceAsync(userId, categoryEnum, key, cancellationToken);
             
             return Ok(result);
         }
@@ -523,9 +487,7 @@ public class UserProfileController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var result = await _userProfileService.ClearPreferencesAsync(userId, cancellationToken);
-            
-            _logger.LogInformation("All preferences cleared successfully for user {UserId}", userId);
+            var result = await _userPreferenceService.ClearPreferencesAsync(userId, cancellationToken);
             
             return Ok(result);
         }

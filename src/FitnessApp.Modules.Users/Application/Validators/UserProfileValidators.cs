@@ -102,16 +102,28 @@ public class UpdatePhysicalMeasurementsRequestValidator : AbstractValidator<Upda
 {
     public UpdatePhysicalMeasurementsRequestValidator()
     {
-        RuleFor(x => x.HeightCm)
-            .InclusiveBetween(50, 250).WithMessage("Height must be between 50 and 250 cm")
-            .When(x => x.HeightCm.HasValue);
+        RuleFor(x => x.Height)
+            .GreaterThan(0).WithMessage("Height must be greater than 0")
+            .LessThan(300).WithMessage("Height must be less than 300 (supports both cm and converted units)")
+            .When(x => x.Height.HasValue);
 
-        RuleFor(x => x.WeightKg)
-            .InclusiveBetween(10, 500).WithMessage("Weight must be between 10 and 500 kg")
-            .When(x => x.WeightKg.HasValue);
+        RuleFor(x => x.Weight)
+            .GreaterThan(0).WithMessage("Weight must be greater than 0")
+            .LessThan(1000).WithMessage("Weight must be less than 1000 (supports both kg and lbs)")
+            .When(x => x.Weight.HasValue);
+
+        RuleFor(x => x.Units!.HeightUnit)
+            .Must(unit => string.IsNullOrEmpty(unit) || FitnessApp.SharedKernel.Services.MeasurementUnitConverter.IsValidHeightUnit(unit))
+            .WithMessage("Invalid height unit. Supported: cm, ft, in")
+            .When(x => x.Units != null);
+
+        RuleFor(x => x.Units!.WeightUnit)
+            .Must(unit => string.IsNullOrEmpty(unit) || FitnessApp.SharedKernel.Services.MeasurementUnitConverter.IsValidWeightUnit(unit))
+            .WithMessage("Invalid weight unit. Supported: kg, lbs")
+            .When(x => x.Units != null);
 
         RuleFor(x => x)
-            .Must(x => x.HeightCm.HasValue || x.WeightKg.HasValue)
+            .Must(x => x.Height.HasValue || x.Weight.HasValue)
             .WithMessage("At least one measurement must be provided");
     }
 }

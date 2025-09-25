@@ -87,15 +87,6 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                     b.ToTable("UserProfiles", "users");
                 });
 
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.Preference", b =>
-                {
-                    b.HasOne("FitnessApp.Modules.Users.Domain.Entities.UserProfile", null)
-                        .WithMany("Preferences")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.UserProfile", b =>
                 {
                     b.OwnsOne("FitnessApp.Modules.Users.Domain.Entities.Subscription", "Subscription", b1 =>
@@ -209,11 +200,6 @@ namespace FitnessApp.Modules.Users.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Subscription");
-                });
-
-            modelBuilder.Entity("FitnessApp.Modules.Users.Domain.Entities.UserProfile", b =>
-                {
-                    b.Navigation("Preferences");
                 });
 #pragma warning restore 612, 618
         }

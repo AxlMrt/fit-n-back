@@ -12,7 +12,7 @@ public class Subscription
     public bool IsActive => DateTime.UtcNow >= StartDate && DateTime.UtcNow <= EndDate;
     public UserProfile UserProfile { get; private set; } = null!;
 
-    private Subscription() { } // EF Core constructor
+    private Subscription() { }
 
     public Subscription(UserProfile userProfile, SubscriptionLevel level, DateTime startDate, DateTime endDate)
     {
@@ -20,7 +20,6 @@ public class Subscription
         UserProfile = userProfile;
         Level = level;
         
-        // Ensure dates are in UTC
         StartDate = startDate.Kind == DateTimeKind.Utc ? startDate : DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
         EndDate = endDate.Kind == DateTimeKind.Utc ? endDate : DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
     }

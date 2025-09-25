@@ -80,13 +80,8 @@ public class UserMetric
         return metricType switch
         {
             UserMetricType.Weight => "kg",
-            UserMetricType.BodyFatPercentage => "%",
-            UserMetricType.MuscleMass => "kg",
+            UserMetricType.Height => "cm", 
             UserMetricType.PersonalRecord => "kg",
-            UserMetricType.RestingHeartRate => "bpm",
-            UserMetricType.BloodPressure => "mmHg",
-            UserMetricType.BodyMeasurement => "cm",
-            UserMetricType.VO2Max => "ml/kg/min",
             _ => "unit"
         };
     }
@@ -107,23 +102,19 @@ public class UserMetric
         return MetricType switch
         {
             UserMetricType.PersonalRecord => true,
-            UserMetricType.VO2Max => true,
-            UserMetricType.MuscleMass => true,
+            UserMetricType.Height => true, // Taller is generally considered better for tracking
             _ => false
         };
     }
 
     /// <summary>
-    /// Check if this metric is a health metric (lower is often better)
+    /// Check if this metric is a health metric (lower is often better for goals)
     /// </summary>
     public bool IsHealthMetricType()
     {
         return MetricType switch
         {
-            UserMetricType.Weight => true,
-            UserMetricType.BodyFatPercentage => true,
-            UserMetricType.RestingHeartRate => true,
-            UserMetricType.BloodPressure => true,
+            UserMetricType.Weight => true, // Often goal is to lose weight
             _ => false
         };
     }

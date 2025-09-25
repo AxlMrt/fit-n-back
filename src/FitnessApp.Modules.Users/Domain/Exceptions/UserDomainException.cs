@@ -1,7 +1,7 @@
 namespace FitnessApp.Modules.Users.Domain.Exceptions;
 
 /// <summary>
-/// Exception thrown when a business rule is violated in the User domain.
+/// Exception levée lorsqu'une règle métier est violée dans le domaine User.
 /// </summary>
 public class UserDomainException : Exception
 {

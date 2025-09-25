@@ -28,7 +28,8 @@ public static class ModuleExtensions
         app.UseExercisesModule();
         app.UseContentModule();
         app.UseWorkoutsModule();
-
+        app.UseTrackingModule();
+        
         return app;
     }
 }

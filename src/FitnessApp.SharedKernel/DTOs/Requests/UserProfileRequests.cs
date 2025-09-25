@@ -55,11 +55,24 @@ public sealed record UpdatePersonalInfoRequest(
 /// Request to update physical measurements.
 /// </summary>
 public sealed record UpdatePhysicalMeasurementsRequest(
-    [Range(1, 250)]
-    int? HeightCm,
+    [Range(1, 300)]  // Support both cm (50-250) and inches (20-120) 
+    decimal? Height,
     
-    [Range(1, 500)]
-    decimal? WeightKg
+    [Range(1, 1000)] // Support both kg (30-300) and lbs (65-650)
+    decimal? Weight,
+    
+    /// <summary>
+    /// Unit preferences for this update (optional - will use user preferences if not specified)
+    /// </summary>
+    MeasurementUnits? Units = null
+);
+
+/// <summary>
+/// Measurement units for height and weight
+/// </summary>
+public sealed record MeasurementUnits(
+    string? HeightUnit = "cm",  // "cm", "ft", "in"
+    string? WeightUnit = "kg"   // "kg", "lbs"
 );
 
 /// <summary>
