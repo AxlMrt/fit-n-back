@@ -17,10 +17,9 @@ public static class AuthenticationModule
 {
     public static IServiceCollection AddAuthenticationModule(this IServiceCollection services, string connectionString)
     {
-        // DbContext for auth schema
         services.AddDbContext<AuthenticationDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "auth"))
-                   .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+            options.UseNpgsql(connectionString,
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "auth")));
 
         // Auth service
         services.AddScoped<IAuthService, AuthService>();

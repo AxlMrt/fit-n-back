@@ -3,6 +3,7 @@ using System;
 using FitnessApp.Modules.Users.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FitnessApp.Modules.Users.Migrations
 {
     [DbContext(typeof(UsersDbContext))]
-    partial class UsersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250926071927_InitialUsersSchema")]
+    partial class InitialUsersSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -178,20 +181,10 @@ namespace FitnessApp.Modules.Users.Migrations
                                 .HasColumnType("numeric(5,2)")
                                 .HasColumnName("Height");
 
-                            b1.Property<string>("HeightUnit")
-                                .HasMaxLength(10)
-                                .HasColumnType("character varying(10)")
-                                .HasColumnName("HeightUnit");
-
                             b1.Property<decimal?>("Weight")
                                 .HasPrecision(5, 2)
                                 .HasColumnType("numeric(5,2)")
                                 .HasColumnName("Weight");
-
-                            b1.Property<string>("WeightUnit")
-                                .HasMaxLength(10)
-                                .HasColumnType("character varying(10)")
-                                .HasColumnName("WeightUnit");
 
                             b1.HasKey("UserProfileUserId");
 

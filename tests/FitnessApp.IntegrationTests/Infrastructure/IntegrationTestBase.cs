@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +33,6 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
         Client = factory.CreateClient();
         Scope = factory.Services.CreateScope();
 
-        // Récupérer tous les DbContexts
         UsersContext = Scope.ServiceProvider.GetRequiredService<UsersDbContext>();
         WorkoutsContext = Scope.ServiceProvider.GetRequiredService<WorkoutsDbContext>();
         ExercisesContext = Scope.ServiceProvider.GetRequiredService<ExercisesDbContext>();
@@ -42,7 +40,6 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
         ContentContext = Scope.ServiceProvider.GetRequiredService<ContentDbContext>();
         AuthenticationContext = Scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
 
-        // Configuration JSON pour l'API
         JsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -53,7 +50,6 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
 
     public virtual async Task InitializeAsync()
     {
-        // Nettoyer la base de données avant chaque test
         await Factory.CleanDatabaseAsync();
     }
 
@@ -67,27 +63,27 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     #region Helper Methods
 
     /// <summary>
-    /// Authentifie l'utilisateur en tant qu'utilisateur régulier
+    /// Authenticates as a regular user for test requests.
     /// </summary>
     protected async Task AuthenticateAsUserAsync()
     {
         var testUser = AuthenticationHelper.CreateTestUser();
         SetAuthorizationHeader(testUser.Token);
-        await Task.CompletedTask; // Pour cohérence async
+        await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Authentifie l'utilisateur en tant qu'admin
+    /// Authenticates as an admin for test requests.
     /// </summary>
     protected async Task AuthenticateAsAdminAsync()
     {
         var testAdmin = AuthenticationHelper.CreateTestAdmin();
         SetAuthorizationHeader(testAdmin.Token);
-        await Task.CompletedTask; // Pour cohérence async
+        await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Crée une requête HTTP POST avec du contenu JSON
+    /// Creates a JSON POST request.
     /// </summary>
     protected HttpRequestMessage CreateJsonPostRequest(string requestUri, object content)
     {
@@ -99,7 +95,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Crée une requête HTTP PUT avec du contenu JSON
+    /// Creates a JSON PUT request.
     /// </summary>
     protected HttpRequestMessage CreateJsonPutRequest(string requestUri, object content)
     {
@@ -111,7 +107,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Désérialise une réponse HTTP en objet
+    /// Deserializes an HTTP response to an object.
     /// </summary>
     protected async Task<T?> DeserializeResponseAsync<T>(HttpResponseMessage response)
     {
@@ -123,7 +119,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Ajoute un header d'autorisation avec Bearer token
+    /// Sets the Authorization header with a Bearer token.
     /// </summary>
     protected void SetAuthorizationHeader(string token)
     {
@@ -132,7 +128,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Supprime le header d'autorisation
+    /// Clears the Authorization header.
     /// </summary>
     protected void ClearAuthorizationHeader()
     {
@@ -140,7 +136,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Attend qu'une condition soit vraie (utile pour les événements asynchrones)
+    /// Waits for a condition to be true (useful for async events).
     /// </summary>
     protected async Task WaitForConditionAsync(Func<Task<bool>> condition, TimeSpan? timeout = null, TimeSpan? pollInterval = null)
     {
@@ -161,7 +157,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Vérifie qu'une entité existe dans la base de données
+    /// Finds an entity by key in the database context.
     /// </summary>
     protected async Task<T?> FindEntityAsync<T>(DbContext context, params object[] keyValues) where T : class
     {
@@ -169,7 +165,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Recharge les données depuis la base de données
+    /// Reloads all tracked entities from the database.
     /// </summary>
     protected async Task RefreshContextAsync(DbContext context)
     {
@@ -185,7 +181,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     #region Database Assertions
 
     /// <summary>
-    /// Vérifie qu'une entité existe dans la base de données
+    /// Asserts that an entity exists in the database.
     /// </summary>
     protected async Task AssertEntityExistsAsync<T>(DbContext context, params object[] keyValues) where T : class
     {
@@ -197,7 +193,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Vérifie qu'une entité n'existe pas dans la base de données
+    /// Asserts that an entity does not exist in the database.
     /// </summary>
     protected async Task AssertEntityNotExistsAsync<T>(DbContext context, params object[] keyValues) where T : class
     {
@@ -209,7 +205,7 @@ public abstract class IntegrationTestBase : IClassFixture<TestWebApplicationFact
     }
 
     /// <summary>
-    /// Compte le nombre d'entités d'un type donné
+    /// Counts the number of entities of a given type.
     /// </summary>
     protected async Task<int> CountEntitiesAsync<T>(DbContext context) where T : class
     {

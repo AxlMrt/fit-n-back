@@ -21,10 +21,13 @@ public class AuthenticationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Configure schema for all entities
+        modelBuilder.HasDefaultSchema("auth");
+
         // Configure AuthUser entity
         modelBuilder.Entity<AuthUser>(entity =>
         {
-            entity.ToTable("AuthUsers");
+            entity.ToTable("AuthUsers", "auth");
             entity.HasKey(e => e.Id);
             
             // Configure Email value object
@@ -98,7 +101,7 @@ public class AuthenticationDbContext : DbContext
         // Configure RefreshToken entity
         modelBuilder.Entity<RefreshToken>(entity =>
         {
-            entity.ToTable("RefreshTokens");
+            entity.ToTable("RefreshTokens", "auth");
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Token)
@@ -114,8 +117,23 @@ public class AuthenticationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .IsRequired();
 
-            entity.Property(e => e.IsRevoked)
+            entity.Property(e => e.IsUsed)
+                .IsRequired()
                 .HasDefaultValue(false);
+
+            entity.Property(e => e.UsedAt);
+            
+            entity.Property(e => e.IsRevoked)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.RevokedAt);
+            
+            entity.Property(e => e.RevokedReason)
+                .HasMaxLength(200);
+            
+            entity.Property(e => e.CreatedByIpAddress)
+                .HasMaxLength(50);
 
             // Indexes
             entity.HasIndex(e => e.Token)
@@ -127,6 +145,16 @@ public class AuthenticationDbContext : DbContext
 
             entity.HasIndex(e => e.ExpiresAt)
                 .HasDatabaseName("IX_RefreshTokens_ExpiresAt");
+                
+            entity.HasIndex(e => e.IsUsed)
+                .HasDatabaseName("IX_RefreshTokens_IsUsed");
+                
+            entity.HasIndex(e => e.IsRevoked)
+                .HasDatabaseName("IX_RefreshTokens_IsRevoked");
+                
+            // Composite index for efficient queries
+            entity.HasIndex(e => new { e.UserId, e.IsUsed, e.IsRevoked, e.ExpiresAt })
+                .HasDatabaseName("IX_RefreshTokens_Active");
         });
     }
 }

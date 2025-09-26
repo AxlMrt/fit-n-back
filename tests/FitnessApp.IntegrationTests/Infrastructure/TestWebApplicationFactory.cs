@@ -31,7 +31,6 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
     {
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Remplacer la configuration de base de données
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = ConnectionString,
@@ -41,12 +40,10 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
                 ["ConnectionStrings:TrackingConnection"] = ConnectionString,
                 ["ConnectionStrings:ContentConnection"] = ConnectionString,
                 ["ConnectionStrings:AuthenticationConnection"] = ConnectionString,
-                // Configuration JWT pour les tests - DOIT matcher les tokens générés
                 ["Jwt:Key"] = "2rO4vtN20xfKnM7gQLeGOlXXS9WDt5Z8a3bQ1kY2H8E",
                 ["Jwt:Issuer"] = "FitnessApp", 
                 ["Jwt:Audience"] = "FitnessAppUsers",
                 ["Jwt:ExpiresInMinutes"] = "60",
-                // Configuration pour les tests
                 ["Environment"] = "Testing",
                 ["Logging:LogLevel:Default"] = "Warning"
             });
@@ -54,29 +51,26 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
 
         builder.ConfigureServices(services =>
         {
-            // Supprimer tous les DbContexts et services EF Core existants
             RemoveAllDbContextServices(services);
 
-            // Ajouter les DbContexts de test avec PostgreSQL
             services.AddDbContext<UsersDbContext>(options =>
-                options.UseNpgsql(ConnectionString));
+                options.UseNpgsql(ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", "users")));
 
             services.AddDbContext<WorkoutsDbContext>(options =>
-                options.UseNpgsql(ConnectionString));
+                options.UseNpgsql(ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", "workouts")));
 
             services.AddDbContext<ExercisesDbContext>(options =>
-                options.UseNpgsql(ConnectionString));
+                options.UseNpgsql(ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", "exercises")));
 
             services.AddDbContext<TrackingDbContext>(options =>
-                options.UseNpgsql(ConnectionString));
+                options.UseNpgsql(ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", "tracking")));
 
             services.AddDbContext<ContentDbContext>(options =>
-                options.UseNpgsql(ConnectionString));
+                options.UseNpgsql(ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", "content")));
 
             services.AddDbContext<AuthenticationDbContext>(options =>
-                options.UseNpgsql(ConnectionString));
+                options.UseNpgsql(ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", "auth")));
 
-            // Configuration de test supplémentaire
             services.Configure<LoggerFilterOptions>(options =>
             {
                 options.MinLevel = LogLevel.Warning;
@@ -90,7 +84,6 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
     {
         await _dbContainer.StartAsync();
         
-        // Créer et migrer toutes les bases de données
         using var scope = Services.CreateScope();
         var contexts = new DbContext[]
         {
@@ -102,6 +95,10 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
             scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>()
         };
 
+        // Delete the database once using the first context
+        await contexts[0].Database.EnsureDeletedAsync();
+        
+        // Apply migrations for all contexts
         foreach (var context in contexts)
         {
             await context.Database.MigrateAsync();
@@ -116,7 +113,6 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
 
     private static void RemoveAllDbContextServices(IServiceCollection services)
     {
-        // Liste des types DbContext à remplacer
         var dbContextTypes = new[]
         {
             typeof(UsersDbContext),
@@ -127,10 +123,8 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
             typeof(AuthenticationDbContext)
         };
 
-        // Supprimer spécifiquement chaque DbContext et ses options
         foreach (var dbContextType in dbContextTypes)
         {
-            // Supprimer le DbContext lui-même
             var descriptorsToRemove = services
                 .Where(d => d.ServiceType == dbContextType)
                 .ToList();
@@ -139,7 +133,6 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
                 services.Remove(descriptor);
             }
 
-            // Supprimer DbContextOptions<TContext>
             var optionsType = typeof(DbContextOptions<>).MakeGenericType(dbContextType);
             descriptorsToRemove = services
                 .Where(d => d.ServiceType == optionsType)
@@ -150,7 +143,6 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
             }
         }
 
-        // Supprimer les options génériques de DbContext si elles existent
         var genericDescriptors = services
             .Where(d => d.ServiceType == typeof(DbContextOptions))
             .ToList();
@@ -161,105 +153,110 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
     }
 
     /// <summary>
-    /// Nettoie toutes les données de test entre les tests
+    /// Cleans all test data between tests. Simple deletion approach.
     /// </summary>
     public async Task CleanDatabaseAsync()
     {
         using var scope = Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<UsersDbContext>();
+        
+        // Clear known tables in order (respecting foreign keys)
+        await ClearUsersDataAsync(scope);
+        await ClearAuthenticationDataAsync(scope);
+        await ClearWorkoutDataAsync(scope);
+        await ClearTrackingDataAsync(scope);
+        await ClearExerciseDataAsync(scope);
+        await ClearContentDataAsync(scope);
+    }
 
+    private async Task ClearUsersDataAsync(IServiceScope scope)
+    {
         try
         {
-            // Obtenir toutes les tables utilisateur (exclure les tables système et migrations)
-            var rawQuery = context.Database.SqlQueryRaw<string>(@"
-                SELECT schemaname || '.' || tablename as table_name
-                FROM pg_tables 
-                WHERE schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-                AND tablename != '__EFMigrationsHistory'
-                ORDER BY schemaname, tablename");
-
-            var tableNames = await rawQuery.ToListAsync();
-
-            if (!tableNames.Any()) return;
-
-            // Désactiver temporairement les contraintes de clé étrangère
-            await context.Database.ExecuteSqlRawAsync("SET session_replication_role = replica;");
-
-            // Nettoyer toutes les tables
-            foreach (var tableName in tableNames)
-            {
-                try
-                {
-                    var quotedTableName = tableName.Contains('.') 
-                        ? string.Join('.', tableName.Split('.').Select(part => $"\"{part}\""))
-                        : $"\"{tableName}\"";
-                    
-                    await context.Database.ExecuteSqlAsync($"TRUNCATE TABLE {quotedTableName} RESTART IDENTITY CASCADE");
-                }
-                catch
-                {
-                    // Fallback vers DELETE si TRUNCATE échoue
-                    try
-                    {
-                        var quotedTableName = tableName.Contains('.') 
-                            ? string.Join('.', tableName.Split('.').Select(part => $"\"{part}\""))
-                            : $"\"{tableName}\"";
-                        
-                        await context.Database.ExecuteSqlAsync($"DELETE FROM {quotedTableName}");
-                    }
-                    catch
-                    {
-                        // Ignorer les erreurs de nettoyage de tables individuelles
-                    }
-                }
-            }
-
-            // Réactiver les contraintes de clé étrangère
-            await context.Database.ExecuteSqlRawAsync("SET session_replication_role = DEFAULT;");
+            var context = scope.ServiceProvider.GetRequiredService<UsersDbContext>();
+            context.Preferences.RemoveRange(context.Preferences);
+            context.UserProfiles.RemoveRange(context.UserProfiles);
+            await context.SaveChangesAsync();
         }
         catch
         {
-            // Fallback : nettoyer manuellement les tables principales connues
-            try
-            {
-                var mainTables = new[]
-                {
-                    "users.user_profiles", "users.preferences", 
-                    "auth.auth_users", "auth.refresh_tokens",
-                    "content.media_assets", "content.exercise_media_assets",
-                    "workouts.workouts", "workouts.workout_phases", "workouts.workout_exercises",
-                    "tracking.workout_sessions", "tracking.workout_session_exercises", 
-                    "tracking.planned_workouts", "tracking.user_metrics",
-                    "public.exercises"
-                };
+            // Ignore if tables don't exist
+        }
+    }
 
-                await context.Database.ExecuteSqlRawAsync("SET session_replication_role = replica;");
+    private async Task ClearAuthenticationDataAsync(IServiceScope scope)
+    {
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
+            context.RefreshTokens.RemoveRange(context.RefreshTokens);
+            context.AuthUsers.RemoveRange(context.AuthUsers);
+            await context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Ignore if tables don't exist
+        }
+    }
 
-                foreach (var table in mainTables)
-                {
-                    try
-                    {
-                        await context.Database.ExecuteSqlAsync($"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE");
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            await context.Database.ExecuteSqlAsync($"DELETE FROM {table}");
-                        }
-                        catch
-                        {
-                            // Ignorer les erreurs de nettoyage
-                        }
-                    }
-                }
+    private async Task ClearWorkoutDataAsync(IServiceScope scope)
+    {
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<WorkoutsDbContext>();
+            // Clear workout tables in dependency order
+            await context.Database.ExecuteSqlAsync($"DELETE FROM workouts.workout_exercises");
+            await context.Database.ExecuteSqlAsync($"DELETE FROM workouts.workout_phases");
+            await context.Database.ExecuteSqlAsync($"DELETE FROM workouts.workouts");
+        }
+        catch
+        {
+            // Ignore if tables don't exist
+        }
+    }
 
-                await context.Database.ExecuteSqlRawAsync("SET session_replication_role = DEFAULT;");
-            }
-            catch
-            {
-                // En dernier recours, ignorer les erreurs de nettoyage
-            }
+    private async Task ClearTrackingDataAsync(IServiceScope scope)
+    {
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<TrackingDbContext>();
+            // Clear tracking tables in dependency order
+            await context.Database.ExecuteSqlAsync($"DELETE FROM tracking.\"WorkoutSessionSet\"");
+            await context.Database.ExecuteSqlAsync($"DELETE FROM tracking.workout_session_exercises");
+            await context.Database.ExecuteSqlAsync($"DELETE FROM tracking.workout_sessions");
+            await context.Database.ExecuteSqlAsync($"DELETE FROM tracking.planned_workouts");
+            await context.Database.ExecuteSqlAsync($"DELETE FROM tracking.user_metrics");
+        }
+        catch
+        {
+            // Ignore if tables don't exist
+        }
+    }
+
+    private async Task ClearExerciseDataAsync(IServiceScope scope)
+    {
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ExercisesDbContext>();
+            context.Exercises.RemoveRange(context.Exercises);
+            await context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Ignore if tables don't exist
+        }
+    }
+
+    private async Task ClearContentDataAsync(IServiceScope scope)
+    {
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+            // Clear content tables directly using SQL
+            await context.Database.ExecuteSqlAsync($"DELETE FROM content.media_assets");
+        }
+        catch
+        {
+            // Ignore if tables don't exist
         }
     }
 }

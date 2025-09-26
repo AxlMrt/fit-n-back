@@ -23,17 +23,22 @@ public sealed record CreateUserProfileRequest(
     
     [Required]
     [Range(1, 250)]
-    int HeightCm,
+    decimal Height,
     
     [Required]
     [Range(1, 500)]
-    decimal WeightKg,
+    decimal Weight,
     
     [Required]
     FitnessLevel FitnessLevel,
     
     [Required]
-    FitnessGoal PrimaryFitnessGoal
+    FitnessGoal FitnessGoal,
+    
+    /// <summary>
+    /// Units for height and weight measurements. Defaults to metric (cm, kg) if not provided.
+    /// </summary>
+    MeasurementUnits? Units = null
 );
 
 /// <summary>
@@ -80,7 +85,7 @@ public sealed record MeasurementUnits(
 /// </summary>
 public sealed record UpdateFitnessProfileRequest(
     FitnessLevel? FitnessLevel,
-    FitnessGoal? PrimaryFitnessGoal
+    FitnessGoal? FitnessGoal
 );
 
 /// <summary>
@@ -118,4 +123,17 @@ public sealed record UpdateSubscriptionRequest(
     
     [Required]
     DateTime EndDate
+);
+
+/// <summary>
+/// Request to set user's preferred measurement units.
+/// </summary>
+public sealed record SetPreferredUnitsRequest(
+    [Required]
+    [RegularExpression("^(cm|ft|in)$", ErrorMessage = "Height unit must be cm, ft, or in")]
+    string HeightUnit,
+    
+    [Required]
+    [RegularExpression("^(kg|lbs|lb)$", ErrorMessage = "Weight unit must be kg, lbs, or lb")]
+    string WeightUnit
 );

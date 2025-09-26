@@ -1,10 +1,5 @@
-using FluentAssertions;
 using FitnessApp.IntegrationTests.Infrastructure;
 using FitnessApp.IntegrationTests.Helpers;
-using Microsoft.EntityFrameworkCore;
-using System.Net;
-using System.Diagnostics;
-using Xunit;
 using FluentAssertions.Execution;
 
 namespace FitnessApp.IntegrationTests.Tests;
@@ -75,8 +70,8 @@ public class InfrastructureTests : IntegrationTestBase
         testUser.Should().NotBeNull();
         testUser.Name.FirstName.Should().Be("Integration");
         testUser.Name.LastName.Should().Be("Test");
-        testUser.PhysicalMeasurements.HeightCm.Should().Be(180m);
-        testUser.PhysicalMeasurements.WeightKg.Should().Be(80m);
+        testUser.PhysicalMeasurements.Height.Should().Be(180m);
+        testUser.PhysicalMeasurements.Weight.Should().Be(80m);
         
         // Vérifier que l'entité a été sauvegardée
         var savedUser = await UsersContext.UserProfiles.FindAsync(testUser.UserId);
@@ -104,7 +99,6 @@ public class InfrastructureTests : IntegrationTestBase
         testMetric.ShouldHaveCorrectMetricData(userId, 75.5, "kg");
         testMetric.Notes.Should().Be("Test metric");
         
-        // Vérifier que l'entité a été sauvegardée
         var savedMetric = await TrackingContext.UserMetrics.FindAsync(testMetric.Id);
         savedMetric.Should().NotBeNull();
         savedMetric!.UserId.Should().Be(userId);

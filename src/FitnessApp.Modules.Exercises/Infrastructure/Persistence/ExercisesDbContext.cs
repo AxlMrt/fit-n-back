@@ -13,6 +13,7 @@ public class ExercisesDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.HasDefaultSchema("exercises");
 
         modelBuilder.Entity<Exercise>(entity =>
         {

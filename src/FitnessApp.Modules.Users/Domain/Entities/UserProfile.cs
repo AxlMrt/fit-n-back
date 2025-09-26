@@ -13,7 +13,7 @@ public class UserProfile
     public PhysicalMeasurements PhysicalMeasurements { get; private set; } = PhysicalMeasurements.Empty;
     
     public FitnessLevel? FitnessLevel { get; private set; }
-    public FitnessGoal? PrimaryFitnessGoal { get; private set; }
+    public FitnessGoal? FitnessGoal { get; private set; }
 
     public Subscription? Subscription { get; private set; }
 
@@ -46,7 +46,7 @@ public class UserProfile
     public void UpdateFitnessProfile(FitnessLevel? fitnessLevel, FitnessGoal? primaryGoal)
     {
         if (fitnessLevel != null) FitnessLevel = fitnessLevel;
-        if (primaryGoal != null) PrimaryFitnessGoal = primaryGoal;
+        if (primaryGoal != null) FitnessGoal = primaryGoal;
         
         SetUpdatedAt();
     }
@@ -71,7 +71,7 @@ public class UserProfile
                && Gender != null
                && PhysicalMeasurements != PhysicalMeasurements.Empty
                && FitnessLevel != null
-               && PrimaryFitnessGoal != null;
+               && FitnessGoal != null;
     }
 
     public decimal GetProfileCompletionPercentage()
@@ -84,7 +84,7 @@ public class UserProfile
         if (Gender != null) completedFields++;
         if (PhysicalMeasurements != PhysicalMeasurements.Empty) completedFields++;
         if (FitnessLevel != null) completedFields++;
-        if (PrimaryFitnessGoal != null) completedFields++;
+        if (FitnessGoal != null) completedFields++;
 
         return Math.Round((completedFields / totalFields) * 100, 2);
     }
@@ -105,11 +105,11 @@ public class UserProfile
 
     public decimal? GetBMI()
     {
-        if (PhysicalMeasurements.HeightCm == null || PhysicalMeasurements.WeightKg == null)
+        if (PhysicalMeasurements.Height == null || PhysicalMeasurements.Weight == null)
             return null;
 
-        var heightInMeters = PhysicalMeasurements.HeightCm.Value / 100.0m;
-        return PhysicalMeasurements.WeightKg.Value / (heightInMeters * heightInMeters);
+        var heightInMeters = PhysicalMeasurements.Height.Value / 100.0m;
+        return PhysicalMeasurements.Weight.Value / (heightInMeters * heightInMeters);
     }
 
     // Business Logic Methods

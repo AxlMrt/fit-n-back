@@ -18,17 +18,20 @@ namespace FitnessApp.Modules.Users.Application.Services;
 public class UserProfileService : IUserProfileService
 {
     private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUserPreferenceService _userPreferenceService;
     private readonly IValidationService _validationService;
     private readonly IMapper _mapper;
     private readonly IMediator _mediator;
 
     public UserProfileService(
         IUserProfileRepository userProfileRepository,
+        IUserPreferenceService userPreferenceService,
         IValidationService validationService,
         IMapper mapper,
         IMediator mediator)
     {
         _userProfileRepository = userProfileRepository ?? throw new ArgumentNullException(nameof(userProfileRepository));
+        _userPreferenceService = userPreferenceService ?? throw new ArgumentNullException(nameof(userPreferenceService));
         _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -38,7 +41,7 @@ public class UserProfileService : IUserProfileService
     {
         var profile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
         
-        return profile == null ? null : _mapper.Map<UserProfileResponse>(profile);
+        return profile == null ? null : await MapToResponseAsync(profile, cancellationToken);
     }
 
     public async Task<UserProfileSummaryResponse?> GetUserProfileSummaryAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -63,15 +66,27 @@ public class UserProfileService : IUserProfileService
         var dateOfBirth = DateOfBirth.Create(request.DateOfBirth);
         profile.UpdatePersonalInfo(fullName, dateOfBirth, request.Gender);
 
-        var measurements = CreatePhysicalMeasurements(request.HeightCm, request.WeightKg);
+        var measurements = CreatePhysicalMeasurements(request.Height, request.Weight, request.Units);
         profile.UpdatePhysicalMeasurements(measurements);
 
-        profile.UpdateFitnessProfile(request.FitnessLevel, request.PrimaryFitnessGoal);
+        profile.UpdateFitnessProfile(request.FitnessLevel, request.FitnessGoal);
 
         await _userProfileRepository.AddAsync(profile, cancellationToken);
         await _userProfileRepository.SaveChangesAsync(cancellationToken);
 
-        return _mapper.Map<UserProfileResponse>(profile);
+        // Publish event for cross-module synchronization when creating profile with physical measurements
+        var measurementsEvent = new PhysicalMeasurementsUpdatedEvent(
+            userId,
+            request.Height,
+            request.Units?.HeightUnit,
+            request.Weight,
+            request.Units?.WeightUnit,
+            DateTime.UtcNow,
+            "ProfileCreation");
+
+        await _mediator.Publish(measurementsEvent, cancellationToken);
+
+        return await MapToResponseAsync(profile, cancellationToken);
     }
 
     public async Task<UserProfileResponse> UpdatePersonalInfoAsync(Guid userId, UpdatePersonalInfoRequest request, CancellationToken cancellationToken = default)
@@ -81,7 +96,9 @@ public class UserProfileService : IUserProfileService
         var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
 
         var fullName = request.FirstName != null || request.LastName != null
-            ? CreateFullName(request.FirstName, request.LastName)
+            ? CreateFullName(
+                request.FirstName ?? profile.Name.FirstName,  // Preserve existing if not provided
+                request.LastName ?? profile.Name.LastName)    // Preserve existing if not provided
             : null;
         
         var dateOfBirth = request.DateOfBirth.HasValue
@@ -92,7 +109,7 @@ public class UserProfileService : IUserProfileService
 
         await _userProfileRepository.SaveChangesAsync(cancellationToken);
         
-        return _mapper.Map<UserProfileResponse>(profile);
+        return await MapToResponseAsync(profile, cancellationToken);
     }
 
     public async Task<UserProfileResponse> UpdatePhysicalMeasurementsAsync(Guid userId, UpdatePhysicalMeasurementsRequest request, CancellationToken cancellationToken = default)
@@ -118,7 +135,7 @@ public class UserProfileService : IUserProfileService
 
         await _mediator.Publish(measurementsEvent, cancellationToken);
 
-        return _mapper.Map<UserProfileResponse>(profile);
+        return await MapToResponseAsync(profile, cancellationToken);
     }
 
     public async Task<UserProfileResponse> UpdateFitnessProfileAsync(Guid userId, UpdateFitnessProfileRequest request, CancellationToken cancellationToken = default)
@@ -127,11 +144,11 @@ public class UserProfileService : IUserProfileService
 
         var profile = await GetProfileOrThrowAsync(userId, cancellationToken);
 
-        profile.UpdateFitnessProfile(request.FitnessLevel, request.PrimaryFitnessGoal);
+        profile.UpdateFitnessProfile(request.FitnessLevel, request.FitnessGoal);
 
         await _userProfileRepository.SaveChangesAsync(cancellationToken);
 
-        return _mapper.Map<UserProfileResponse>(profile);
+        return await MapToResponseAsync(profile, cancellationToken);
     }
 
     public async Task<ProfileOperationResponse> DeleteUserProfileAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -222,12 +239,12 @@ public class UserProfileService : IUserProfileService
         return FullName.Create(firstName?.Trim(), lastName?.Trim());
     }
 
-    private static PhysicalMeasurements CreatePhysicalMeasurements(int? heightCm, decimal? weightKg)
+    private static PhysicalMeasurements CreatePhysicalMeasurements(decimal? height, decimal? weight)
     {
-        if (heightCm == null && weightKg == null)
+        if (height == null && weight == null)
             return PhysicalMeasurements.Empty;
 
-        return PhysicalMeasurements.Create((decimal?)heightCm, weightKg);
+        return PhysicalMeasurements.Create(height, weight);
     }
 
     private static PhysicalMeasurements CreatePhysicalMeasurements(decimal? height, decimal? weight, MeasurementUnits? units = null)
@@ -235,21 +252,25 @@ public class UserProfileService : IUserProfileService
         if (height == null && weight == null)
             return PhysicalMeasurements.Empty;
 
-        decimal? heightCm = null;
-        decimal? weightKg = null;
+        // Enregistrer les valeurs exactes saisies par l'utilisateur avec leurs unités
+        return PhysicalMeasurements.Create(
+            height, 
+            weight, 
+            units?.HeightUnit, 
+            units?.WeightUnit);
+    }
 
-        if (height.HasValue)
+    /// <summary>
+    /// Helper method to map UserProfile to UserProfileResponse with user's preferred units
+    /// </summary>
+    private async Task<UserProfileResponse> MapToResponseAsync(UserProfile profile, CancellationToken cancellationToken = default)
+    {
+        var preferredUnits = await _userPreferenceService.GetUserPreferredUnitsAsync(profile.UserId, cancellationToken);
+        
+        return _mapper.Map<UserProfileResponse>(profile, opts =>
         {
-            var heightUnit = units?.HeightUnit ?? "cm";
-            heightCm = FitnessApp.SharedKernel.Services.MeasurementUnitConverter.ConvertHeightToCentimeters(height.Value, heightUnit);
-        }
-
-        if (weight.HasValue)
-        {
-            var weightUnit = units?.WeightUnit ?? "kg";
-            weightKg = FitnessApp.SharedKernel.Services.MeasurementUnitConverter.ConvertWeightToKilograms(weight.Value, weightUnit);
-        }
-
-        return PhysicalMeasurements.Create(heightCm, weightKg);
+            opts.Items["HeightUnit"] = preferredUnits.heightUnit;
+            opts.Items["WeightUnit"] = preferredUnits.weightUnit;
+        });
     }
 }

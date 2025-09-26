@@ -23,7 +23,8 @@ public static class ExercisesModule
 
         // Register EF Core DbContext
         services.AddDbContext<ExercisesDbContext>(options =>
-            options.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(ExercisesModule).Assembly.FullName)));
+            options.UseNpgsql(connectionString, 
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "exercises")));
 
         // Domain repositories
         services.AddScoped<IExerciseRepository, ExerciseRepository>();

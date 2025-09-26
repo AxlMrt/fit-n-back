@@ -7,15 +7,16 @@ public class RefreshToken
     public string Token { get; private set; } = null!;
     public DateTime ExpiresAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
-    public DateTime? RevokedAt { get; private set; }
-    public bool IsRevoked { get; private set; }
-    public string? RevokedByIpAddress { get; private set; }
-    public string? ReplacedByToken { get; private set; }
-    public string CreatedByIpAddress { get; private set; } = null!;
+    public string? CreatedByIpAddress { get; private set; }
+    public bool IsUsed { get; internal set; }
+    public DateTime? UsedAt { get; internal set; }
+    public bool IsRevoked { get; internal set; }
+    public DateTime? RevokedAt { get; internal set; }
+    public string? RevokedReason { get; internal set; }
 
-    private RefreshToken() { }
+    private RefreshToken() { } // EF Core
 
-    public RefreshToken(Guid userId, string token, DateTime expiresAt, string createdByIpAddress)
+    public RefreshToken(Guid userId, string token, DateTime expiresAt, string? createdByIpAddress = null)
     {
         Id = Guid.NewGuid();
         UserId = userId;
@@ -23,16 +24,27 @@ public class RefreshToken
         ExpiresAt = expiresAt;
         CreatedAt = DateTime.UtcNow;
         CreatedByIpAddress = createdByIpAddress;
+        IsUsed = false;
         IsRevoked = false;
     }
 
-    public bool IsActive() => !IsRevoked && RevokedAt is null && DateTime.UtcNow < ExpiresAt;
+    public bool IsActive => !IsUsed && !IsRevoked && !IsExpired;
+    
+    public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
 
-    public void Revoke(string? replacedByToken = null, string? revokedByIpAddress = null)
+    public void MarkAsUsed()
+    {
+        if (!IsActive)
+            throw new InvalidOperationException("Cannot use an inactive token");
+            
+        IsUsed = true;
+        UsedAt = DateTime.UtcNow;
+    }
+
+    public void Revoke(string? reason = null)
     {
         IsRevoked = true;
         RevokedAt = DateTime.UtcNow;
-        RevokedByIpAddress = revokedByIpAddress;
-        ReplacedByToken = replacedByToken;
+        RevokedReason = reason;
     }
 }

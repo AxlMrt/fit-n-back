@@ -1,4 +1,3 @@
-using FluentAssertions;
 using FluentAssertions.Execution;
 using FitnessApp.Modules.Users.Domain.Entities;
 using FitnessApp.Modules.Tracking.Domain.Entities;
@@ -6,15 +5,12 @@ using System.Net;
 
 namespace FitnessApp.IntegrationTests.Helpers;
 
-/// <summary>
-/// Extensions d'assertions personnalisées pour les tests d'intégration FitnessApp
-/// </summary>
 public static class CustomAssertions
 {
     #region HTTP Response Assertions
 
     /// <summary>
-    /// Vérifie qu'une réponse HTTP a le statut attendu et un contenu non vide
+    /// Asserts that an HTTP response has the expected status and non-empty content, and deserializes the content.
     /// </summary>
     public static async Task<T> ShouldHaveStatusAndContentAsync<T>(
         this HttpResponseMessage response, 
@@ -23,11 +19,11 @@ public static class CustomAssertions
         using (new AssertionScope())
         {
             response.StatusCode.Should().Be(expectedStatus, 
-                "la réponse devrait avoir le statut {0} mais a reçu {1}", 
+                "Response should have status {0} but got {1}", 
                 expectedStatus, response.StatusCode);
 
             var content = await response.Content.ReadAsStringAsync();
-            content.Should().NotBeNullOrEmpty("le contenu de la réponse ne devrait pas être vide");
+            content.Should().NotBeNullOrEmpty("Response content should not be empty");
 
             try
             {
@@ -39,13 +35,13 @@ public static class CustomAssertions
             }
             catch (Exception ex)
             {
-                throw new AssertionException($"Impossible de désérialiser le contenu en {typeof(T).Name}: {ex.Message}. Contenu: {content}");
+                throw new AssertionException($"Failed to deserialize content to {typeof(T).Name}: {ex.Message}. Content: {content}");
             }
         }
     }
 
     /// <summary>
-    /// Vérifie qu'une réponse HTTP a le statut d'erreur attendu
+    /// Asserts that an HTTP response has the expected error status and optionally contains an error message.
     /// </summary>
     public static async Task ShouldHaveErrorStatusAsync(
         this HttpResponseMessage response, 
@@ -65,12 +61,12 @@ public static class CustomAssertions
     }
 
     /// <summary>
-    /// Vérifie qu'une réponse est un succès (2xx)
+    /// Asserts that an HTTP response is successful (2xx).
     /// </summary>
     public static void ShouldBeSuccessful(this HttpResponseMessage response)
     {
         response.IsSuccessStatusCode.Should().BeTrue(
-            "la réponse devrait être un succès mais a reçu le statut {0}: {1}", 
+            "Response should be successful but got status {0}: {1}", 
             (int)response.StatusCode, response.StatusCode);
     }
 
@@ -79,7 +75,7 @@ public static class CustomAssertions
     #region Entity Assertions
 
     /// <summary>
-    /// Vérifie qu'un UserProfile a les propriétés attendues
+    /// Asserts that a UserProfile has the expected properties.
     /// </summary>
     public static void ShouldHaveCorrectUserProfileData(
         this UserProfile profile,
@@ -97,7 +93,7 @@ public static class CustomAssertions
     }
 
     /// <summary>
-    /// Vérifie qu'un UserMetric a les propriétés attendues
+    /// Asserts that a UserMetric has the expected properties.
     /// </summary>
     public static void ShouldHaveCorrectMetricData(
         this UserMetric metric,
@@ -124,7 +120,7 @@ public static class CustomAssertions
     #region Collection Assertions
 
     /// <summary>
-    /// Vérifie qu'une collection contient exactement les éléments attendus dans l'ordre
+    /// Asserts that a collection contains exactly the expected items in order.
     /// </summary>
     public static void ShouldContainInOrder<T>(this IEnumerable<T> collection, params T[] expectedItems)
     {
@@ -133,7 +129,7 @@ public static class CustomAssertions
     }
 
     /// <summary>
-    /// Vérifie qu'une collection de métriques est triée par date
+    /// Asserts that a collection of metrics is sorted by recorded date.
     /// </summary>
     public static void ShouldBeSortedByRecordedDate(this IEnumerable<UserMetric> metrics, bool ascending = true)
     {
@@ -148,12 +144,12 @@ public static class CustomAssertions
             if (ascending)
             {
                 comparison.Should().BeGreaterOrEqualTo(0, 
-                    "les métriques devraient être triées par date croissante");
+                    "Metrics should be sorted in ascending order by date");
             }
             else
             {
                 comparison.Should().BeLessOrEqualTo(0, 
-                    "les métriques devraient être triées par date décroissante");
+                    "Metrics should be sorted in descending order by date");
             }
         }
     }
@@ -163,7 +159,7 @@ public static class CustomAssertions
     #region Time Assertions
 
     /// <summary>
-    /// Vérifie qu'une date est récente (dans les X minutes)
+    /// Asserts that a DateTime is recent (within X minutes).
     /// </summary>
     public static void ShouldBeRecent(this DateTime dateTime, int maxMinutesAgo = 2)
     {
@@ -171,7 +167,7 @@ public static class CustomAssertions
     }
 
     /// <summary>
-    /// Vérifie qu'une date est antérieure à une autre
+    /// Asserts that a DateTime is before another.
     /// </summary>
     public static void ShouldBeBefore(this DateTime dateTime, DateTime otherDateTime)
     {
@@ -179,7 +175,7 @@ public static class CustomAssertions
     }
 
     /// <summary>
-    /// Vérifie qu'une date est postérieure à une autre
+    /// Asserts that a DateTime is after another.
     /// </summary>
     public static void ShouldBeAfter(this DateTime dateTime, DateTime otherDateTime)
     {
@@ -191,18 +187,18 @@ public static class CustomAssertions
     #region Business Logic Assertions
 
     /// <summary>
-    /// Vérifie qu'un UserProfile a un BMI calculé correctement
+    /// Asserts that a UserProfile has a correctly calculated BMI.
     /// </summary>
     public static void ShouldHaveCorrectBMI(this UserProfile profile, decimal expectedBMI, decimal tolerance = 0.1m)
     {
         var actualBMI = profile.GetBMI();
-        actualBMI.Should().NotBeNull("le BMI devrait être calculé");
+        actualBMI.Should().NotBeNull("BMI should be calculated");
         actualBMI!.Value.Should().BeApproximately(expectedBMI, tolerance, 
-            "le BMI devrait être calculé correctement");
+            "BMI should be calculated correctly");
     }
 
     /// <summary>
-    /// Vérifie qu'une série de métriques montre une tendance (croissante/décroissante)
+    /// Asserts that a series of metrics shows a trend (increasing/decreasing).
     /// </summary>
     public static void ShouldShowTrend(this IEnumerable<UserMetric> metrics, bool isIncreasing)
     {
@@ -210,7 +206,7 @@ public static class CustomAssertions
         
         if (sortedMetrics.Count < 2)
         {
-            throw new AssertionException("Il faut au moins 2 métriques pour analyser une tendance");
+            throw new AssertionException("At least 2 metrics are required to analyze a trend");
         }
 
         var firstValue = sortedMetrics.First().Value;
@@ -218,11 +214,11 @@ public static class CustomAssertions
 
         if (isIncreasing)
         {
-            lastValue.Should().BeGreaterThan(firstValue, "la tendance devrait être croissante");
+            lastValue.Should().BeGreaterThan(firstValue, "Trend should be increasing");
         }
         else
         {
-            lastValue.Should().BeLessThan(firstValue, "la tendance devrait être décroissante");
+            lastValue.Should().BeLessThan(firstValue, "Trend should be decreasing");
         }
     }
 
@@ -231,7 +227,7 @@ public static class CustomAssertions
     #region Performance Assertions
 
     /// <summary>
-    /// Vérifie qu'une opération s'exécute dans un délai acceptable
+    /// Asserts that a task completes within a given duration.
     /// </summary>
     public static async Task<T> ShouldCompleteWithin<T>(this Task<T> task, TimeSpan maxDuration)
     {
@@ -240,14 +236,14 @@ public static class CustomAssertions
         var duration = DateTime.UtcNow - startTime;
 
         duration.Should().BeLessOrEqualTo(maxDuration, 
-            "l'opération devrait se terminer dans les {0} mais a pris {1}", 
+            "Operation should complete within {0} but took {1}", 
             maxDuration, duration);
 
         return result;
     }
 
     /// <summary>
-    /// Vérifie qu'une action s'exécute dans un délai acceptable
+    /// Asserts that a task completes within a given duration.
     /// </summary>
     public static async Task ShouldCompleteWithin(this Task task, TimeSpan maxDuration)
     {
@@ -256,16 +252,13 @@ public static class CustomAssertions
         var duration = DateTime.UtcNow - startTime;
 
         duration.Should().BeLessOrEqualTo(maxDuration, 
-            "l'opération devrait se terminer dans les {0} mais a pris {1}", 
+            "Operation should complete within {0} but took {1}", 
             maxDuration, duration);
     }
 
     #endregion
 }
 
-/// <summary>
-/// Exception d'assertion personnalisée
-/// </summary>
 public class AssertionException : Exception
 {
     public AssertionException(string message) : base(message) { }

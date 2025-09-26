@@ -29,6 +29,9 @@ public class UserPreferenceDomainService
         {
             PreferenceCategory.General when key == "theme" => value is "light" or "dark" or "auto",
             PreferenceCategory.General when key == "language" => IsValidLanguageCode(value),
+            PreferenceCategory.Units when key == "height_unit" => value is "cm" or "ft" or "in",
+            PreferenceCategory.Units when key == "weight_unit" => value is "kg" or "lbs" or "lb",
+            PreferenceCategory.Units when key == "locale" => IsValidLanguageCode(value) || value.Contains("-"),
             PreferenceCategory.Notifications => IsBooleanString(value),
             PreferenceCategory.Privacy when key == "profile_visibility" => value is "public" or "friends" or "private",
             _ => !string.IsNullOrWhiteSpace(value)

@@ -17,4 +17,9 @@ public interface IUserPreferenceService
     Task<ProfileOperationResponse> DeletePreferenceAsync(Guid userId, PreferenceCategory category, string key, CancellationToken cancellationToken = default);
 
     Task<ProfileOperationResponse> ClearPreferencesAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get user's preferred units for measurements
+    /// </summary>
+    Task<(string heightUnit, string weightUnit)> GetUserPreferredUnitsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

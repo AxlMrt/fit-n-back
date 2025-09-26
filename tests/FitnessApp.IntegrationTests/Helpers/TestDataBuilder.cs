@@ -5,9 +5,6 @@ using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.IntegrationTests.Helpers;
 
-/// <summary>
-/// Builder pattern pour créer des données de test cohérentes
-/// </summary>
 public static class TestDataBuilder
 {
     #region User Test Data
@@ -84,20 +81,16 @@ public static class TestDataBuilder
         public UserProfile Build()
         {
             var profile = new UserProfile(_userId);
-            
-            // Set personal information
             var fullName = FullName.Create(_firstName, _lastName);
             var dateOfBirth = DateOfBirth.Create(_dateOfBirth.ToDateTime(TimeOnly.MinValue));
             profile.UpdatePersonalInfo(fullName, dateOfBirth, _gender);
 
-            // Set physical measurements if provided
             if (_heightCm.HasValue || _weightKg.HasValue)
             {
                 var measurements = PhysicalMeasurements.Create(_heightCm, _weightKg);
                 profile.UpdatePhysicalMeasurements(measurements);
             }
 
-            // Set fitness profile
             profile.UpdateFitnessProfile(_fitnessLevel, _primaryGoal);
 
             return profile;
@@ -170,7 +163,7 @@ public static class TestDataBuilder
     #region Common Test Scenarios
 
     /// <summary>
-    /// Crée un utilisateur complet avec des métriques initiales
+    /// Creates a user with initial metrics for test scenarios.
     /// </summary>
     public static class TestScenarios
     {
@@ -220,7 +213,7 @@ public static class TestDataBuilder
         }
 
         /// <summary>
-        /// Crée plusieurs utilisateurs pour les tests de performance
+        /// Creates multiple users for performance tests.
         /// </summary>
         public static List<UserProfile> CreateMultipleUsers(int count)
         {
@@ -244,7 +237,7 @@ public static class TestDataBuilder
         }
 
         /// <summary>
-        /// Crée des données de test pour la conversion d'unités
+        /// Creates test metrics for unit conversion scenarios.
         /// </summary>
         public static List<UserMetric> CreateMetricsForUnitConversion(Guid userId)
         {
@@ -252,19 +245,14 @@ public static class TestDataBuilder
             
             return new List<UserMetric>
             {
-                // Poids en différentes unités
                 CreateMetric().ForUser(userId).WithMetricType(UserMetricType.Weight)
                     .WithValue(75.0, "kg").RecordedAt(baseDate).Build(),
                 CreateMetric().ForUser(userId).WithMetricType(UserMetricType.Weight)
                     .WithValue(165.3, "lb").RecordedAt(baseDate.AddDays(15)).Build(),
-                
-                // Taille en différentes unités
                 CreateMetric().ForUser(userId).WithMetricType(UserMetricType.Height)
                     .WithValue(175.0, "cm").RecordedAt(baseDate).Build(),
                 CreateMetric().ForUser(userId).WithMetricType(UserMetricType.Height)
                     .WithValue(69.0, "in").RecordedAt(baseDate.AddDays(30)).Build(),
-                
-                // Performances personnelles
                 CreateMetric().ForUser(userId).WithMetricType(UserMetricType.PersonalRecord)
                     .WithValue(100.0, "kg").RecordedAt(baseDate.AddDays(45))
                     .WithNotes("Deadlift PR").Build()

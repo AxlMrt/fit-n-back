@@ -88,7 +88,7 @@ public class AuthService : IAuthService
                 savedAuthUser.Role, 
                 null); // No subscription level in auth module
                 
-            var (refreshToken, refreshExp) = await _refreshTokenRepository.IssueAsync(savedAuthUser.Id);
+            var refreshToken = await _refreshTokenRepository.CreateAsync(savedAuthUser.Id);
 
             return new AuthResponse(
                 savedAuthUser.Id, 
@@ -99,7 +99,7 @@ public class AuthService : IAuthService
                 savedAuthUser.Role,
                 null, // No subscription level in auth module
                 refreshToken, 
-                refreshExp);
+                DateTime.UtcNow.AddDays(30)); // Default refresh token expiry
         }
         catch (Exception ex)
         {
@@ -158,7 +158,7 @@ public class AuthService : IAuthService
             authUser.Role, 
             null); // No subscription in auth module
             
-        var (refreshToken, refreshExp) = await _refreshTokenRepository.IssueAsync(authUser.Id);
+        var refreshToken = await _refreshTokenRepository.CreateAsync(authUser.Id);
         
         return new AuthResponse(
             authUser.Id, 
@@ -169,7 +169,7 @@ public class AuthService : IAuthService
             authUser.Role,
             null, // No subscription in auth module
             refreshToken, 
-            refreshExp);
+            DateTime.UtcNow.AddDays(30)); // Default refresh token expiry
     }
 
     public async Task LogoutAsync(Guid userId, string accessToken)
@@ -182,10 +182,11 @@ public class AuthService : IAuthService
     {
         _logger.LogDebug("Refresh token attempt");
         
-        var userId = await _refreshTokenRepository.ValidateAsync(request.RefreshToken);
+        // Validate and use the token (marks as used if valid)
+        var userId = await _refreshTokenRepository.ValidateAndUseAsync(request.RefreshToken);
         if (userId is null) 
         {
-            _logger.LogWarning("Invalid refresh token provided");
+            _logger.LogWarning("Invalid, expired, or already used refresh token provided");
             return null;
         }
 
@@ -195,17 +196,16 @@ public class AuthService : IAuthService
             _logger.LogWarning("Refresh token for invalid or inactive user: {UserId}", userId.Value);
             return null;
         }
-
-        await _refreshTokenRepository.InvalidateAsync(request.RefreshToken);
         
+        // Generate new tokens
         string accessToken = _jwtService.GenerateJwtToken(
             authUser.Id, 
             authUser.Username.Value, 
             authUser.Email.Value, 
             authUser.Role, 
             null); // No subscription in auth module
-            
-        var (newRefreshToken, refreshExp) = await _refreshTokenRepository.IssueAsync(authUser.Id);
+
+        string newRefreshToken = await _refreshTokenRepository.CreateAsync(authUser.Id);
         
         return new AuthResponse(
             authUser.Id, 
@@ -216,7 +216,7 @@ public class AuthService : IAuthService
             authUser.Role,
             null, // No subscription in auth module
             newRefreshToken, 
-            refreshExp);
+            DateTime.UtcNow.AddDays(30)); // Default refresh token expiry
     }
 
     public async Task ForgotPasswordAsync(ForgotPasswordRequest request)

@@ -499,6 +499,39 @@ public class UserProfileController : ControllerBase
 
     #endregion
 
+    /// <summary>
+    /// Set user's preferred measurement units.
+    /// </summary>
+    [HttpPut("preferences/units")]
+    [ProducesResponseType(typeof(UserPreferencesResponse), 200)]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 401)]
+    public async Task<IActionResult> SetPreferredUnits([FromBody] SetPreferredUnitsRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            
+            var unitsPreferences = new Dictionary<PreferenceCategory, IDictionary<string, string?>>
+            {
+                [PreferenceCategory.Units] = new Dictionary<string, string?>
+                {
+                    ["height_unit"] = request.HeightUnit,
+                    ["weight_unit"] = request.WeightUnit
+                }
+            };
+
+            var updateRequest = new UpdatePreferencesRequest(unitsPreferences);
+            var preferences = await _userPreferenceService.UpdatePreferencesAsync(userId, updateRequest, cancellationToken);
+            
+            return Ok(preferences);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     #region Utility Methods
 
     private Guid GetCurrentUserId()

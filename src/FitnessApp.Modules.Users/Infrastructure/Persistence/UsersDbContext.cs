@@ -15,6 +15,7 @@ public class UsersDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.HasDefaultSchema("users");
 
         modelBuilder.Entity<UserProfile>(b =>
         {
@@ -33,14 +34,16 @@ public class UsersDbContext : DbContext
             
             b.OwnsOne(u => u.PhysicalMeasurements, pm =>
             {
-                pm.Property(p => p.HeightCm).HasColumnName("HeightCm").HasPrecision(5, 2);
-                pm.Property(p => p.WeightKg).HasColumnName("WeightKg").HasPrecision(5, 2);
+                pm.Property(p => p.Height).HasColumnName("Height").HasPrecision(5, 2);
+                pm.Property(p => p.Weight).HasColumnName("Weight").HasPrecision(5, 2);
                 pm.Property(p => p.BMI).HasColumnName("BMI").HasPrecision(4, 2);
+                pm.Property(p => p.HeightUnit).HasColumnName("HeightUnit").HasMaxLength(10);
+                pm.Property(p => p.WeightUnit).HasColumnName("WeightUnit").HasMaxLength(10);
             });
             
             b.Property(u => u.Gender).HasConversion<string>();
             b.Property(u => u.FitnessLevel).HasConversion<string>();
-            b.Property(u => u.PrimaryFitnessGoal).HasConversion<string>();
+            b.Property(u => u.FitnessGoal).HasConversion<string>();
 
             b.OwnsOne(u => u.Subscription, s =>
             {

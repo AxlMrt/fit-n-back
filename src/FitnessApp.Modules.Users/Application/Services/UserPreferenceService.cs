@@ -107,4 +107,17 @@ public class UserPreferenceService : IUserPreferenceService
 
         return new ProfileOperationResponse($"Cleared {deletedCount} preferences successfully");
     }
+
+    /// <summary>
+    /// Get user's preferred units for measurements
+    /// </summary>
+    public async Task<(string heightUnit, string weightUnit)> GetUserPreferredUnitsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var unitPreferences = await _preferenceRepository.GetPreferencesByCategoryAsync(userId, PreferenceCategory.Units, cancellationToken);
+        
+        var heightUnit = unitPreferences.FirstOrDefault(p => p.Key == "height_unit")?.Value ?? "cm";
+        var weightUnit = unitPreferences.FirstOrDefault(p => p.Key == "weight_unit")?.Value ?? "kg";
+        
+        return (heightUnit, weightUnit);
+    }
 }

@@ -22,7 +22,8 @@ public static class TrackingModule
 
         // Register DbContext
         services.AddDbContext<TrackingDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(connectionString,
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "tracking")));
 
         // Add AutoMapper
         services.AddAutoMapper(cfg => cfg.AddProfile<TrackingMappingProfile>());

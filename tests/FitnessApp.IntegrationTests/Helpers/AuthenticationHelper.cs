@@ -6,17 +6,14 @@ using FitnessApp.SharedKernel.DTOs.Auth.Responses;
 
 namespace FitnessApp.IntegrationTests.Helpers;
 
-/// <summary>
-/// Helper pour l'authentification dans les tests d'intégration
-/// </summary>
 public static class AuthenticationHelper
 {
-    private const string TestSecretKey = "2rO4vtN20xfKnM7gQLeGOlXXS9WDt5Z8a3bQ1kY2H8E"; // Même que l'app
-    private const string TestIssuer = "FitnessApp"; // Même que l'app
-    private const string TestAudience = "FitnessAppUsers"; // Même que l'app
+    private const string TestSecretKey = "2rO4vtN20xfKnM7gQLeGOlXXS9WDt5Z8a3bQ1kY2H8E";
+    private const string TestIssuer = "FitnessApp";
+    private const string TestAudience = "FitnessAppUsers";
 
     /// <summary>
-    /// Génère un JWT token de test valide
+    /// Generates a valid test JWT token.
     /// </summary>
     public static string GenerateTestJwtToken(
         Guid userId, 
@@ -39,7 +36,6 @@ public static class AuthenticationHelper
             new("user_id", userId.ToString())
         };
 
-        // Ajouter les rôles
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var token = new JwtSecurityToken(
@@ -54,7 +50,7 @@ public static class AuthenticationHelper
     }
 
     /// <summary>
-    /// Crée un utilisateur de test avec authentification
+    /// Creates a test user with authentication.
     /// </summary>
     public static TestUser CreateTestUser(
         string firstName = "Test", 
@@ -77,7 +73,7 @@ public static class AuthenticationHelper
     }
 
     /// <summary>
-    /// Crée un admin de test avec authentification
+    /// Creates a test admin with authentication.
     /// </summary>
     public static TestUser CreateTestAdmin(
         string firstName = "Admin", 
@@ -88,7 +84,7 @@ public static class AuthenticationHelper
     }
 
     /// <summary>
-    /// Simule une réponse de connexion
+    /// Simulates an authentication response.
     /// </summary>
     public static AuthResponse CreateMockAuthResponse(TestUser user)
     {
@@ -106,7 +102,7 @@ public static class AuthenticationHelper
     }
 
     /// <summary>
-    /// Vérifie si un token JWT est valide (pour les tests)
+    /// Checks if a JWT token is valid (for tests).
     /// </summary>
     public static bool IsTokenValid(string token)
     {
@@ -136,7 +132,7 @@ public static class AuthenticationHelper
     }
 
     /// <summary>
-    /// Extrait les claims d'un token JWT
+    /// Extracts claims from a JWT token.
     /// </summary>
     public static IEnumerable<Claim> GetTokenClaims(string token)
     {
@@ -146,7 +142,7 @@ public static class AuthenticationHelper
     }
 
     /// <summary>
-    /// Obtient l'ID utilisateur depuis un token JWT
+    /// Gets the user ID from a JWT token.
     /// </summary>
     public static Guid GetUserIdFromToken(string token)
     {
@@ -162,9 +158,6 @@ public static class AuthenticationHelper
     }
 }
 
-/// <summary>
-/// Représente un utilisateur de test avec authentification
-/// </summary>
 public class TestUser
 {
     public Guid Id { get; set; }
@@ -177,7 +170,7 @@ public class TestUser
     public string FullName => $"{FirstName} {LastName}";
 
     /// <summary>
-    /// Retourne le header Authorization pour les requêtes HTTP
+    /// Returns the Authorization header for HTTP requests.
     /// </summary>
     public string AuthorizationHeader => $"Bearer {Token}";
 }

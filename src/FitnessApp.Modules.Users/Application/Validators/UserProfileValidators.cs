@@ -25,16 +25,16 @@ public class CreateUserProfileRequestValidator : AbstractValidator<CreateUserPro
         RuleFor(x => x.Gender)
             .IsInEnum().WithMessage("Invalid gender value");
 
-        RuleFor(x => x.HeightCm)
+        RuleFor(x => x.Height)
             .InclusiveBetween(50, 250).WithMessage("Height must be between 50 and 250 cm");
 
-        RuleFor(x => x.WeightKg)
+        RuleFor(x => x.Weight)
             .InclusiveBetween(10, 500).WithMessage("Weight must be between 10 and 500 kg");
 
         RuleFor(x => x.FitnessLevel)
             .IsInEnum().WithMessage("Invalid fitness level");
 
-        RuleFor(x => x.PrimaryFitnessGoal)
+        RuleFor(x => x.FitnessGoal)
             .IsInEnum().WithMessage("Invalid fitness goal");
     }
 
@@ -136,12 +136,12 @@ public class UpdateFitnessProfileRequestValidator : AbstractValidator<UpdateFitn
             .IsInEnum().WithMessage("Invalid fitness level")
             .When(x => x.FitnessLevel.HasValue);
 
-        RuleFor(x => x.PrimaryFitnessGoal)
+        RuleFor(x => x.FitnessGoal)
             .IsInEnum().WithMessage("Invalid fitness goal")
-            .When(x => x.PrimaryFitnessGoal.HasValue);
+            .When(x => x.FitnessGoal.HasValue);
 
         RuleFor(x => x)
-            .Must(x => x.FitnessLevel.HasValue || x.PrimaryFitnessGoal.HasValue)
+            .Must(x => x.FitnessLevel.HasValue || x.FitnessGoal.HasValue)
             .WithMessage("At least one fitness profile field must be provided");
     }
 }
