@@ -18,16 +18,16 @@ public class WorkoutSessionExercise
         int order)
     {
         if (workoutSessionId == Guid.Empty)
-            throw new TrackingDomainException("Workout session ID cannot be empty");
+            throw TrackingDomainException.WorkoutSessionIdCannotBeEmpty();
             
         if (exerciseId == Guid.Empty)
-            throw new TrackingDomainException("Exercise ID cannot be empty");
+            throw TrackingDomainException.ExerciseIdCannotBeEmpty();
 
         if (string.IsNullOrWhiteSpace(exerciseName))
-            throw new TrackingDomainException("Exercise name is required");
+            throw TrackingDomainException.ExerciseNameRequired();
 
         if (order < 1)
-            throw new TrackingDomainException("Order must be at least 1");
+            throw TrackingDomainException.OrderMustBeAtLeastOne();
 
         Id = Guid.NewGuid();
         WorkoutSessionId = workoutSessionId;
@@ -99,7 +99,7 @@ public class WorkoutSessionExercise
     {
         var set = Sets.FirstOrDefault(s => s.SetNumber == setNumber);
         if (set == null)
-            throw new TrackingDomainException($"Set number {setNumber} not found");
+            throw TrackingDomainException.SetNotFound(setNumber);
 
         set.UpdatePerformance(repetitions, weight, durationSeconds, distance, restTimeSeconds);
         UpdatedAt = DateTime.UtcNow;
@@ -112,7 +112,7 @@ public class WorkoutSessionExercise
     {
         var set = Sets.FirstOrDefault(s => s.SetNumber == setNumber);
         if (set == null)
-            throw new TrackingDomainException($"Set number {setNumber} not found");
+            throw TrackingDomainException.SetNotFound(setNumber);
 
         Sets.Remove(set);
         
@@ -137,7 +137,7 @@ public class WorkoutSessionExercise
     public void SetPerformanceScore(double score)
     {
         if (score < 0 || score > 100)
-            throw new TrackingDomainException("Performance score must be between 0 and 100");
+            throw TrackingDomainException.PerformanceScoreOutOfRange();
 
         PerformanceScore = score;
         UpdatedAt = DateTime.UtcNow;
@@ -149,7 +149,7 @@ public class WorkoutSessionExercise
     public void UpdateOrder(int newOrder)
     {
         if (newOrder < 1)
-            throw new TrackingDomainException("Order must be at least 1");
+            throw TrackingDomainException.OrderMustBeAtLeastOne();
 
         Order = newOrder;
         UpdatedAt = DateTime.UtcNow;

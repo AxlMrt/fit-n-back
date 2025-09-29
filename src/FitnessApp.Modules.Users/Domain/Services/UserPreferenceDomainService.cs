@@ -1,4 +1,5 @@
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.Modules.Users.Domain.Exceptions;
 using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.Modules.Users.Domain.Services;
@@ -8,7 +9,7 @@ public class UserPreferenceDomainService
     public Preference AddOrUpdatePreference(Guid userId, PreferenceCategory category, string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
-            throw new ArgumentException("Key cannot be empty", nameof(key));
+            throw UserDomainException.PreferenceKeyRequired();
 
         return new Preference(userId, category, key, value ?? string.Empty);
     }

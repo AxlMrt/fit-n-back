@@ -18,10 +18,10 @@ public class PlannedWorkout
         Guid? programId = null)
     {
         if (userId == Guid.Empty)
-            throw new TrackingDomainException("User ID cannot be empty");
+            throw TrackingDomainException.UserIdCannotBeEmpty();
             
         if (workoutId == Guid.Empty)
-            throw new TrackingDomainException("Workout ID cannot be empty");
+            throw TrackingDomainException.WorkoutIdCannotBeEmpty();
 
         Id = Guid.NewGuid();
         UserId = userId;
@@ -52,10 +52,10 @@ public class PlannedWorkout
     public void MarkAsStarted(Guid workoutSessionId)
     {
         if (Status != WorkoutSessionStatus.Planned)
-            throw new TrackingDomainException($"Cannot start planned workout with status {Status}");
+            throw TrackingDomainException.CannotStartPlannedWorkout(Status.ToString());
 
         if (workoutSessionId == Guid.Empty)
-            throw new TrackingDomainException("Workout session ID cannot be empty");
+            throw TrackingDomainException.WorkoutSessionIdCannotBeEmpty();
 
         Status = WorkoutSessionStatus.InProgress;
         WorkoutSessionId = workoutSessionId;
@@ -68,7 +68,7 @@ public class PlannedWorkout
     public void MarkAsCompleted()
     {
         if (Status != WorkoutSessionStatus.InProgress)
-            throw new TrackingDomainException($"Cannot complete planned workout with status {Status}");
+            throw TrackingDomainException.CannotCompletePlannedWorkout(Status.ToString());
 
         Status = WorkoutSessionStatus.Completed;
         UpdatedAt = DateTime.UtcNow;
@@ -80,7 +80,7 @@ public class PlannedWorkout
     public void Cancel()
     {
         if (Status != WorkoutSessionStatus.Planned)
-            throw new TrackingDomainException($"Cannot cancel planned workout with status {Status}");
+            throw TrackingDomainException.CannotCancelPlannedWorkout(Status.ToString());
 
         Status = WorkoutSessionStatus.Cancelled;
         UpdatedAt = DateTime.UtcNow;
@@ -92,7 +92,7 @@ public class PlannedWorkout
     public void MarkAsAbandoned()
     {
         if (Status != WorkoutSessionStatus.InProgress)
-            throw new TrackingDomainException($"Cannot abandon planned workout with status {Status}");
+            throw TrackingDomainException.CannotAbandonPlannedWorkout(Status.ToString());
 
         Status = WorkoutSessionStatus.Abandoned;
         UpdatedAt = DateTime.UtcNow;
@@ -108,7 +108,7 @@ public class PlannedWorkout
     public void Reschedule(DateTime newScheduledDate)
     {
         if (Status != WorkoutSessionStatus.Planned)
-            throw new TrackingDomainException($"Cannot reschedule workout with status {Status}");
+            throw TrackingDomainException.CannotRescheduleWorkout(Status.ToString());
 
         ScheduledDate = newScheduledDate.Date;
         UpdatedAt = DateTime.UtcNow;

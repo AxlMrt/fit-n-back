@@ -1,10 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using FitnessApp.Modules.Tracking.Application.Interfaces;
 using FitnessApp.Modules.Exercises.Application.Interfaces;
 using FitnessApp.SharedKernel.Enums;
 using FitnessApp.SharedKernel.DTOs.Requests;
 using FitnessApp.SharedKernel.DTOs.Responses;
+using FitnessApp.API.Infrastructure.Errors;
+using FitnessApp.API.Controllers;
 using System.Security.Claims;
 
 namespace FitnessApp.API.Controllers.v1;
@@ -12,11 +14,9 @@ namespace FitnessApp.API.Controllers.v1;
 /// <summary>
 /// API controller for tracking workout sessions and user metrics
 /// </summary>
-[ApiController]
 [Authorize]
 [Route("api/v1/tracking")]
-[Produces("application/json")]
-public class TrackingController : ControllerBase
+public class TrackingController : BaseController
 {
     private readonly ITrackingService _trackingService;
     private readonly IExerciseService _exerciseService;
@@ -27,7 +27,7 @@ public class TrackingController : ControllerBase
         _exerciseService = exerciseService ?? throw new ArgumentNullException(nameof(exerciseService));
     }
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException());
+    private Guid GetUserId() => GetCurrentUserId();
 
     #region Workout Sessions
 

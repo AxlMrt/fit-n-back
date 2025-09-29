@@ -18,13 +18,13 @@ public class Workout
         int estimatedDurationMinutes)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new WorkoutDomainException("Workout name is required");
+            throw WorkoutDomainException.NameRequired();
             
         if (name.Length > 200)
-            throw new WorkoutDomainException("Workout name cannot exceed 200 characters");
+            throw WorkoutDomainException.NameTooLong(200);
 
         if (estimatedDurationMinutes <= 0 || estimatedDurationMinutes > 300)
-            throw new WorkoutDomainException("Duration must be between 1 and 300 minutes");
+            throw WorkoutDomainException.InvalidDurationRange(1, 300);
 
         Id = Guid.NewGuid();
         Name = name.Trim();
@@ -68,7 +68,7 @@ public class Workout
     public void AddPhase(WorkoutPhaseType type, string name, int estimatedDurationMinutes)
     {
         if (_phases.Any(p => p.Type == type))
-            throw new WorkoutDomainException($"Phase of type {type} already exists");
+            throw WorkoutDomainException.DuplicatePhase(type.ToString());
 
         var nextOrder = _phases.Count + 1;
         var phase = new WorkoutPhase(type, name, estimatedDurationMinutes, nextOrder);
@@ -80,7 +80,7 @@ public class Workout
     {
         var phase = GetPhase(type);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase of type {type} not found");
+            throw WorkoutDomainException.PhaseNotFound(type.ToString());
 
         _phases.Remove(phase);
         UpdatePhaseOrders();
@@ -91,10 +91,10 @@ public class Workout
     {
         var phase = GetPhase(type);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase of type {type} not found");
+            throw WorkoutDomainException.PhaseNotFound(type.ToString());
 
         if (newOrder < 1 || newOrder > _phases.Count)
-            throw new WorkoutDomainException($"Order must be between 1 and {_phases.Count}");
+            throw WorkoutDomainException.InvalidPhaseOrderRange(_phases.Count);
 
         var currentOrder = phase.Order;
         
@@ -151,7 +151,7 @@ public class Workout
         if (!string.IsNullOrWhiteSpace(name))
         {
             if (name.Length > 200)
-                throw new WorkoutDomainException("Workout name cannot exceed 200 characters");
+                throw WorkoutDomainException.NameTooLong(200);
             Name = name.Trim();
         }
 
@@ -163,7 +163,7 @@ public class Workout
         if (estimatedDurationMinutes.HasValue)
         {
             if (estimatedDurationMinutes.Value <= 0 || estimatedDurationMinutes.Value > 300)
-                throw new WorkoutDomainException("Duration must be between 1 and 300 minutes");
+                throw WorkoutDomainException.InvalidDurationRange(1, 300);
             EstimatedDurationMinutes = estimatedDurationMinutes.Value;
         }
 

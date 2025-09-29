@@ -19,10 +19,10 @@ public class UserMetric
         string? unit = null)
     {
         if (userId == Guid.Empty)
-            throw new TrackingDomainException("User ID cannot be empty");
+            throw TrackingDomainException.UserIdCannotBeEmpty();
 
         if (value < 0)
-            throw new TrackingDomainException("Metric value cannot be negative");
+            throw TrackingDomainException.NegativeMetricValue();
 
         Id = Guid.NewGuid();
         UserId = userId;
@@ -52,7 +52,7 @@ public class UserMetric
     public void UpdateValue(double newValue, string? notes = null)
     {
         if (newValue < 0)
-            throw new TrackingDomainException("Metric value cannot be negative");
+            throw TrackingDomainException.NegativeMetricValue();
 
         Value = newValue;
         Notes = notes?.Trim();

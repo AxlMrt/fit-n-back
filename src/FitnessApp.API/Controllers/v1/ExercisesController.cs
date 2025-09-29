@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using FitnessApp.Modules.Authorization.Policies;
 using FitnessApp.Modules.Exercises.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -6,14 +6,14 @@ using FluentValidation;
 using FitnessApp.Modules.Exercises.Domain.Exceptions;
 using FitnessApp.SharedKernel.DTOs.Responses;
 using FitnessApp.SharedKernel.DTOs.Requests;
+using FitnessApp.API.Infrastructure.Errors;
+using FitnessApp.API.Controllers;
 
 namespace FitnessApp.API.Controllers.v1;
 
-[ApiController]
 [Authorize]
 [Route("api/v1/exercises")]
-[Produces("application/json")]
-public class ExercisesController : ControllerBase
+public class ExercisesController : BaseController
 {
 
     private readonly IExerciseService _exerciseService;
@@ -33,19 +33,12 @@ public class ExercisesController : ControllerBase
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ExerciseListDto>), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<ActionResult<PagedResult<ExerciseListDto>>> GetExercises([FromQuery] ExerciseQueryDto query)
     {
-        try
-        {
-            var result = await _exerciseService.GetPagedAsync(query);
-            return Ok(result);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { message = "Validation failed", errors = ex.Errors.Select(e => e.ErrorMessage) });
-        }
+        var result = await _exerciseService.GetPagedAsync(query);
+        return Ok(result);
     }
 
     /// <summary>
@@ -54,23 +47,16 @@ public class ExercisesController : ControllerBase
     /// <param name="id">Exercise identifier (GUID).</param>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ExerciseDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
-    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<ActionResult<ExerciseDto>> GetExercise(Guid id)
     {
-        try
-        {
-            var exercise = await _exerciseService.GetByIdAsync(id);
-            if (exercise == null)
-                return NotFound(new { message = $"Exercise with ID {id} not found" });
+        var exercise = await _exerciseService.GetByIdAsync(id);
+        if (exercise == null)
+            return NotFound(new { message = $"Exercise with ID {id} not found" });
 
-            return Ok(exercise);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(exercise);
     }
 
     /// <summary>
@@ -99,25 +85,14 @@ public class ExercisesController : ControllerBase
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     [ProducesResponseType(typeof(ExerciseDto), 201)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
-    [ProducesResponseType(typeof(object), 403)]
-    [ProducesResponseType(typeof(object), 409)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<ActionResult<ExerciseDto>> CreateExercise([FromBody] CreateExerciseDto createDto)
     {
-        try
-        {
-            var exercise = await _exerciseService.CreateAsync(createDto);
-            return CreatedAtAction(nameof(GetExercise), new { id = exercise.Id }, exercise);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { message = "Validation failed", errors = ex.Errors.Select(e => e.ErrorMessage) });
-        }
-        catch (ExerciseDomainException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        var exercise = await _exerciseService.CreateAsync(createDto);
+        return CreatedAtAction(nameof(GetExercise), new { id = exercise.Id }, exercise);
     }
 
     /// <summary>
@@ -125,28 +100,17 @@ public class ExercisesController : ControllerBase
     /// </summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ExerciseDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
-    [ProducesResponseType(typeof(object), 404)]
-    [ProducesResponseType(typeof(object), 409)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<ActionResult<ExerciseDto>> UpdateExercise(Guid id, [FromBody] UpdateExerciseDto updateDto)
     {
-        try
-        {
-            var exercise = await _exerciseService.UpdateAsync(id, updateDto);
-            if (exercise == null)
-                return NotFound(new { message = $"Exercise with ID {id} not found" });
+        var exercise = await _exerciseService.UpdateAsync(id, updateDto);
+        if (exercise == null)
+            return NotFound(new { message = $"Exercise with ID {id} not found" });
 
-            return Ok(exercise);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { message = "Validation failed", errors = ex.Errors.Select(e => e.ErrorMessage) });
-        }
-        catch (ExerciseDomainException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        return Ok(exercise);
     }
 
     /// <summary>
@@ -155,10 +119,10 @@ public class ExercisesController : ControllerBase
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     [ProducesResponseType(204)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
-    [ProducesResponseType(typeof(object), 403)]
-    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<ActionResult> DeleteExercise(Guid id)
     {
         var success = await _exerciseService.DeleteAsync(id);

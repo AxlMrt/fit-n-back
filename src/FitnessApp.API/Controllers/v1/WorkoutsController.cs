@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using FluentValidation;
 using FitnessApp.Modules.Workouts.Application.Interfaces;
 using FitnessApp.Modules.Workouts.Domain.Exceptions;
@@ -6,6 +6,8 @@ using FitnessApp.SharedKernel.DTOs.Requests;
 using FitnessApp.SharedKernel.DTOs.Responses;
 using FitnessApp.SharedKernel.Enums;
 using FitnessApp.Modules.Authorization.Policies;
+using FitnessApp.API.Infrastructure.Errors;
+using FitnessApp.API.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
@@ -14,11 +16,9 @@ namespace FitnessApp.API.Controllers.v1;
 /// <summary>
 /// API controller for workout operations with user/admin role separation
 /// </summary>
-[ApiController]
 [Authorize]
 [Route("api/v1/workouts")]
-[Produces("application/json")]
-public class WorkoutsController : ControllerBase
+public class WorkoutsController : BaseController
 {
     #region Fields
 
@@ -42,8 +42,8 @@ public class WorkoutsController : ControllerBase
     /// </summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> GetWorkout(Guid id, CancellationToken cancellationToken = default)
     {
         var workout = await _workoutService.GetWorkoutByIdAsync(id, cancellationToken);
@@ -162,24 +162,13 @@ public class WorkoutsController : ControllerBase
     /// </summary>
     [HttpPut("my-workouts/{id:guid}")]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> UpdateUserWorkout(Guid id, [FromBody] UpdateWorkoutDto updateDto, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var workout = await _workoutService.UpdateUserWorkoutAsync(id, updateDto, userId, cancellationToken);
-            return Ok(workout);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Message = "Validation failed", ex.Errors });
-        }
-        catch (WorkoutDomainException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var workout = await _workoutService.UpdateUserWorkoutAsync(id, updateDto, userId, cancellationToken);
+        return Ok(workout);
     }
 
     /// <summary>
@@ -234,23 +223,12 @@ public class WorkoutsController : ControllerBase
     /// </summary>
     [HttpPost("my-workouts/{workoutId:guid}/phases")]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> AddPhaseToUserWorkout(Guid workoutId, [FromBody] AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var workout = await _workoutService.AddPhaseToUserWorkoutAsync(workoutId, phaseDto, userId, cancellationToken);
-            return Ok(workout);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Message = "Validation failed", ex.Errors });
-        }
-        catch (WorkoutDomainException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var workout = await _workoutService.AddPhaseToUserWorkoutAsync(workoutId, phaseDto, userId, cancellationToken);
+        return Ok(workout);
     }
 
     /// <summary>
@@ -258,23 +236,12 @@ public class WorkoutsController : ControllerBase
     /// </summary>
     [HttpPut("my-workouts/{workoutId:guid}/phases/{phaseId:guid}")]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> UpdateUserWorkoutPhase(Guid workoutId, Guid phaseId, [FromBody] UpdateWorkoutPhaseDto updateDto, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var workout = await _workoutService.UpdateUserWorkoutPhaseAsync(workoutId, phaseId, updateDto, userId, cancellationToken);
-            return Ok(workout);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Message = "Validation failed", ex.Errors });
-        }
-        catch (WorkoutDomainException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var workout = await _workoutService.UpdateUserWorkoutPhaseAsync(workoutId, phaseId, updateDto, userId, cancellationToken);
+        return Ok(workout);
     }
 
     /// <summary>
@@ -282,23 +249,12 @@ public class WorkoutsController : ControllerBase
     /// </summary>
     [HttpPost("my-workouts/{workoutId:guid}/phases/{phaseId:guid}/exercises")]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> AddExerciseToUserPhase(Guid workoutId, Guid phaseId, [FromBody] AddWorkoutExerciseDto exerciseDto, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var workout = await _workoutService.AddExerciseToUserPhaseAsync(workoutId, phaseId, exerciseDto, userId, cancellationToken);
-            return Ok(workout);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Message = "Validation failed", ex.Errors });
-        }
-        catch (WorkoutDomainException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var workout = await _workoutService.AddExerciseToUserPhaseAsync(workoutId, phaseId, exerciseDto, userId, cancellationToken);
+        return Ok(workout);
     }
 
     #endregion
@@ -339,23 +295,12 @@ public class WorkoutsController : ControllerBase
     [HttpPut("admin/{id:guid}")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 404)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> UpdateWorkoutAsAdmin(Guid id, [FromBody] UpdateWorkoutDto updateDto, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var workout = await _workoutService.UpdateWorkoutAsAdminAsync(id, updateDto, cancellationToken);
-            return Ok(workout);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Message = "Validation failed", ex.Errors });
-        }
-        catch (WorkoutDomainException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
+        var workout = await _workoutService.UpdateWorkoutAsAdminAsync(id, updateDto, cancellationToken);
+        return Ok(workout);
     }
 
     /// <summary>
@@ -417,40 +362,11 @@ public class WorkoutsController : ControllerBase
     [HttpPost("admin/{workoutId:guid}/phases")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
     [ProducesResponseType(typeof(WorkoutDto), 200)]
-    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> AddPhaseToWorkoutAsAdmin(Guid workoutId, [FromBody] AddWorkoutPhaseDto phaseDto, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var workout = await _workoutService.AddPhaseToWorkoutAsAdminAsync(workoutId, phaseDto, cancellationToken);
-            return Ok(workout);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Message = "Validation failed", ex.Errors });
-        }
-        catch (WorkoutDomainException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
-    }
-
-    #endregion
-
-    #region Utility Methods
-
-    private Guid GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                         ?? User.FindFirst("sub")?.Value
-                         ?? User.FindFirst("userId")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-        {
-            throw new UnauthorizedAccessException("User ID not found in token");
-        }
-
-        return userId;
+        var workout = await _workoutService.AddPhaseToWorkoutAsAdminAsync(workoutId, phaseDto, cancellationToken);
+        return Ok(workout);
     }
 
     #endregion

@@ -21,33 +21,33 @@ public class WorkoutExercise
         int order = 1)
     {
         if (exerciseId == Guid.Empty)
-            throw new WorkoutDomainException("Exercise ID cannot be empty");
+            throw WorkoutDomainException.EmptyExerciseId();
             
         if (order < 1)
-            throw new WorkoutDomainException("Order must be at least 1");
+            throw WorkoutDomainException.InvalidOrder();
 
         if (restSeconds.HasValue && restSeconds.Value < 0)
-            throw new WorkoutDomainException("Rest time cannot be negative");
+            throw WorkoutDomainException.NegativeRestTime();
 
         // Validation: au moins un paramètre d'effort doit être spécifié
         if (!sets.HasValue && !reps.HasValue && !durationSeconds.HasValue && !distance.HasValue)
-            throw new WorkoutDomainException("At least one exercise parameter (sets, reps, duration, or distance) must be specified");
+            throw WorkoutDomainException.NoExerciseParameters();
 
         // Validation pour les exercices basés sur répétitions
         if ((sets.HasValue || reps.HasValue) && (sets <= 0 || reps <= 0))
-            throw new WorkoutDomainException("Sets and reps must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidSetsReps();
 
         // Validation pour la durée
         if (durationSeconds.HasValue && durationSeconds <= 0)
-            throw new WorkoutDomainException("Duration must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidDurationValue();
 
         // Validation pour la distance
         if (distance.HasValue && distance <= 0)
-            throw new WorkoutDomainException("Distance must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidDistance();
 
         // Validation pour le poids
         if (weight.HasValue && weight <= 0)
-            throw new WorkoutDomainException("Weight must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidWeight();
 
         Id = Guid.NewGuid();
         ExerciseId = exerciseId;
@@ -66,19 +66,19 @@ public class WorkoutExercise
     public WorkoutExercise(Guid exerciseId, int sets, int reps, int? restSeconds, int order)
     {
         if (exerciseId == Guid.Empty)
-            throw new WorkoutDomainException("Exercise ID cannot be empty");
+            throw WorkoutDomainException.EmptyExerciseId();
             
         if (order < 1)
-            throw new WorkoutDomainException("Order must be at least 1");
+            throw WorkoutDomainException.InvalidOrder();
 
         if (sets <= 0)
-            throw new WorkoutDomainException("Sets must be greater than 0");
+            throw WorkoutDomainException.InvalidSets();
 
         if (reps <= 0)
-            throw new WorkoutDomainException("Reps must be greater than 0");
+            throw WorkoutDomainException.InvalidReps();
 
         if (restSeconds.HasValue && restSeconds.Value < 0)
-            throw new WorkoutDomainException("Rest time cannot be negative");
+            throw WorkoutDomainException.NegativeRestTime();
 
         Id = Guid.NewGuid();
         ExerciseId = exerciseId;
@@ -113,13 +113,13 @@ public class WorkoutExercise
     public void UpdateParameters(int sets, int reps, int? restSeconds = null)
     {
         if (sets <= 0)
-            throw new WorkoutDomainException("Sets must be greater than 0");
+            throw WorkoutDomainException.InvalidSets();
 
         if (reps <= 0)
-            throw new WorkoutDomainException("Reps must be greater than 0");
+            throw WorkoutDomainException.InvalidReps();
             
         if (restSeconds.HasValue && restSeconds.Value < 0)
-            throw new WorkoutDomainException("Rest time cannot be negative");
+            throw WorkoutDomainException.NegativeRestTime();
             
         Sets = sets;
         Reps = reps;
@@ -133,26 +133,26 @@ public class WorkoutExercise
     {
         // Au moins un paramètre d'effort doit être spécifié
         if (!sets.HasValue && !reps.HasValue && !durationSeconds.HasValue && !distance.HasValue)
-            throw new WorkoutDomainException("At least one exercise parameter must be specified");
+            throw WorkoutDomainException.NoExerciseParameters();
 
         // Validation pour les exercices basés sur répétitions
         if ((sets.HasValue || reps.HasValue) && (sets <= 0 || reps <= 0))
-            throw new WorkoutDomainException("Sets and reps must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidSetsReps();
 
         // Validation pour la durée
         if (durationSeconds.HasValue && durationSeconds <= 0)
-            throw new WorkoutDomainException("Duration must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidDurationValue();
 
         // Validation pour la distance
         if (distance.HasValue && distance <= 0)
-            throw new WorkoutDomainException("Distance must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidDistance();
 
         // Validation pour le poids
         if (weight.HasValue && weight <= 0)
-            throw new WorkoutDomainException("Weight must be greater than 0 when specified");
+            throw WorkoutDomainException.InvalidWeight();
             
         if (restSeconds.HasValue && restSeconds.Value < 0)
-            throw new WorkoutDomainException("Rest time cannot be negative");
+            throw WorkoutDomainException.NegativeRestTime();
 
         Sets = sets ?? Sets;
         Reps = reps ?? Reps;
@@ -166,7 +166,7 @@ public class WorkoutExercise
     public void UpdateOrder(int newOrder)
     {
         if (newOrder < 1)
-            throw new WorkoutDomainException("Order must be at least 1");
+            throw WorkoutDomainException.InvalidOrder();
         Order = newOrder;
         UpdatedAt = DateTime.UtcNow;
     }

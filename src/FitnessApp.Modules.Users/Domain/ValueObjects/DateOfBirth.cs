@@ -23,15 +23,15 @@ public sealed class DateOfBirth : IEquatable<DateOfBirth>
         dateOfBirth = DateTime.SpecifyKind(dateOfBirth.Date, DateTimeKind.Utc);
 
         if (dateOfBirth > DateTime.UtcNow.Date)
-            throw new UserDomainException("Date of birth cannot be in the future");
+            throw UserDomainException.FutureBirthDate();
 
         var age = CalculateAgeFromDate(dateOfBirth);
         
         if (age > 120)
-            throw new UserDomainException("Date of birth indicates an unrealistic age");
+            throw UserDomainException.UnrealisticAge();
 
         if (age < 13)
-            throw new UserDomainException("Users must be at least 13 years old");
+            throw UserDomainException.UserTooYoung();
 
         return new DateOfBirth(dateOfBirth);
     }

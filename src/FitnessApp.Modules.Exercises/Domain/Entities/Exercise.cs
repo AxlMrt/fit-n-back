@@ -9,10 +9,10 @@ public class Exercise
     public Exercise(string name, ExerciseType type, DifficultyLevel difficulty, MuscleGroup muscleGroups, Equipment equipment)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new ExerciseDomainException("Exercise name is required");
+            throw ExerciseDomainException.NameRequired();
         
         if (name.Length > 100)
-            throw new ExerciseDomainException("Exercise name cannot exceed 100 characters");
+            throw ExerciseDomainException.NameTooLong(100);
             
         Id = Guid.NewGuid();
         Name = name.Trim();
@@ -47,10 +47,10 @@ public class Exercise
     public void SetName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new ExerciseDomainException("Exercise name is required");
+            throw ExerciseDomainException.NameRequired();
         
         if (name.Length > 100)
-            throw new ExerciseDomainException("Exercise name cannot exceed 100 characters");
+            throw ExerciseDomainException.NameTooLong(100);
         
         Name = name.Trim();
         UpdatedAt = DateTime.UtcNow;
@@ -59,7 +59,7 @@ public class Exercise
     public void SetDescription(string? description)
     {
         if (!string.IsNullOrWhiteSpace(description) && description.Length > 1000)
-            throw new ExerciseDomainException("Description cannot exceed 1000 characters");
+            throw ExerciseDomainException.DescriptionTooLong(1000);
         
         Description = description?.Trim();
         UpdatedAt = DateTime.UtcNow;
@@ -82,7 +82,7 @@ public class Exercise
     public void SetInstructions(string? instructions)
     {
         if (!string.IsNullOrWhiteSpace(instructions) && instructions.Length > 2000)
-            throw new ExerciseDomainException("Instructions cannot exceed 2000 characters");
+            throw ExerciseDomainException.InstructionsTooLong(2000);
         
         Instructions = instructions?.Trim();
         UpdatedAt = DateTime.UtcNow;

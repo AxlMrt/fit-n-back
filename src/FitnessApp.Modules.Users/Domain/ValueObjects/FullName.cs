@@ -36,11 +36,11 @@ public sealed class FullName : IEquatable<FullName>
         name = name.Trim();
 
         if (name.Length > 50)
-            throw new UserDomainException($"{parameterName} cannot exceed 50 characters");
+            throw UserDomainException.NameTooLong(parameterName);
 
         // Check for invalid characters (basic security check)
         if (name.Contains('<') || name.Contains('>') || name.Contains('&'))
-            throw new UserDomainException($"{parameterName} contains invalid characters");
+            throw UserDomainException.NameContainsInvalidCharacters(parameterName);
 
         return name;
     }

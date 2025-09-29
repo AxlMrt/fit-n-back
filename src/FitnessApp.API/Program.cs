@@ -23,8 +23,11 @@ app.UseModules();
 if (app.Environment.IsDevelopment())
 {
     app.UseOpenApiUI();
-    app.UseDeveloperExceptionPage();
+    // Remove DeveloperExceptionPage as we use GlobalExceptionMiddleware
 }
+
+// Add global exception handling (must be early in pipeline)
+app.UseGlobalExceptionHandling();
 
 app.UseHttpsRedirection();
 app.UseRouting();

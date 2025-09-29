@@ -44,7 +44,7 @@ public class TrackingService : ITrackingService
         var existingSession = await _workoutSessionRepository.GetActiveSessionAsync(userId, cancellationToken);
         if (existingSession != null)
         {
-            throw new TrackingDomainException("User already has an active workout session");
+            throw TrackingDomainException.UserAlreadyHasActiveWorkoutSession();
         }
 
         var session = new WorkoutSession(userId, workoutId);
@@ -246,7 +246,7 @@ public class TrackingService : ITrackingService
         var exists = await _plannedWorkoutRepository.HasPlannedWorkoutAsync(userId, workoutId, scheduledDate, cancellationToken);
         if (exists)
         {
-            throw new TrackingDomainException($"Workout is already scheduled for {scheduledDate:yyyy-MM-dd}");
+            throw TrackingDomainException.WorkoutAlreadyScheduled(scheduledDate);
         }
 
         var plannedWorkout = new PlannedWorkout(userId, workoutId, scheduledDate, isFromProgram, programId);

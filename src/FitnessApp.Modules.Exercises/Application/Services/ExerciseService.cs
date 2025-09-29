@@ -38,7 +38,7 @@ public class ExerciseService : IExerciseService
     public async Task<ExerciseDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
-            throw new ArgumentException("Exercise ID cannot be empty", nameof(id));
+            throw ExerciseDomainException.EmptyId();
 
         var exercise = await _repository.GetByIdAsync(id, cancellationToken);
         return exercise != null ? _mapper.Map<ExerciseDto>(exercise) : null;
@@ -47,7 +47,7 @@ public class ExerciseService : IExerciseService
     public async Task<ExerciseDto?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Exercise name cannot be empty", nameof(name));
+            throw ExerciseDomainException.EmptyName();
 
         var exercise = await _repository.GetByNameAsync(name.Trim(), cancellationToken);
         return exercise != null ? _mapper.Map<ExerciseDto>(exercise) : null;
@@ -88,7 +88,7 @@ public class ExerciseService : IExerciseService
         // Check for duplicate name
         if (await _repository.ExistsWithNameAsync(dto.Name, cancellationToken: cancellationToken))
         {
-            throw new ExerciseDomainException($"An exercise with the name '{dto.Name}' already exists");
+            throw ExerciseDomainException.NameAlreadyExists(dto.Name);
         }
 
         var exercise = _mapper.Map<Exercise>(dto);
@@ -115,7 +115,7 @@ public class ExerciseService : IExerciseService
         if (!string.IsNullOrWhiteSpace(dto.Name) && 
             await _repository.ExistsWithNameAsync(dto.Name, id, cancellationToken))
         {
-            throw new ExerciseDomainException($"An exercise with the name '{dto.Name}' already exists");
+            throw ExerciseDomainException.NameAlreadyExists(dto.Name);
         }
 
         // Apply updates

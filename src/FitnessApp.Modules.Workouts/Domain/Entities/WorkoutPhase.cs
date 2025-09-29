@@ -19,16 +19,16 @@ public class WorkoutPhase
         int order)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new WorkoutDomainException("Phase name is required");
+            throw WorkoutDomainException.PhaseNameRequired();
             
         if (name.Length > 100)
-            throw new WorkoutDomainException("Phase name cannot exceed 100 characters");
+            throw WorkoutDomainException.PhaseNameTooLong(100);
             
         if (order < 1)
-            throw new WorkoutDomainException("Order must be at least 1");
+            throw WorkoutDomainException.InvalidPhaseOrder();
 
         if (estimatedDurationMinutes <= 0 || estimatedDurationMinutes > 180)
-            throw new WorkoutDomainException("Phase duration must be between 1 and 180 minutes");
+            throw WorkoutDomainException.InvalidPhaseDuration(1, 180);
 
         Id = Guid.NewGuid();
         Type = type;
@@ -59,7 +59,7 @@ public class WorkoutPhase
         int? durationSeconds = null, double? distance = null, double? weight = null, int? restSeconds = null)
     {
         if (_exercises.Any(e => e.ExerciseId == exerciseId))
-            throw new WorkoutDomainException($"Exercise {exerciseId} already exists in this phase");
+            throw WorkoutDomainException.ExerciseAlreadyExists(exerciseId);
 
         var nextOrder = _exercises.Count + 1;
         var workoutExercise = new WorkoutExercise(exerciseId, sets, reps, durationSeconds, 
@@ -71,7 +71,7 @@ public class WorkoutPhase
     public void AddExercise(Guid exerciseId, int sets, int reps, int? restSeconds)
     {
         if (_exercises.Any(e => e.ExerciseId == exerciseId))
-            throw new WorkoutDomainException($"Exercise {exerciseId} already exists in this phase");
+            throw WorkoutDomainException.ExerciseAlreadyExists(exerciseId);
 
         var nextOrder = _exercises.Count + 1;
         var workoutExercise = new WorkoutExercise(exerciseId, sets, reps, restSeconds, nextOrder);
@@ -112,7 +112,7 @@ public class WorkoutPhase
     {
         var exercise = _exercises.FirstOrDefault(e => e.ExerciseId == exerciseId);
         if (exercise == null)
-            throw new WorkoutDomainException($"Exercise {exerciseId} not found in this phase");
+            throw WorkoutDomainException.ExerciseNotFound(exerciseId);
 
         _exercises.Remove(exercise);
         UpdateExerciseOrders();
@@ -122,10 +122,10 @@ public class WorkoutPhase
     {
         var exercise = _exercises.FirstOrDefault(e => e.ExerciseId == exerciseId);
         if (exercise == null)
-            throw new WorkoutDomainException($"Exercise {exerciseId} not found in this phase");
+            throw WorkoutDomainException.ExerciseNotFound(exerciseId);
 
         if (newOrder < 1 || newOrder > _exercises.Count)
-            throw new WorkoutDomainException($"Order must be between 1 and {_exercises.Count}");
+            throw WorkoutDomainException.InvalidExerciseOrder(_exercises.Count);
 
         var currentOrder = exercise.Order;
         
@@ -176,7 +176,7 @@ public class WorkoutPhase
         if (!string.IsNullOrWhiteSpace(name))
         {
             if (name.Length > 100)
-                throw new WorkoutDomainException("Phase name cannot exceed 100 characters");
+                throw WorkoutDomainException.PhaseNameTooLong(100);
             Name = name.Trim();
         }
 
@@ -185,7 +185,7 @@ public class WorkoutPhase
         if (estimatedDurationMinutes.HasValue)
         {
             if (estimatedDurationMinutes.Value <= 0 || estimatedDurationMinutes.Value > 180)
-                throw new WorkoutDomainException("Phase duration must be between 1 and 180 minutes");
+                throw WorkoutDomainException.InvalidPhaseDuration(1, 180);
             EstimatedDurationMinutes = estimatedDurationMinutes.Value;
         }
     }
@@ -193,7 +193,7 @@ public class WorkoutPhase
     public void UpdateOrder(int newOrder)
     {
         if (newOrder < 1)
-            throw new WorkoutDomainException("Order must be at least 1");
+            throw WorkoutDomainException.InvalidPhaseOrder();
         Order = newOrder;
     }
 

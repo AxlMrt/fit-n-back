@@ -1,6 +1,7 @@
 using AutoMapper;
 using FitnessApp.Modules.Users.Application.Interfaces;
 using FitnessApp.Modules.Users.Domain.Entities;
+using FitnessApp.Modules.Users.Domain.Exceptions;
 using FitnessApp.Modules.Users.Domain.Repositories;
 using FitnessApp.Modules.Users.Domain.ValueObjects;
 using FitnessApp.SharedKernel.DTOs.Users.Requests;
@@ -58,7 +59,7 @@ public class UserProfileService : IUserProfileService
         var existingProfile = await _userProfileRepository.GetByUserIdAsync(userId, cancellationToken);
         if (existingProfile != null)
         {
-            throw new InvalidOperationException("User profile already exists");
+            throw UserDomainException.UserProfileAlreadyExists();
         }
         var profile = new UserProfile(userId);
         
@@ -157,7 +158,7 @@ public class UserProfileService : IUserProfileService
         
         if (!success)
         {
-            throw new InvalidOperationException($"Failed to delete user profile for user {userId}");
+            throw UserDomainException.FailedToDeleteUserProfile(userId);
         }
 
         return new ProfileOperationResponse("Profile deleted successfully");
@@ -190,7 +191,7 @@ public class UserProfileService : IUserProfileService
 
         if (profile.Subscription == null)
         {
-            throw new InvalidOperationException("No active subscription found");
+            throw UserDomainException.NoActiveSubscriptionFound();
         }
 
         profile.Subscription.Cancel();
@@ -205,7 +206,7 @@ public class UserProfileService : IUserProfileService
 
         if (profile.Subscription == null)
         {
-            throw new InvalidOperationException("No subscription found to renew");
+            throw UserDomainException.NoSubscriptionToRenew();
         }
 
         profile.Subscription.Renew(newEndDate);
@@ -225,7 +226,7 @@ public class UserProfileService : IUserProfileService
         
         if (profile == null)
         {
-            throw new InvalidOperationException($"User profile not found for user {userId}");
+            throw UserDomainException.UserProfileNotFound(userId);
         }
 
         return profile;

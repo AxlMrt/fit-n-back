@@ -1,3 +1,5 @@
+using FitnessApp.Modules.Authentication.Domain.Exceptions;
+
 namespace FitnessApp.Modules.Authentication.Domain.Entities;
 
 public class RefreshToken
@@ -35,7 +37,7 @@ public class RefreshToken
     public void MarkAsUsed()
     {
         if (!IsActive)
-            throw new InvalidOperationException("Cannot use an inactive token");
+            throw AuthenticationDomainException.InactiveToken();
             
         IsUsed = true;
         UsedAt = DateTime.UtcNow;

@@ -1,18 +1,18 @@
-using FitnessApp.Modules.Users.Application.Interfaces;
+﻿using FitnessApp.Modules.Users.Application.Interfaces;
 using FitnessApp.SharedKernel.DTOs.Users.Requests;
 using FitnessApp.SharedKernel.DTOs.Users.Responses;
 using FitnessApp.SharedKernel.Enums;
+using FitnessApp.API.Infrastructure.Errors;
+using FitnessApp.API.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace FitnessApp.API.Controllers.v1;
 
-[ApiController]
 [Route("api/v1/users")]
 [Authorize]
-[Produces("application/json")]
-public class UserProfileController : ControllerBase
+public class UserProfileController : BaseController
 {
     private readonly IUserProfileService _userProfileService;
     private readonly IUserPreferenceService _userPreferenceService;
@@ -111,26 +111,15 @@ public class UserProfileController : ControllerBase
     /// <returns>Updated profile</returns>
     [HttpPatch("profile/personal")]
     [ProducesResponseType(typeof(UserProfileResponse), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdatePersonalInfo([FromBody] UpdatePersonalInfoRequest request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var profile = await _userProfileService.UpdatePersonalInfoAsync(userId, request, cancellationToken);
-            
-            return Ok(profile);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var profile = await _userProfileService.UpdatePersonalInfoAsync(userId, request, cancellationToken);
+        
+        return Ok(profile);
     }
 
     /// <summary>
@@ -145,21 +134,10 @@ public class UserProfileController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdatePhysicalMeasurements([FromBody] UpdatePhysicalMeasurementsRequest request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var profile = await _userProfileService.UpdatePhysicalMeasurementsAsync(userId, request, cancellationToken);
-            
-            return Ok(profile);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var profile = await _userProfileService.UpdatePhysicalMeasurementsAsync(userId, request, cancellationToken);
+        
+        return Ok(profile);
     }
 
     /// <summary>
@@ -532,21 +510,5 @@ public class UserProfileController : ControllerBase
         }
     }
 
-    #region Utility Methods
 
-    private Guid GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                         ?? User.FindFirst("sub")?.Value
-                         ?? User.FindFirst("userId")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-        {
-            throw new UnauthorizedAccessException("User ID not found in token");
-        }
-
-        return userId;
-    }
-
-    #endregion
 }

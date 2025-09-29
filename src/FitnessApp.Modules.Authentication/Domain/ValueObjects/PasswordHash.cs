@@ -17,13 +17,13 @@ public sealed class PasswordHash : IEquatable<PasswordHash>
     public static PasswordHash Create(string password)
     {
         if (string.IsNullOrWhiteSpace(password))
-            throw new AuthenticationDomainException("Password cannot be empty");
+            throw AuthenticationDomainException.EmptyPassword();
 
         if (password.Length < 8)
-            throw new AuthenticationDomainException("Password must be at least 8 characters long");
+            throw AuthenticationDomainException.PasswordTooShort();
 
         if (password.Length > 128)
-            throw new AuthenticationDomainException("Password cannot exceed 128 characters");
+            throw AuthenticationDomainException.PasswordTooLong();
 
         // Validate password complexity
         ValidatePasswordComplexity(password);
@@ -36,7 +36,7 @@ public sealed class PasswordHash : IEquatable<PasswordHash>
     public static PasswordHash FromHash(string hash)
     {
         if (string.IsNullOrWhiteSpace(hash))
-            throw new AuthenticationDomainException("Password hash cannot be empty");
+            throw AuthenticationDomainException.EmptyPasswordHash();
 
         return new PasswordHash(hash);
     }
@@ -79,8 +79,7 @@ public sealed class PasswordHash : IEquatable<PasswordHash>
 
         if (missingRequirements.Any())
         {
-            throw new AuthenticationDomainException(
-                $"Password must contain at least one: {string.Join(", ", missingRequirements)}");
+            throw AuthenticationDomainException.InvalidPasswordComplexity(string.Join(", ", missingRequirements));
         }
     }
 

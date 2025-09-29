@@ -20,10 +20,10 @@ public class WorkoutSession
         Guid? programId = null)
     {
         if (userId == Guid.Empty)
-            throw new TrackingDomainException("User ID cannot be empty");
+            throw TrackingDomainException.UserIdCannotBeEmpty();
             
         if (workoutId == Guid.Empty)
-            throw new TrackingDomainException("Workout ID cannot be empty");
+            throw TrackingDomainException.WorkoutIdCannotBeEmpty();
 
         Id = Guid.NewGuid();
         UserId = userId;
@@ -73,7 +73,7 @@ public class WorkoutSession
     public void Start()
     {
         if (Status != WorkoutSessionStatus.Planned)
-            throw new TrackingDomainException($"Cannot start session with status {Status}");
+            throw TrackingDomainException.CannotStartSession(Status.ToString());
 
         Status = WorkoutSessionStatus.InProgress;
         StartTime = DateTime.UtcNow;
@@ -86,10 +86,10 @@ public class WorkoutSession
     public void Complete(PerceivedDifficulty perceivedDifficulty, string? notes = null)
     {
         if (Status != WorkoutSessionStatus.InProgress)
-            throw new TrackingDomainException($"Cannot complete session with status {Status}");
+            throw TrackingDomainException.CannotCompleteSession(Status.ToString());
 
         if (!StartTime.HasValue)
-            throw new TrackingDomainException("Cannot complete session without start time");
+            throw TrackingDomainException.CannotCompleteSessionWithoutStartTime();
 
         Status = WorkoutSessionStatus.Completed;
         EndTime = DateTime.UtcNow;
@@ -129,7 +129,7 @@ public class WorkoutSession
     public void Abandon(string? reason = null)
     {
         if (Status != WorkoutSessionStatus.InProgress)
-            throw new TrackingDomainException($"Cannot abandon session with status {Status}");
+            throw TrackingDomainException.CannotAbandonSession(Status.ToString());
 
         Status = WorkoutSessionStatus.Abandoned;
         if (StartTime.HasValue)
@@ -147,7 +147,7 @@ public class WorkoutSession
     public void Cancel(string? reason = null)
     {
         if (Status != WorkoutSessionStatus.Planned)
-            throw new TrackingDomainException($"Cannot cancel session with status {Status}");
+            throw TrackingDomainException.CannotCancelSession(Status.ToString());
 
         Status = WorkoutSessionStatus.Cancelled;
         Notes = reason?.Trim();
@@ -173,13 +173,13 @@ public class WorkoutSession
         int? sets = null)
     {
         if (Status != WorkoutSessionStatus.InProgress)
-            throw new TrackingDomainException("Can only add exercises to sessions in progress");
+            throw TrackingDomainException.CanOnlyAddExercisesToActiveSession();
 
         if (exerciseId == Guid.Empty)
-            throw new TrackingDomainException("Exercise ID cannot be empty");
+            throw TrackingDomainException.ExerciseIdCannotBeEmpty();
 
         if (string.IsNullOrWhiteSpace(exerciseName))
-            throw new TrackingDomainException("Exercise name is required");
+            throw TrackingDomainException.ExerciseNameRequired();
 
         var exercise = new WorkoutSessionExercise(
             Id,
@@ -210,11 +210,11 @@ public class WorkoutSession
     public void RemoveExercise(Guid exerciseId)
     {
         if (Status != WorkoutSessionStatus.InProgress)
-            throw new TrackingDomainException("Can only modify exercises in sessions in progress");
+            throw TrackingDomainException.CanOnlyModifyExercisesInActiveSession();
 
         var exercise = _exercises.FirstOrDefault(e => e.Id == exerciseId);
         if (exercise == null)
-            throw new TrackingDomainException($"Exercise {exerciseId} not found in session");
+            throw TrackingDomainException.ExerciseNotFoundInSession(exerciseId);
 
         _exercises.Remove(exercise);
         UpdateExerciseOrders();
@@ -236,7 +236,7 @@ public class WorkoutSession
     public void UpdatePlannedDate(DateTime? plannedDate)
     {
         if (Status != WorkoutSessionStatus.Planned)
-            throw new TrackingDomainException("Can only update planned date for planned sessions");
+            throw TrackingDomainException.CanOnlyUpdatePlannedDateForPlannedSessions();
 
         PlannedDate = plannedDate;
         UpdatedAt = DateTime.UtcNow;
@@ -245,7 +245,7 @@ public class WorkoutSession
     public void SetEstimatedCalories(int calories)
     {
         if (calories < 0)
-            throw new TrackingDomainException("Calories cannot be negative");
+            throw TrackingDomainException.CaloriesCannotBeNegative();
 
         CaloriesEstimated = calories;
         UpdatedAt = DateTime.UtcNow;

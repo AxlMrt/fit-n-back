@@ -1,5 +1,6 @@
 using FitnessApp.Modules.Authentication.Application.Interfaces;
 using FitnessApp.Modules.Authentication.Domain.Entities;
+using FitnessApp.Modules.Authentication.Domain.Exceptions;
 using FitnessApp.Modules.Authentication.Domain.Repositories;
 using FitnessApp.Modules.Authentication.Domain.ValueObjects;
 using FitnessApp.Modules.Authentication.Infrastructure.Repositories;
@@ -50,19 +51,19 @@ public class AuthService : IAuthService
         if (await _authenticationRepository.ExistsWithEmailAsync(request.Email))
         {
             _logger.LogWarning("Registration attempt with existing email: {Email}", request.Email);
-            throw new InvalidOperationException("Email is already in use");
+            throw AuthenticationDomainException.EmailAlreadyExists(request.Email);
         }
         
         if (await _authenticationRepository.ExistsWithUsernameAsync(request.UserName))
         {
             _logger.LogWarning("Registration attempt with existing username: {UserName}", request.UserName);
-            throw new InvalidOperationException("Username is already in use");
+            throw AuthenticationDomainException.UsernameAlreadyExists(request.UserName);
         }
 
         // Validate password confirmation
         if (request.Password != request.ConfirmPassword)
         {
-            throw new InvalidOperationException("Passwords do not match");
+            throw AuthenticationDomainException.PasswordMismatch();
         }
 
         try
@@ -253,14 +254,14 @@ public class AuthService : IAuthService
         // Validate password confirmation
         if (request.NewPassword != request.ConfirmNewPassword)
         {
-            throw new InvalidOperationException("Passwords do not match");
+            throw AuthenticationDomainException.PasswordMismatch();
         }
 
         var authUser = await _authenticationRepository.GetByEmailAsync(request.Email);
         if (authUser == null || !authUser.IsActive)
         {
             _logger.LogWarning("Password reset attempt for non-existent or inactive email: {Email}", request.Email);
-            throw new InvalidOperationException("Invalid reset request");
+            throw AuthenticationDomainException.InvalidToken();
         }
 
         // In a real implementation, validate the token here
@@ -290,21 +291,21 @@ public class AuthService : IAuthService
         // Validate password confirmation
         if (request.NewPassword != request.ConfirmNewPassword)
         {
-            throw new InvalidOperationException("Passwords do not match");
+            throw AuthenticationDomainException.PasswordMismatch();
         }
 
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null || !authUser.IsActive)
         {
             _logger.LogWarning("Password change attempt for non-existent or inactive user: {UserId}", userId);
-            throw new InvalidOperationException("User not found or inactive");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         // Verify current password
         if (!authUser.VerifyPassword(request.CurrentPassword))
         {
             _logger.LogWarning("Invalid current password provided for user: {UserId}", userId);
-            throw new InvalidOperationException("Current password is incorrect");
+            throw AuthenticationDomainException.IncorrectPassword();
         }
 
         try
@@ -328,7 +329,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null)
         {
-            throw new InvalidOperationException("User not found");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         return new AuthUserDto(
@@ -353,13 +354,13 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null || !authUser.IsActive)
         {
-            throw new InvalidOperationException("User not found or inactive");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         // Check if new email already exists
         if (await _authenticationRepository.ExistsWithEmailAsync(request.NewEmail))
         {
-            throw new InvalidOperationException("Email is already in use");
+            throw AuthenticationDomainException.EmailAlreadyExists(request.NewEmail);
         }
 
         try
@@ -387,13 +388,13 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null || !authUser.IsActive)
         {
-            throw new InvalidOperationException("User not found or inactive");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         // Check if new username already exists
         if (await _authenticationRepository.ExistsWithUsernameAsync(request.NewUsername))
         {
-            throw new InvalidOperationException("Username is already in use");
+            throw AuthenticationDomainException.UsernameAlreadyExists(request.NewUsername);
         }
 
         try
@@ -421,7 +422,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByEmailVerificationTokenAsync(request.Token);
         if (authUser == null)
         {
-            throw new InvalidOperationException("Invalid or expired confirmation token");
+            throw AuthenticationDomainException.InvalidToken();
         }
 
         if (authUser.IsEmailVerificationTokenValid(request.Token))
@@ -435,7 +436,7 @@ public class AuthService : IAuthService
         }
         else
         {
-            throw new InvalidOperationException("Invalid or expired confirmation token");
+            throw AuthenticationDomainException.InvalidToken();
         }
     }
 
@@ -472,7 +473,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null)
         {
-            throw new InvalidOperationException("User not found");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         return new SecurityStatusDto(
@@ -492,7 +493,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null || !authUser.IsActive)
         {
-            throw new InvalidOperationException("User not found or inactive");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         authUser.EnableTwoFactor();
@@ -506,7 +507,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null || !authUser.IsActive)
         {
-            throw new InvalidOperationException("User not found or inactive");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         authUser.DisableTwoFactor();
@@ -520,7 +521,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null)
         {
-            throw new InvalidOperationException("User not found");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         authUser.UnlockAccount();
@@ -534,7 +535,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null)
         {
-            throw new InvalidOperationException("User not found");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         authUser.Deactivate();
@@ -548,7 +549,7 @@ public class AuthService : IAuthService
         var authUser = await _authenticationRepository.GetByIdAsync(userId);
         if (authUser == null)
         {
-            throw new InvalidOperationException("User not found");
+            throw AuthenticationDomainException.UserNotFound();
         }
 
         authUser.Reactivate();

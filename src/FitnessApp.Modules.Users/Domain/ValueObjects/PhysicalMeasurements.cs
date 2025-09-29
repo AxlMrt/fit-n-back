@@ -25,7 +25,7 @@ public sealed class PhysicalMeasurements : IEquatable<PhysicalMeasurements>
         if (height.HasValue)
         {
             if (height <= 0)
-                throw new UserDomainException("Height must be greater than 0");
+                throw UserDomainException.HeightMustBeGreaterThanZero();
             
             // Validation adaptée selon l'unité
             var unit = heightUnit ?? "cm";
@@ -37,13 +37,13 @@ public sealed class PhysicalMeasurements : IEquatable<PhysicalMeasurements>
             };
             
             if (height < minHeight || height > maxHeight)
-                throw new UserDomainException($"Height must be between {minHeight} and {maxHeight} {unit}");
+                throw UserDomainException.HeightOutOfRange(minHeight, maxHeight, unit);
         }
 
         if (weight.HasValue)
         {
             if (weight <= 0)
-                throw new UserDomainException("Weight must be greater than 0");
+                throw UserDomainException.WeightMustBeGreaterThanZero();
             
             // Validation adaptée selon l'unité  
             var unit = weightUnit ?? "kg";
@@ -54,7 +54,7 @@ public sealed class PhysicalMeasurements : IEquatable<PhysicalMeasurements>
             };
             
             if (weight < minWeight || weight > maxWeight)
-                throw new UserDomainException($"Weight must be between {minWeight} and {maxWeight} {unit}");
+                throw UserDomainException.WeightOutOfRange(minWeight, maxWeight, unit);
         }
 
         return new PhysicalMeasurements(height, weight, heightUnit, weightUnit);

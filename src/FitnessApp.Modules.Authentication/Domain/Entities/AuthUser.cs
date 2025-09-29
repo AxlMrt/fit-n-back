@@ -59,7 +59,7 @@ public class AuthUser
     public void SetPasswordHash(PasswordHash passwordHash)
     {
         if (passwordHash == null)
-            throw new AuthenticationDomainException("Password hash cannot be null");
+            throw AuthenticationDomainException.InvalidPasswordHash();
 
         PasswordHash = passwordHash;
         UpdateSecurityStamp();
@@ -114,7 +114,7 @@ public class AuthUser
     public void LockAccount(TimeSpan duration)
     {
         if (!LockoutEnabled)
-            throw new AuthenticationDomainException("Account lockout is not enabled for this user");
+            throw AuthenticationDomainException.LockoutNotEnabled();
 
         LockoutEnd = DateTime.UtcNow.Add(duration);
         SetUpdatedAt();

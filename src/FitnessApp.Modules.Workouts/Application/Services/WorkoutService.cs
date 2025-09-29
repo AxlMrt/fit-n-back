@@ -62,7 +62,7 @@ public class WorkoutService : IWorkoutService
 
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {id} not found");
+            throw WorkoutDomainException.WorkoutNotFound(id);
 
         ValidateUserOwnership(workout, userId);
 
@@ -92,7 +92,7 @@ public class WorkoutService : IWorkoutService
     {
         var originalWorkout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (originalWorkout == null)
-            throw new WorkoutDomainException($"Workout with ID {id} not found");
+            throw WorkoutDomainException.WorkoutNotFound(id);
 
         // Create a user workout duplicate
         var createDto = CreateDuplicateDto(originalWorkout, newName);
@@ -165,7 +165,7 @@ public class WorkoutService : IWorkoutService
 
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {id} not found");
+            throw WorkoutDomainException.WorkoutNotFound(id);
 
         workout.UpdateDetails(
             updateDto.Name ?? workout.Name,
@@ -191,7 +191,7 @@ public class WorkoutService : IWorkoutService
     {
         var originalWorkout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (originalWorkout == null)
-            throw new WorkoutDomainException($"Workout with ID {id} not found");
+            throw WorkoutDomainException.WorkoutNotFound(id);
 
         // Create a template duplicate
         var createDto = CreateDuplicateDto(originalWorkout, newName);
@@ -331,7 +331,7 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
@@ -344,13 +344,13 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description, updateDto.EstimatedDurationMinutes);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -361,13 +361,13 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         workout.RemovePhase(phase.Type);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -378,13 +378,13 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         workout.MovePhase(phase.Type, newOrder);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -399,7 +399,7 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -410,11 +410,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description, updateDto.EstimatedDurationMinutes);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -425,11 +425,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         workout.RemovePhase(phase.Type);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -440,11 +440,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         workout.MovePhase(phase.Type, newOrder);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -459,13 +459,13 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.AddExercise(
             exerciseDto.ExerciseId,
@@ -481,17 +481,17 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         var exercise = phase.GetExercise(exerciseId);
         if (exercise == null)
-            throw new WorkoutDomainException($"Exercise with ID {exerciseId} not found");
+            throw WorkoutDomainException.ExerciseNotFoundInWorkout(exerciseId);
 
         if (updateDto.Sets.HasValue || updateDto.Reps.HasValue)
         {
@@ -509,13 +509,13 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.RemoveExercise(exerciseId);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -526,13 +526,13 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         ValidateUserOwnership(workout, userId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.MoveExercise(exerciseId, newOrder);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -547,11 +547,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.AddExercise(
             exerciseDto.ExerciseId,
@@ -567,15 +567,15 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         var exercise = phase.GetExercise(exerciseId);
         if (exercise == null)
-            throw new WorkoutDomainException($"Exercise with ID {exerciseId} not found");
+            throw WorkoutDomainException.ExerciseNotFoundInWorkout(exerciseId);
 
         if (updateDto.Sets.HasValue || updateDto.Reps.HasValue)
         {
@@ -593,11 +593,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.RemoveExercise(exerciseId);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -608,11 +608,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workoutRepository.GetByIdAsync(workoutId, cancellationToken);
         if (workout == null)
-            throw new WorkoutDomainException($"Workout with ID {workoutId} not found");
+            throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
         var phase = workout.Phases.FirstOrDefault(p => p.Id == phaseId);
         if (phase == null)
-            throw new WorkoutDomainException($"Phase with ID {phaseId} not found");
+            throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
         phase.MoveExercise(exerciseId, newOrder);
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
@@ -627,12 +627,12 @@ public class WorkoutService : IWorkoutService
     {
         if (workout.Type != WorkoutType.UserCreated)
         {
-            throw new WorkoutDomainException("Only user-created workouts can be modified by users");
+            throw WorkoutDomainException.OnlyUserCreatedWorkoutsCanBeModified();
         }
 
         if (workout.CreatedByUserId != userId)
         {
-            throw new WorkoutDomainException("User can only modify workouts they created");
+            throw WorkoutDomainException.UserCanOnlyModifyOwnWorkouts();
         }
     }
 

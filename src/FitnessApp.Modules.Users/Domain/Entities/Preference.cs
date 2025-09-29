@@ -18,16 +18,16 @@ public class Preference
     public Preference(Guid userId, PreferenceCategory category, string key, string value)
     {
         if (userId == Guid.Empty)
-            throw new UserDomainException("User ID is required");
+            throw UserDomainException.UserIdRequired();
 
         if (string.IsNullOrWhiteSpace(key))
-            throw new UserDomainException("Preference key is required");
+            throw UserDomainException.PreferenceKeyRequired();
 
         if (key.Length > 100)
-            throw new UserDomainException("Preference key cannot exceed 100 characters");
+            throw UserDomainException.PreferenceKeyTooLong();
 
         if (value?.Length > 1000)
-            throw new UserDomainException("Preference value cannot exceed 1000 characters");
+            throw UserDomainException.PreferenceValueTooLong();
 
         Id = Guid.NewGuid();
         UserId = userId;
@@ -40,7 +40,7 @@ public class Preference
     public void UpdateValue(string value)
     {
         if (value?.Length > 1000)
-            throw new UserDomainException("Preference value cannot exceed 1000 characters");
+            throw UserDomainException.PreferenceValueTooLong();
 
         Value = value?.Trim() ?? string.Empty;
         UpdatedAt = DateTime.UtcNow;
@@ -69,7 +69,7 @@ public class Preference
         }
         catch
         {
-            throw new UserDomainException($"Cannot convert preference value '{Value}' to type {typeof(T).Name}");
+            throw UserDomainException.PreferenceConversionFailed(Value, typeof(T).Name);
         }
     }
 
