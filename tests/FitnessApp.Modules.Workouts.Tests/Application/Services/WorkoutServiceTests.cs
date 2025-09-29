@@ -1,6 +1,7 @@
 using FluentAssertions;
 using AutoMapper;
 using Moq;
+using Microsoft.Extensions.Logging;
 using FitnessApp.Modules.Workouts.Application.Services;
 using FitnessApp.Modules.Workouts.Domain.Entities;
 using FitnessApp.Modules.Workouts.Domain.Repositories;
@@ -15,13 +16,15 @@ public class WorkoutServiceTests
 {
     private readonly Mock<IWorkoutRepository> _mockRepository;
     private readonly Mock<IMapper> _mockMapper;
+    private readonly Mock<ILogger<WorkoutService>> _mockLogger;
     private readonly WorkoutService _service;
 
     public WorkoutServiceTests()
     {
         _mockRepository = new Mock<IWorkoutRepository>();
         _mockMapper = new Mock<IMapper>();
-        _service = new WorkoutService(_mockRepository.Object, _mockMapper.Object);
+        _mockLogger = new Mock<ILogger<WorkoutService>>();
+        _service = new WorkoutService(_mockRepository.Object, _mockMapper.Object, _mockLogger.Object);
     }
 
     #region CreateUserWorkoutAsync Tests

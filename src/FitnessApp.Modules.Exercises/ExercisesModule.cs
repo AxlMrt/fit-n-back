@@ -52,11 +52,8 @@ public static class ExercisesModule
         {
             using var scope = app.ApplicationServices.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ExercisesDbContext>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ExercisesDbContext>>();
             
-            logger.LogInformation("Applying Exercises module migrations...");
             context.Database.Migrate();
-            logger.LogInformation("Exercises module migrations applied successfully");
         }
         catch (Exception ex)
         {

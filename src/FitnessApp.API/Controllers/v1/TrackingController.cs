@@ -60,20 +60,13 @@ public class TrackingController : BaseController
         [FromBody] CompleteWorkoutSessionRequest request, 
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var session = await _trackingService.CompleteWorkoutSessionAsync(
-                sessionId, 
-                request.PerceivedDifficulty, 
-                request.Notes,
-                cancellationToken);
+        var session = await _trackingService.CompleteWorkoutSessionAsync(
+            sessionId, 
+            request.PerceivedDifficulty, 
+            request.Notes,
+            cancellationToken);
 
-            return Ok(session);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        return Ok(session);
     }
 
     /// <summary>
@@ -88,15 +81,8 @@ public class TrackingController : BaseController
         [FromBody] string? reason = null, 
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var session = await _trackingService.AbandonWorkoutSessionAsync(sessionId, reason, cancellationToken);
-            return Ok(session);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        var session = await _trackingService.AbandonWorkoutSessionAsync(sessionId, reason, cancellationToken);
+        return Ok(session);
     }
 
     /// <summary>
@@ -111,32 +97,25 @@ public class TrackingController : BaseController
         [FromBody] AddExercisePerformanceRequest request, 
         CancellationToken cancellationToken = default)
     {
-        try
+        // Get exercise name from exercise service
+        var exercise = await _exerciseService.GetByIdAsync(request.ExerciseId, cancellationToken);
+        if (exercise == null)
         {
-            // Get exercise name from exercise service
-            var exercise = await _exerciseService.GetByIdAsync(request.ExerciseId, cancellationToken);
-            if (exercise == null)
-            {
-                return BadRequest(new { Message = $"Exercise with ID {request.ExerciseId} not found" });
-            }
-
-            var session = await _trackingService.AddExerciseToSessionAsync(
-                sessionId,
-                request.ExerciseId,
-                exercise.Name,
-                request.MetricType,
-                request.Repetitions,
-                request.Weight,
-                request.DurationSeconds,
-                request.Distance,
-                cancellationToken);
-
-            return Ok(session);
+            return BadRequest(new { Message = $"Exercise with ID {request.ExerciseId} not found" });
         }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+
+        var session = await _trackingService.AddExerciseToSessionAsync(
+            sessionId,
+            request.ExerciseId,
+            exercise.Name,
+            request.MetricType,
+            request.Repetitions,
+            request.Weight,
+            request.DurationSeconds,
+            request.Distance,
+            cancellationToken);
+
+        return Ok(session);
     }
 
     /// <summary>
@@ -152,23 +131,16 @@ public class TrackingController : BaseController
         [FromBody] AddSetRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var set = await _trackingService.AddSetToExerciseAsync(
-                sessionId, 
-                exerciseId, 
-                request.Repetitions, 
-                request.Weight, 
-                request.DurationSeconds, 
-                request.Distance, 
-                request.RestTimeSeconds, 
-                cancellationToken);
-            return Ok(set);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        var set = await _trackingService.AddSetToExerciseAsync(
+            sessionId, 
+            exerciseId, 
+            request.Repetitions, 
+            request.Weight, 
+            request.DurationSeconds, 
+            request.Distance, 
+            request.RestTimeSeconds, 
+            cancellationToken);
+        return Ok(set);
     }
 
     /// <summary>
@@ -182,15 +154,8 @@ public class TrackingController : BaseController
         Guid exerciseId,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var session = await _trackingService.RemoveExerciseFromSessionAsync(sessionId, exerciseId, cancellationToken);
-            return Ok(session);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        var session = await _trackingService.RemoveExerciseFromSessionAsync(sessionId, exerciseId, cancellationToken);
+        return Ok(session);
     }
 
     /// <summary>
@@ -273,15 +238,8 @@ public class TrackingController : BaseController
         [FromBody] RecordUserMetricRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var metric = await _trackingService.UpdateUserMetricAsync(metricId, request.Value, request.Notes, cancellationToken);
-            return Ok(metric);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        var metric = await _trackingService.UpdateUserMetricAsync(metricId, request.Value, request.Notes, cancellationToken);
+        return Ok(metric);
     }
 
     /// <summary>
@@ -332,15 +290,8 @@ public class TrackingController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteUserMetric(Guid metricId, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _trackingService.DeleteUserMetricAsync(metricId, cancellationToken);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        await _trackingService.DeleteUserMetricAsync(metricId, cancellationToken);
+        return NoContent();
     }
 
     #endregion
@@ -379,18 +330,11 @@ public class TrackingController : BaseController
         [FromBody] RescheduleWorkoutRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var plannedWorkout = await _trackingService.RescheduleWorkoutAsync(
-                plannedWorkoutId,
-                request.NewScheduledDate,
-                cancellationToken);
-            return Ok(plannedWorkout);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        var plannedWorkout = await _trackingService.RescheduleWorkoutAsync(
+            plannedWorkoutId,
+            request.NewScheduledDate,
+            cancellationToken);
+        return Ok(plannedWorkout);
     }
 
     /// <summary>
@@ -401,15 +345,8 @@ public class TrackingController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> CancelPlannedWorkout(Guid plannedWorkoutId, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _trackingService.CancelPlannedWorkoutAsync(plannedWorkoutId, cancellationToken);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+        await _trackingService.CancelPlannedWorkoutAsync(plannedWorkoutId, cancellationToken);
+        return NoContent();
     }
 
     /// <summary>

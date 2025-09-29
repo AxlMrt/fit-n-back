@@ -17,12 +17,10 @@ public class ExercisesController : BaseController
 {
 
     private readonly IExerciseService _exerciseService;
-    private readonly ILogger<ExercisesController> _logger;
 
-    public ExercisesController(IExerciseService exerciseService, ILogger<ExercisesController> logger)
+    public ExercisesController(IExerciseService exerciseService)
     {
         _exerciseService = exerciseService;
-        _logger = logger;
     }
 
     /// <summary>

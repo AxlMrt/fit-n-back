@@ -16,12 +16,10 @@ namespace FitnessApp.API.Controllers.v1;
 public class AuthController : BaseController
 {
     private readonly IAuthService _authService;
-    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -51,7 +49,6 @@ public class AuthController : BaseController
             return Unauthorized(new { message = "Invalid credentials" });
         }
 
-        _logger.LogInformation("User {Email} logged in successfully", request.Email);
         return Ok(response);
     }
 
@@ -83,7 +80,6 @@ public class AuthController : BaseController
         }
 
         var response = await _authService.RegisterAsync(request);
-        _logger.LogInformation("User {Email} registered successfully", request.Email);
         return CreatedAtAction(nameof(GetAuthUser), new { }, response);
     }
 
@@ -134,7 +130,6 @@ public class AuthController : BaseController
         var token = HttpContext.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
         await _authService.LogoutAsync(userId, token ?? string.Empty);
         
-        _logger.LogInformation("User {UserId} logged out successfully", userId);
         return Ok(new { message = "Logged out successfully" });
     }
 
@@ -205,7 +200,6 @@ public class AuthController : BaseController
     {
         var userId = GetCurrentUserId();
         await _authService.ChangePasswordAsync(userId, request);
-        _logger.LogInformation("User {UserId} changed password successfully", userId);
         return Ok(new { message = "Password changed successfully" });
     }
 
@@ -230,7 +224,6 @@ public class AuthController : BaseController
         }
 
         await _authService.UpdateEmailAsync(userId, request);
-        _logger.LogInformation("User {UserId} updated email successfully", userId);
         return Ok(new { message = "Email updated successfully. Please check your new email for confirmation." });
     }
 
@@ -255,7 +248,6 @@ public class AuthController : BaseController
         }
 
         await _authService.UpdateUsernameAsync(userId, request);
-        _logger.LogInformation("User {UserId} updated username successfully", userId);
         return Ok(new { message = "Username updated successfully" });
     }
 
@@ -352,7 +344,6 @@ public class AuthController : BaseController
     {
         var userId = GetCurrentUserId();
         await _authService.DeactivateAccountAsync(userId);
-        _logger.LogInformation("User {UserId} deactivated their account", userId);
         return Ok(new { message = "Account deactivated successfully" });
     }
 
@@ -370,7 +361,6 @@ public class AuthController : BaseController
     public async Task<IActionResult> ReactivateAccount(Guid userId)
     {
         await _authService.ReactivateAccountAsync(userId);
-        _logger.LogInformation("Admin reactivated user {UserId}", userId);
         return Ok(new { message = "Account reactivated successfully" });
     }
 
@@ -388,7 +378,6 @@ public class AuthController : BaseController
     public async Task<IActionResult> UnlockAccount(Guid userId)
     {
         await _authService.UnlockAccountAsync(userId);
-        _logger.LogInformation("Admin unlocked user {UserId}", userId);
         return Ok(new { message = "Account unlocked successfully" });
     }
 

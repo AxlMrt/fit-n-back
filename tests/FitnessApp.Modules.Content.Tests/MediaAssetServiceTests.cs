@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Minio;
@@ -22,6 +23,8 @@ namespace FitnessApp.Modules.Content.Tests;
 
 public class MediaAssetServiceTests
 {
+    private readonly Mock<ILogger<MediaAssetService>> _mockLogger = new Mock<ILogger<MediaAssetService>>();
+
     [Fact]
     public async Task UploadAsync_should_store_and_return_id_when_minio_available()
     {
@@ -43,7 +46,7 @@ public class MediaAssetServiceTests
         var dbOptions = new DbContextOptionsBuilder<ContentDbContext>().UseInMemoryDatabase("content_test_upload").Options;
         var db = new ContentDbContext(dbOptions);
 
-        var service = new MediaAssetService(repoMock.Object, storage, db);
+        var service = new MediaAssetService(repoMock.Object, storage, db, _mockLogger.Object);
 
         var data = Encoding.UTF8.GetBytes("hello world");
         using var ms = new MemoryStream(data);
@@ -75,7 +78,7 @@ public class MediaAssetServiceTests
         var dbOptions = new DbContextOptionsBuilder<ContentDbContext>().UseInMemoryDatabase("content_test_download").Options;
         var db = new ContentDbContext(dbOptions);
 
-        var service = new MediaAssetService(repoMock.Object, storage, db);
+        var service = new MediaAssetService(repoMock.Object, storage, db, _mockLogger.Object);
 
         // Act
         var stream = await service.DownloadAsync(asset.Id);
@@ -101,7 +104,7 @@ public class MediaAssetServiceTests
         var dbOptions = new DbContextOptionsBuilder<ContentDbContext>().UseInMemoryDatabase("content_test_list").Options;
         var db = new ContentDbContext(dbOptions);
 
-        var service = new MediaAssetService(repoMock.Object, storage, db);
+        var service = new MediaAssetService(repoMock.Object, storage, db, _mockLogger.Object);
 
         // Act
         var list = await service.GetByExerciseIdAsync(exerciseId);
@@ -126,7 +129,7 @@ public class MediaAssetServiceTests
         var dbOptions = new DbContextOptionsBuilder<ContentDbContext>().UseInMemoryDatabase("content_test_missing").Options;
         var db = new ContentDbContext(dbOptions);
 
-        var service = new MediaAssetService(repoMock.Object, storage, db);
+        var service = new MediaAssetService(repoMock.Object, storage, db, _mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () => await service.DownloadAsync(Guid.NewGuid()));

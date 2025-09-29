@@ -6,6 +6,7 @@ using FitnessApp.Modules.Workouts.Domain.Exceptions;
 using FitnessApp.SharedKernel.DTOs.Requests;
 using FitnessApp.SharedKernel.DTOs.Responses;
 using FitnessApp.SharedKernel.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace FitnessApp.Modules.Workouts.Application.Services;
 
@@ -16,11 +17,13 @@ public class WorkoutService : IWorkoutService
 {
     private readonly IWorkoutRepository _workoutRepository;
     private readonly IMapper _mapper;
+    private readonly ILogger<WorkoutService> _logger;
 
-    public WorkoutService(IWorkoutRepository workoutRepository, IMapper mapper)
+    public WorkoutService(IWorkoutRepository workoutRepository, IMapper mapper, ILogger<WorkoutService> logger)
     {
         _workoutRepository = workoutRepository ?? throw new ArgumentNullException(nameof(workoutRepository));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     #region User Operations (UserCreated workouts only)
@@ -28,6 +31,8 @@ public class WorkoutService : IWorkoutService
     public async Task<WorkoutDto> CreateUserWorkoutAsync(CreateWorkoutDto createWorkoutDto, Guid userId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(createWorkoutDto);
+        
+        _logger.LogInformation("Creating user workout '{WorkoutName}' for user {UserId}", createWorkoutDto.Name, userId);
         
         var workout = _mapper.Map<Workout>(createWorkoutDto);
         workout.SetType(WorkoutType.UserCreated);
@@ -53,12 +58,18 @@ public class WorkoutService : IWorkoutService
         }
 
         var createdWorkout = await _workoutRepository.AddAsync(workout, cancellationToken);
+        
+        _logger.LogInformation("User workout '{WorkoutName}' (ID: {WorkoutId}) created successfully for user {UserId} with {PhaseCount} phases", 
+            createWorkoutDto.Name, createdWorkout.Id, userId, createWorkoutDto.Phases.Count);
+        
         return _mapper.Map<WorkoutDto>(createdWorkout);
     }
 
     public async Task<WorkoutDto> UpdateUserWorkoutAsync(Guid id, UpdateWorkoutDto updateDto, Guid userId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(updateDto);
+
+        _logger.LogInformation("Updating user workout {WorkoutId} for user {UserId}", id, userId);
 
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (workout == null)
@@ -73,18 +84,29 @@ public class WorkoutService : IWorkoutService
             updateDto.EstimatedDurationMinutes);
 
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
+        
+        _logger.LogInformation("User workout {WorkoutId} updated successfully for user {UserId}", id, userId);
+        
         return _mapper.Map<WorkoutDto>(workout);
     }
 
     public async Task<bool> DeleteUserWorkoutAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("Deleting user workout {WorkoutId} for user {UserId}", id, userId);
+        
         var workout = await _workoutRepository.GetByIdAsync(id, cancellationToken);
         if (workout == null)
+        {
+            _logger.LogWarning("Workout {WorkoutId} not found for deletion by user {UserId}", id, userId);
             return false;
+        }
 
         ValidateUserOwnership(workout, userId);
 
         await _workoutRepository.DeleteAsync(id, cancellationToken);
+        
+        _logger.LogInformation("User workout {WorkoutId} deleted successfully by user {UserId}", id, userId);
+        
         return true;
     }
 
@@ -133,6 +155,8 @@ public class WorkoutService : IWorkoutService
     {
         ArgumentNullException.ThrowIfNull(createWorkoutDto);
         
+        _logger.LogInformation("Creating template workout '{WorkoutName}' by admin", createWorkoutDto.Name);
+        
         var workout = _mapper.Map<Workout>(createWorkoutDto);
         workout.SetType(WorkoutType.Template);
         
@@ -156,6 +180,9 @@ public class WorkoutService : IWorkoutService
         }
 
         var createdWorkout = await _workoutRepository.AddAsync(workout, cancellationToken);
+        
+        _logger.LogInformation("Template workout '{WorkoutName}' (ID: {WorkoutId}) created successfully with {PhaseCount} phases", 
+            createWorkoutDto.Name, createdWorkout.Id, createWorkoutDto.Phases.Count);
         return _mapper.Map<WorkoutDto>(createdWorkout);
     }
 

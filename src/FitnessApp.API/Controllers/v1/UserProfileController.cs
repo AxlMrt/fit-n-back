@@ -84,24 +84,17 @@ public class UserProfileController : BaseController
     [ProducesResponseType(typeof(object), 409)]
     public async Task<IActionResult> CreateProfile([FromBody] CreateUserProfileRequest request, CancellationToken cancellationToken = default)
     {
-        try
+        var userId = GetCurrentUserId();
+        
+        // Check if profile already exists
+        if (await _userProfileService.UserProfileExistsAsync(userId, cancellationToken))
         {
-            var userId = GetCurrentUserId();
-            
-            // Check if profile already exists
-            if (await _userProfileService.UserProfileExistsAsync(userId, cancellationToken))
-            {
-                return Conflict(new { message = "Profile already exists" });
-            }
+            return Conflict(new { message = "Profile already exists" });
+        }
 
-            var profile = await _userProfileService.CreateUserProfileAsync(userId, request, cancellationToken);
-            
-            return CreatedAtAction(nameof(GetProfile), new { }, profile);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var profile = await _userProfileService.CreateUserProfileAsync(userId, request, cancellationToken);
+        
+        return CreatedAtAction(nameof(GetProfile), new { }, profile);
     }
 
     /// <summary>
@@ -152,21 +145,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdateFitnessProfile([FromBody] UpdateFitnessProfileRequest request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var profile = await _userProfileService.UpdateFitnessProfileAsync(userId, request, cancellationToken);
-            
-            return Ok(profile);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var profile = await _userProfileService.UpdateFitnessProfileAsync(userId, request, cancellationToken);
+        
+        return Ok(profile);
     }
 
     /// <summary>
@@ -180,21 +162,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteProfile(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var result = await _userProfileService.DeleteUserProfileAsync(userId, cancellationToken);
-            
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var result = await _userProfileService.DeleteUserProfileAsync(userId, cancellationToken);
+        
+        return Ok(result);
     }
 
     #endregion
@@ -236,21 +207,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdateSubscription([FromBody] UpdateSubscriptionRequest request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var subscription = await _userProfileService.UpdateSubscriptionAsync(userId, request, cancellationToken);
-            
-            return Ok(subscription);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var subscription = await _userProfileService.UpdateSubscriptionAsync(userId, request, cancellationToken);
+        
+        return Ok(subscription);
     }
 
     /// <summary>
@@ -264,21 +224,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> CancelSubscription(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var result = await _userProfileService.CancelSubscriptionAsync(userId, cancellationToken);
-            
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var result = await _userProfileService.CancelSubscriptionAsync(userId, cancellationToken);
+        
+        return Ok(result);
     }
 
     /// <summary>
@@ -293,21 +242,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> RenewSubscription([FromBody] DateTime newEndDate, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var subscription = await _userProfileService.RenewSubscriptionAsync(userId, newEndDate, cancellationToken);
-            
-            return Ok(subscription);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var subscription = await _userProfileService.RenewSubscriptionAsync(userId, newEndDate, cancellationToken);
+        
+        return Ok(subscription);
     }
 
     #endregion
@@ -325,17 +263,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetPreferences(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var preferences = await _userPreferenceService.GetUserPreferencesAsync(userId, cancellationToken);
-            
-            return Ok(preferences);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var preferences = await _userPreferenceService.GetUserPreferencesAsync(userId, cancellationToken);
+        
+        return Ok(preferences);
     }
 
     /// <summary>
@@ -349,23 +280,16 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetPreferencesByCategory(string category, CancellationToken cancellationToken = default)
     {
-        try
+        // Parse category string to enum
+        if (!Enum.TryParse<PreferenceCategory>(category, true, out var categoryEnum))
         {
-            // Parse category string to enum
-            if (!Enum.TryParse<PreferenceCategory>(category, true, out var categoryEnum))
-            {
-                return BadRequest(new { message = $"Invalid category '{category}'. Valid categories are: {string.Join(", ", Enum.GetNames<PreferenceCategory>())}" });
-            }
+            return BadRequest(new { message = $"Invalid category '{category}'. Valid categories are: {string.Join(", ", Enum.GetNames<PreferenceCategory>())}" });
+        }
 
-            var userId = GetCurrentUserId();
-            var preferences = await _userPreferenceService.GetUserPreferencesByCategoryAsync(userId, categoryEnum, cancellationToken);
-            
-            return Ok(preferences);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var preferences = await _userPreferenceService.GetUserPreferencesByCategoryAsync(userId, categoryEnum, cancellationToken);
+        
+        return Ok(preferences);
     }
 
     /// <summary>
@@ -379,21 +303,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> CreateOrUpdatePreference([FromBody] CreateOrUpdatePreferenceRequest request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var preference = await _userPreferenceService.CreateOrUpdatePreferenceAsync(userId, request, cancellationToken);
-            
-            return Ok(preference);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var preference = await _userPreferenceService.CreateOrUpdatePreferenceAsync(userId, request, cancellationToken);
+        
+        return Ok(preference);
     }
 
     /// <summary>
@@ -406,21 +319,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var preferences = await _userPreferenceService.UpdatePreferencesAsync(userId, request, cancellationToken);
-            
-            return Ok(preferences);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var preferences = await _userPreferenceService.UpdatePreferencesAsync(userId, request, cancellationToken);
+        
+        return Ok(preferences);
     }
 
     /// <summary>
@@ -433,23 +335,16 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeletePreference(string category, string key, CancellationToken cancellationToken = default)
     {
-        try
+        // Parse category string to enum
+        if (!Enum.TryParse<PreferenceCategory>(category, true, out var categoryEnum))
         {
-            // Parse category string to enum
-            if (!Enum.TryParse<PreferenceCategory>(category, true, out var categoryEnum))
-            {
-                return BadRequest(new { message = $"Invalid category '{category}'. Valid categories are: {string.Join(", ", Enum.GetNames<PreferenceCategory>())}" });
-            }
+            return BadRequest(new { message = $"Invalid category '{category}'. Valid categories are: {string.Join(", ", Enum.GetNames<PreferenceCategory>())}" });
+        }
 
-            var userId = GetCurrentUserId();
-            var result = await _userPreferenceService.DeletePreferenceAsync(userId, categoryEnum, key, cancellationToken);
-            
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var result = await _userPreferenceService.DeletePreferenceAsync(userId, categoryEnum, key, cancellationToken);
+        
+        return Ok(result);
     }
 
     /// <summary>
@@ -462,17 +357,10 @@ public class UserProfileController : BaseController
     [ProducesResponseType(404)]
     public async Task<IActionResult> ClearPreferences(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var result = await _userPreferenceService.ClearPreferencesAsync(userId, cancellationToken);
-            
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var userId = GetCurrentUserId();
+        var result = await _userPreferenceService.ClearPreferencesAsync(userId, cancellationToken);
+        
+        return Ok(result);
     }
 
     #endregion
@@ -486,29 +374,20 @@ public class UserProfileController : BaseController
     [ProducesResponseType(typeof(object), 401)]
     public async Task<IActionResult> SetPreferredUnits([FromBody] SetPreferredUnitsRequest request, CancellationToken cancellationToken = default)
     {
-        try
+        var userId = GetCurrentUserId();
+        
+        var unitsPreferences = new Dictionary<PreferenceCategory, IDictionary<string, string?>>
         {
-            var userId = GetCurrentUserId();
-            
-            var unitsPreferences = new Dictionary<PreferenceCategory, IDictionary<string, string?>>
+            [PreferenceCategory.Units] = new Dictionary<string, string?>
             {
-                [PreferenceCategory.Units] = new Dictionary<string, string?>
-                {
-                    ["height_unit"] = request.HeightUnit,
-                    ["weight_unit"] = request.WeightUnit
-                }
-            };
+                ["height_unit"] = request.HeightUnit,
+                ["weight_unit"] = request.WeightUnit
+            }
+        };
 
-            var updateRequest = new UpdatePreferencesRequest(unitsPreferences);
-            var preferences = await _userPreferenceService.UpdatePreferencesAsync(userId, updateRequest, cancellationToken);
-            
-            return Ok(preferences);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updateRequest = new UpdatePreferencesRequest(unitsPreferences);
+        var preferences = await _userPreferenceService.UpdatePreferencesAsync(userId, updateRequest, cancellationToken);
+        
+        return Ok(preferences);
     }
-
-
 }
