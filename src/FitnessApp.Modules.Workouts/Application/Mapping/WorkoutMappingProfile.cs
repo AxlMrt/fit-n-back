@@ -23,14 +23,13 @@ public class WorkoutMappingProfile : Profile
                 src.Name,
                 src.Type,
                 src.Category,
-                src.Difficulty,
-                src.EstimatedDurationMinutes))
-            .ForMember(dest => dest.Phases, opt => opt.Ignore()) // Ignore read-only collection
+                src.Difficulty))
+            .ForMember(dest => dest.Phases, opt => opt.Ignore())
             .AfterMap((src, dest, ctx) =>
             {
                 if (!string.IsNullOrWhiteSpace(src.Description))
                 {
-                    dest.UpdateDetails(dest.Name, src.Description);
+                    dest.UpdateDetails(dest.Name, src.Description, dest.Difficulty);
                 }
             });
 
@@ -51,9 +50,8 @@ public class WorkoutMappingProfile : Profile
             .ConstructUsing((src, ctx) => new WorkoutPhase(
                 src.Type,
                 src.Name,
-                src.EstimatedDurationMinutes,
-                1)) // Order will be set properly later
-            .ForMember(dest => dest.Exercises, opt => opt.Ignore()); // Ignore read-only collection
+                1))
+            .ForMember(dest => dest.Exercises, opt => opt.Ignore());
 
         // Entity to Response mappings
         CreateMap<WorkoutPhase, WorkoutPhaseDto>();
@@ -71,7 +69,7 @@ public class WorkoutMappingProfile : Profile
                 src.Distance,
                 src.Weight,
                 src.RestTimeSeconds,
-                1)); // Order will be set properly later
+                1));
 
         // Entity to Response mappings
         CreateMap<WorkoutExercise, WorkoutExerciseDto>();

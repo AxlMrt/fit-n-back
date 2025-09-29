@@ -21,9 +21,8 @@ public sealed record CreateWorkoutDto
     [Required]
     public DifficultyLevel Difficulty { get; init; }
 
-    [Range(1, 300)]
-    public required int EstimatedDurationMinutes { get; init; }
-
+    // ✅ EstimatedDurationMinutes supprimé - Calculé automatiquement backend
+    
     public Guid? ImageContentId { get; init; }
 
     public List<CreateWorkoutPhaseDto> Phases { get; init; } = [];
@@ -41,8 +40,7 @@ public sealed record CreateWorkoutPhaseDto
     [StringLength(500)]
     public string? Description { get; init; }
 
-    [Range(1, 120)]
-    public required int EstimatedDurationMinutes { get; init; }
+    // ✅ EstimatedDurationMinutes supprimé - Calculé automatiquement via exercices
 
     public List<CreateWorkoutExerciseDto> Exercises { get; init; } = [];
 }
@@ -88,8 +86,7 @@ public sealed record UpdateWorkoutDto
 
     public DifficultyLevel? Difficulty { get; init; }
 
-    [Range(1, 300)]
-    public int? EstimatedDurationMinutes { get; init; }
+    // ✅ EstimatedDurationMinutes supprimé - Recalculé automatiquement
 
     public Guid? ImageContentId { get; init; }
 }
@@ -106,9 +103,7 @@ public sealed record AddWorkoutPhaseDto
     [StringLength(500)]
     public string? Description { get; init; }
 
-    [Required]
-    [Range(1, 180)]
-    public required int EstimatedDurationMinutes { get; init; }
+    // ✅ EstimatedDurationMinutes supprimé - Calculé automatiquement
 }
 
 public sealed record UpdateWorkoutPhaseDto
@@ -119,8 +114,7 @@ public sealed record UpdateWorkoutPhaseDto
     [StringLength(500)]
     public string? Description { get; init; }
 
-    [Range(1, 180)]
-    public int? EstimatedDurationMinutes { get; init; }
+    // ✅ EstimatedDurationMinutes supprimé - Recalculé automatiquement
 }
 
 public sealed record AddWorkoutExerciseDto

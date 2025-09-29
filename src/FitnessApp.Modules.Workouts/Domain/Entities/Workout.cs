@@ -14,8 +14,7 @@ public class Workout
         string name,
         WorkoutType type,
         WorkoutCategory category,
-        DifficultyLevel difficulty,
-        int estimatedDurationMinutes)
+        DifficultyLevel difficulty)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw WorkoutDomainException.NameRequired();
@@ -23,15 +22,12 @@ public class Workout
         if (name.Length > 200)
             throw WorkoutDomainException.NameTooLong(200);
 
-        if (estimatedDurationMinutes <= 0 || estimatedDurationMinutes > 300)
-            throw WorkoutDomainException.InvalidDurationRange(1, 300);
-
         Id = Guid.NewGuid();
         Name = name.Trim();
         Type = type;
         Category = category;
         Difficulty = difficulty;
-        EstimatedDurationMinutes = estimatedDurationMinutes;
+        EstimatedDurationMinutes = 1;
         CreatedAt = DateTime.UtcNow;
         IsActive = true;
     }
@@ -65,14 +61,19 @@ public class Workout
 
     #region Phase Management
 
-    public void AddPhase(WorkoutPhaseType type, string name, int estimatedDurationMinutes)
+    // ✅ Méthode moderne - Durée calculée automatiquement
+    /// <summary>
+    /// Adds a new phase to the workout with automatic duration calculation
+    /// </summary>
+    public void AddPhase(WorkoutPhaseType type, string name)
     {
         if (_phases.Any(p => p.Type == type))
             throw WorkoutDomainException.DuplicatePhase(type.ToString());
 
         var nextOrder = _phases.Count + 1;
-        var phase = new WorkoutPhase(type, name, estimatedDurationMinutes, nextOrder);
+        var phase = new WorkoutPhase(type, name, nextOrder);
         _phases.Add(phase);
+        RecalculateWorkoutDuration();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -84,6 +85,7 @@ public class Workout
 
         _phases.Remove(phase);
         UpdatePhaseOrders();
+        RecalculateWorkoutDuration();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -142,11 +144,13 @@ public class Workout
 
     #region Update Methods
 
+    /// <summary>
+    /// Updates workout details with automatic duration recalculation
+    /// </summary>
     public void UpdateDetails(
         string name,
         string? description = null,
-        DifficultyLevel? difficulty = null,
-        int? estimatedDurationMinutes = null)
+        DifficultyLevel? difficulty = null)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -159,13 +163,6 @@ public class Workout
 
         if (difficulty.HasValue)
             Difficulty = difficulty.Value;
-
-        if (estimatedDurationMinutes.HasValue)
-        {
-            if (estimatedDurationMinutes.Value <= 0 || estimatedDurationMinutes.Value > 300)
-                throw WorkoutDomainException.InvalidDurationRange(1, 300);
-            EstimatedDurationMinutes = estimatedDurationMinutes.Value;
-        }
 
         UpdatedAt = DateTime.UtcNow;
     }
@@ -199,8 +196,22 @@ public class Workout
         if (!_phases.Any())
             return 1; // Minimum 1 minute if no phases
 
-        var totalMinutes = _phases.Sum(p => p.EstimatedDurationMinutes);
+        var totalMinutes = _phases.Sum(p => p.CalculateEstimatedTotalMinutes());
         return Math.Max(1, totalMinutes); // Ensure at least 1 minute
+    }
+
+    /// <summary>
+    /// Automatically recalculates the total workout duration based on phases and exercises
+    /// </summary>
+    public void RecalculateWorkoutDuration()
+    {
+        foreach (var phase in _phases)
+        {
+            phase.RecalculateDuration();
+        }
+
+        EstimatedDurationMinutes = CalculateActualDurationMinutes();
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void SetType(WorkoutType type)
@@ -223,10 +234,9 @@ public class Workout
         string name,
         WorkoutCategory category,
         DifficultyLevel difficulty,
-        int estimatedDurationMinutes,
         Guid userId)
     {
-        var workout = new Workout(name, WorkoutType.UserCreated, category, difficulty, estimatedDurationMinutes);
+        var workout = new Workout(name, WorkoutType.UserCreated, category, difficulty);
         workout.CreatedByUserId = userId;
         return workout;
     }
@@ -235,10 +245,9 @@ public class Workout
         string name,
         WorkoutCategory category,
         DifficultyLevel difficulty,
-        int estimatedDurationMinutes,
         Guid coachId)
     {
-        var workout = new Workout(name, WorkoutType.Template, category, difficulty, estimatedDurationMinutes);
+        var workout = new Workout(name, WorkoutType.Template, category, difficulty);
         workout.CreatedByCoachId = coachId;
         return workout;
     }
@@ -246,20 +255,18 @@ public class Workout
     public static Workout CreatePresetWorkout(
         string name,
         WorkoutCategory category,
-        DifficultyLevel difficulty,
-        int estimatedDurationMinutes)
+        DifficultyLevel difficulty)
     {
-        return new Workout(name, WorkoutType.Template, category, difficulty, estimatedDurationMinutes);
+        return new Workout(name, WorkoutType.Template, category, difficulty);
     }
 
     public static Workout CreateAIGeneratedWorkout(
         string name,
         WorkoutCategory category,
         DifficultyLevel difficulty,
-        int estimatedDurationMinutes,
         Guid userId)
     {
-        var workout = new Workout(name, WorkoutType.AIGenerated, category, difficulty, estimatedDurationMinutes);
+        var workout = new Workout(name, WorkoutType.AIGenerated, category, difficulty);
         workout.CreatedByUserId = userId;
         return workout;
     }

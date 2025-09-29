@@ -99,7 +99,7 @@ public class ExerciseServiceTests
     public async Task GetByIdAsync_WithEmptyId_ShouldThrowArgumentException()
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<ExerciseDomainException>(
             () => _service.GetByIdAsync(Guid.Empty));
         Assert.Contains("Exercise ID cannot be empty", exception.Message);
     }
@@ -149,7 +149,7 @@ public class ExerciseServiceTests
     public async Task GetByNameAsync_WithInvalidName_ShouldThrowArgumentException(string invalidName)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<ExerciseDomainException>(
             () => _service.GetByNameAsync(invalidName));
         Assert.Contains("Exercise name cannot be empty", exception.Message);
     }

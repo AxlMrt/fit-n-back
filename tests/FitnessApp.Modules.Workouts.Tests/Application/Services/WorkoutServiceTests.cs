@@ -41,7 +41,6 @@ public class WorkoutServiceTests
             Type = WorkoutType.Template, // Should be overridden to UserCreated
             Category = WorkoutCategory.Strength,
             Difficulty = DifficultyLevel.Intermediate,
-            EstimatedDurationMinutes = 45,
             Phases = []
         };
 
@@ -89,7 +88,6 @@ public class WorkoutServiceTests
             Type = WorkoutType.UserCreated, // Should be overridden to Template
             Category = WorkoutCategory.Strength,
             Difficulty = DifficultyLevel.Intermediate,
-            EstimatedDurationMinutes = 45,
             Phases = []
         };
 
@@ -101,7 +99,7 @@ public class WorkoutServiceTests
             Type: WorkoutType.Template,
             Category: createDto.Category,
             Difficulty: createDto.Difficulty,
-            EstimatedDurationMinutes: createDto.EstimatedDurationMinutes,
+            EstimatedDurationMinutes: 8, // Default duration will be calculated
             ImageContentId: null,
             IsActive: true,
             PhaseCount: 0,
@@ -190,8 +188,7 @@ public class WorkoutServiceTests
             Name = "Updated Workout",
             Description = "Updated description",
             Type = WorkoutType.UserCreated,
-            Difficulty = DifficultyLevel.Advanced,
-            EstimatedDurationMinutes = 60
+            Difficulty = DifficultyLevel.Advanced
         };
 
         var existingWorkout = CreateTestUserWorkout(userId);
@@ -242,8 +239,7 @@ public class WorkoutServiceTests
             Name = "Admin Updated Workout",
             Description = "Admin updated description",
             Type = WorkoutType.Template,
-            Difficulty = DifficultyLevel.Expert,
-            EstimatedDurationMinutes = 90
+            Difficulty = DifficultyLevel.Expert
         };
 
         var existingWorkout = CreateTestWorkout();
@@ -666,8 +662,7 @@ public class WorkoutServiceTests
             "Test Workout",
             WorkoutType.Template,
             WorkoutCategory.Mixed,
-            DifficultyLevel.Intermediate,
-            45
+            DifficultyLevel.Intermediate
         );
     }
 
@@ -677,8 +672,7 @@ public class WorkoutServiceTests
             "Test User Workout",
             WorkoutType.UserCreated,
             WorkoutCategory.Mixed,
-            DifficultyLevel.Intermediate,
-            45
+            DifficultyLevel.Intermediate
         );
         workout.SetCreatedBy(userId);
         return workout;

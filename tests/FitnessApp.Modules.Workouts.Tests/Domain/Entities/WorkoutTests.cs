@@ -15,10 +15,9 @@ public class WorkoutTests
         var type = WorkoutType.Template;
         var category = WorkoutCategory.Cardio;
         var difficulty = DifficultyLevel.Intermediate;
-        var estimatedDuration = 45;
 
         // Act
-        var workout = new Workout(name, type, category, difficulty, estimatedDuration);
+        var workout = new Workout(name, type, category, difficulty);
 
         // Assert
         workout.Should().NotBeNull();
@@ -26,7 +25,7 @@ public class WorkoutTests
         workout.Type.Should().Be(type);
         workout.Category.Should().Be(category);
         workout.Difficulty.Should().Be(difficulty);
-        workout.EstimatedDurationMinutes.Should().Be(estimatedDuration);
+        workout.EstimatedDurationMinutes.Should().BeGreaterThan(0);
         workout.IsActive.Should().BeTrue();
         workout.Phases.Should().BeEmpty();
     }
@@ -37,18 +36,7 @@ public class WorkoutTests
     public void Workout_Creation_ShouldThrowException_WithInvalidName(string invalidName)
     {
         // Arrange & Act & Assert
-        var act = () => new Workout(invalidName, WorkoutType.Template, WorkoutCategory.Cardio, DifficultyLevel.Beginner, 30);
-        act.Should().Throw<WorkoutDomainException>();
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(301)]
-    public void Workout_Creation_ShouldThrowException_WithInvalidDuration(int invalidDuration)
-    {
-        // Arrange & Act & Assert
-        var act = () => new Workout("Test", WorkoutType.Template, WorkoutCategory.Cardio, DifficultyLevel.Beginner, invalidDuration);
+        var act = () => new Workout(invalidName, WorkoutType.Template, WorkoutCategory.Cardio, DifficultyLevel.Beginner);
         act.Should().Throw<WorkoutDomainException>();
     }
 
@@ -60,16 +48,14 @@ public class WorkoutTests
         var newName = "Updated Workout";
         var newDescription = "Updated description";
         var newDifficulty = DifficultyLevel.Advanced;
-        var newDuration = 60;
 
         // Act
-        workout.UpdateDetails(newName, newDescription, newDifficulty, newDuration);
+        workout.UpdateDetails(newName, newDescription, newDifficulty);
 
         // Assert
         workout.Name.Should().Be(newName);
         workout.Description.Should().Be(newDescription);
         workout.Difficulty.Should().Be(newDifficulty);
-        workout.EstimatedDurationMinutes.Should().Be(newDuration);
     }
 
     [Fact]
@@ -79,14 +65,14 @@ public class WorkoutTests
         var workout = CreateValidWorkout();
 
         // Act
-        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", 10);
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up");
 
         // Assert
         workout.Phases.Should().HaveCount(1);
         var phase = workout.Phases.First();
         phase.Type.Should().Be(WorkoutPhaseType.WarmUp);
         phase.Name.Should().Be("Warm Up");
-        phase.EstimatedDurationMinutes.Should().Be(10);
+        phase.EstimatedDurationMinutes.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -94,10 +80,10 @@ public class WorkoutTests
     {
         // Arrange
         var workout = CreateValidWorkout();
-        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", 10);
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up");
 
         // Act & Assert
-        var act = () => workout.AddPhase(WorkoutPhaseType.WarmUp, "Another Warm Up", 5);
+        var act = () => workout.AddPhase(WorkoutPhaseType.WarmUp, "Another Warm Up");
         act.Should().Throw<WorkoutDomainException>();
     }
 
@@ -106,7 +92,7 @@ public class WorkoutTests
     {
         // Arrange
         var workout = CreateValidWorkout();
-        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up", 10);
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Warm Up");
 
         // Act
         workout.RemovePhase(WorkoutPhaseType.WarmUp);
@@ -131,9 +117,9 @@ public class WorkoutTests
     {
         // Arrange
         var workout = CreateValidWorkout();
-        workout.AddPhase(WorkoutPhaseType.WarmUp, "Phase 1", 10);
-        workout.AddPhase(WorkoutPhaseType.MainEffort, "Phase 2", 20);
-        workout.AddPhase(WorkoutPhaseType.Stretching, "Phase 3", 10);
+        workout.AddPhase(WorkoutPhaseType.WarmUp, "Phase 1");
+        workout.AddPhase(WorkoutPhaseType.MainEffort, "Phase 2");
+        workout.AddPhase(WorkoutPhaseType.Stretching, "Phase 3");
 
         // Act
         workout.MovePhase(WorkoutPhaseType.Stretching, 1);
@@ -207,18 +193,17 @@ public class WorkoutTests
         // Arrange
         var name = "User Workout";
         var difficulty = DifficultyLevel.Beginner;
-        var duration = 30;
         var userId = Guid.NewGuid();
 
         // Act
-        var workout = Workout.CreateUserWorkout(name, WorkoutCategory.Strength, difficulty, duration, userId);
+        var workout = Workout.CreateUserWorkout(name, WorkoutCategory.Strength, difficulty, userId);
 
         // Assert
         workout.Should().NotBeNull();
         workout.Name.Should().Be(name);
         workout.Type.Should().Be(WorkoutType.UserCreated);
         workout.Difficulty.Should().Be(difficulty);
-        workout.EstimatedDurationMinutes.Should().Be(duration);
+        workout.EstimatedDurationMinutes.Should().BeGreaterThan(0);
         workout.CreatedByUserId.Should().Be(userId);
         workout.CreatedByCoachId.Should().BeNull();
     }
@@ -229,11 +214,10 @@ public class WorkoutTests
         // Arrange
         var name = "Coach Workout";
         var difficulty = DifficultyLevel.Advanced;
-        var duration = 60;
         var coachId = Guid.NewGuid();
 
         // Act
-        var workout = Workout.CreateCoachWorkout(name, WorkoutCategory.HIIT, difficulty, duration, coachId);
+        var workout = Workout.CreateCoachWorkout(name, WorkoutCategory.HIIT, difficulty, coachId);
 
         // Assert
         workout.Should().NotBeNull();
@@ -241,7 +225,7 @@ public class WorkoutTests
         workout.Type.Should().Be(WorkoutType.Template);
         workout.Category.Should().Be(WorkoutCategory.HIIT);
         workout.Difficulty.Should().Be(difficulty);
-        workout.EstimatedDurationMinutes.Should().Be(duration);
+        workout.EstimatedDurationMinutes.Should().BeGreaterThan(0);
         workout.CreatedByCoachId.Should().Be(coachId);
         workout.CreatedByUserId.Should().BeNull();
     }
@@ -252,8 +236,7 @@ public class WorkoutTests
             "Test Workout",
             WorkoutType.Template,
             WorkoutCategory.Mixed,
-            DifficultyLevel.Intermediate,
-            45
+            DifficultyLevel.Intermediate
         );
     }
 }

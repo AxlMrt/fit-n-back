@@ -7,9 +7,11 @@ namespace FitnessApp.Modules.Workouts.Domain.Entities;
 /// </summary>
 public class WorkoutExercise
 {
-    private WorkoutExercise() { } // For EF Core
+    private WorkoutExercise() { }
 
-    // Constructeur principal avec tous les paramètres (nouvelle logique)
+    /// <summary>
+    /// Main constructor with all exercise parameters
+    /// </summary>
     public WorkoutExercise(
         Guid exerciseId, 
         int? sets = null,
@@ -29,23 +31,18 @@ public class WorkoutExercise
         if (restSeconds.HasValue && restSeconds.Value < 0)
             throw WorkoutDomainException.NegativeRestTime();
 
-        // Validation: au moins un paramètre d'effort doit être spécifié
         if (!sets.HasValue && !reps.HasValue && !durationSeconds.HasValue && !distance.HasValue)
             throw WorkoutDomainException.NoExerciseParameters();
 
-        // Validation pour les exercices basés sur répétitions
         if ((sets.HasValue || reps.HasValue) && (sets <= 0 || reps <= 0))
             throw WorkoutDomainException.InvalidSetsReps();
 
-        // Validation pour la durée
         if (durationSeconds.HasValue && durationSeconds <= 0)
             throw WorkoutDomainException.InvalidDurationValue();
 
-        // Validation pour la distance
         if (distance.HasValue && distance <= 0)
             throw WorkoutDomainException.InvalidDistance();
 
-        // Validation pour le poids
         if (weight.HasValue && weight <= 0)
             throw WorkoutDomainException.InvalidWeight();
 
@@ -62,7 +59,9 @@ public class WorkoutExercise
         UpdatedAt = DateTime.UtcNow;
     }
 
-    // Constructeur de compatibilité pour les tests existants (ancienne logique)
+    /// <summary>
+    /// Compatibility constructor for existing tests
+    /// </summary>
     public WorkoutExercise(Guid exerciseId, int sets, int reps, int? restSeconds, int order)
     {
         if (exerciseId == Guid.Empty)
@@ -109,7 +108,9 @@ public class WorkoutExercise
 
     #region Update Methods
 
-    // Version surchargée pour la compatibilité avec les tests existants
+    /// <summary>
+    /// Overloaded method for compatibility with existing tests
+    /// </summary>
     public void UpdateParameters(int sets, int reps, int? restSeconds = null)
     {
         if (sets <= 0)
@@ -127,7 +128,9 @@ public class WorkoutExercise
         UpdatedAt = DateTime.UtcNow;
     }
 
-    // Version complète avec tous les paramètres
+    /// <summary>
+    /// Updates all exercise parameters with validation
+    /// </summary>
     public void UpdateAllParameters(int? sets = null, int? reps = null, int? durationSeconds = null, 
         double? distance = null, double? weight = null, int? restSeconds = null)
     {
@@ -139,15 +142,12 @@ public class WorkoutExercise
         if ((sets.HasValue || reps.HasValue) && (sets <= 0 || reps <= 0))
             throw WorkoutDomainException.InvalidSetsReps();
 
-        // Validation pour la durée
         if (durationSeconds.HasValue && durationSeconds <= 0)
             throw WorkoutDomainException.InvalidDurationValue();
 
-        // Validation pour la distance
         if (distance.HasValue && distance <= 0)
             throw WorkoutDomainException.InvalidDistance();
 
-        // Validation pour le poids
         if (weight.HasValue && weight <= 0)
             throw WorkoutDomainException.InvalidWeight();
             
@@ -186,33 +186,28 @@ public class WorkoutExercise
     /// </summary>
     public int EstimateTimeMinutes()
     {
-        // Si une durée spécifique est donnée, l'utiliser
         if (DurationSeconds.HasValue)
         {
             return Math.Max(1, (int)Math.Ceiling(DurationSeconds.Value / 60.0));
         }
 
-        // Si c'est un exercice basé sur la distance (ex: course)
         if (Distance.HasValue)
         {
-            // Estimer basé sur un rythme adaptatif selon la distance
             var distanceKm = Distance.Value / 1000.0;
             double paceMinPerKm = EstimateRunningPace(distanceKm);
             var estimatedTimeMinutes = distanceKm * paceMinPerKm;
             return Math.Max(1, (int)Math.Ceiling(estimatedTimeMinutes));
         }
 
-        // Si c'est un exercice basé sur sets/reps
         if (Sets.HasValue && Reps.HasValue)
         {
-            var executionTimeSeconds = Sets.Value * Reps.Value * 2; // 2 secondes par rep
-            var restTimeSeconds = RestSeconds ?? 45; // 45 secondes par défaut
+            var executionTimeSeconds = Sets.Value * Reps.Value * 2;
+            var restTimeSeconds = RestSeconds ?? 45;
             var totalRestTimeSeconds = (Sets.Value - 1) * restTimeSeconds;
             var totalSeconds = executionTimeSeconds + totalRestTimeSeconds;
             return Math.Max(1, (int)Math.Ceiling(totalSeconds / 60.0));
         }
 
-        // Par défaut, 1 minute minimum
         return 1;
     }
 
@@ -254,15 +249,14 @@ public class WorkoutExercise
     /// </summary>
     private static double EstimateRunningPace(double distanceKm)
     {
-        // Adaptation du rythme selon la distance (plus c'est long, plus le rythme ralentit)
         return distanceKm switch
         {
-            <= 1.0 => 5.5,    // Sprint/court : 5m30/km
-            <= 3.0 => 6.0,    // 1-3km : 6min/km  
-            <= 5.0 => 6.5,    // 3-5km : 6m30/km
-            <= 10.0 => 7.0,   // 5-10km : 7min/km
-            <= 21.0 => 7.5,   // 10-21km : 7m30/km
-            _ => 8.0           // Plus de 21km : 8min/km
+            <= 1.0 => 5.5,
+            <= 3.0 => 6.0,
+            <= 5.0 => 6.5,
+            <= 10.0 => 7.0,
+            <= 21.0 => 7.5,
+            _ => 8.0
         };
     }
 

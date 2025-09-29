@@ -38,10 +38,9 @@ public class WorkoutService : IWorkoutService
         workout.SetType(WorkoutType.UserCreated);
         workout.SetCreatedBy(userId);
         
-        // Add phases if provided
         foreach (var phaseDto in createWorkoutDto.Phases)
         {
-            workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
+            workout.AddPhase(phaseDto.Type, phaseDto.Name);
             
             var phase = workout.GetPhase(phaseDto.Type);
             if (phase != null)
@@ -52,10 +51,15 @@ public class WorkoutService : IWorkoutService
                         exerciseDto.ExerciseId,
                         exerciseDto.Sets,
                         exerciseDto.Reps,
-                        exerciseDto.DurationSeconds);
+                        exerciseDto.DurationSeconds,
+                        exerciseDto.Distance,
+                        exerciseDto.Weight,
+                        exerciseDto.RestTimeSeconds);
                 }
             }
         }
+
+        workout.RecalculateWorkoutDuration();
 
         var createdWorkout = await _workoutRepository.AddAsync(workout, cancellationToken);
         
@@ -80,8 +84,9 @@ public class WorkoutService : IWorkoutService
         workout.UpdateDetails(
             updateDto.Name ?? workout.Name,
             updateDto.Description,
-            updateDto.Difficulty,
-            updateDto.EstimatedDurationMinutes);
+            updateDto.Difficulty);
+
+        workout.RecalculateWorkoutDuration();
 
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         
@@ -160,10 +165,10 @@ public class WorkoutService : IWorkoutService
         var workout = _mapper.Map<Workout>(createWorkoutDto);
         workout.SetType(WorkoutType.Template);
         
-        // Add phases if provided
+        // ✅ Add phases if provided - Durée calculée automatiquement
         foreach (var phaseDto in createWorkoutDto.Phases)
         {
-            workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
+            workout.AddPhase(phaseDto.Type, phaseDto.Name); // Plus de durée manuelle
             
             var phase = workout.GetPhase(phaseDto.Type);
             if (phase != null)
@@ -197,8 +202,10 @@ public class WorkoutService : IWorkoutService
         workout.UpdateDetails(
             updateDto.Name ?? workout.Name,
             updateDto.Description,
-            updateDto.Difficulty,
-            updateDto.EstimatedDurationMinutes);
+            updateDto.Difficulty);
+
+        // ✅ Recalcul automatique de la durée après mise à jour
+        workout.RecalculateWorkoutDuration();
 
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         return _mapper.Map<WorkoutDto>(workout);
@@ -362,7 +369,7 @@ public class WorkoutService : IWorkoutService
 
         ValidateUserOwnership(workout, userId);
 
-        workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
+        workout.AddPhase(phaseDto.Type, phaseDto.Name); // ✅ Plus de durée manuelle
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         return _mapper.Map<WorkoutDto>(workout);
     }
@@ -379,7 +386,8 @@ public class WorkoutService : IWorkoutService
         if (phase == null)
             throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
-        phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description, updateDto.EstimatedDurationMinutes);
+        phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description); // ✅ Plus de durée manuelle
+        phase.RecalculateDuration(); // ✅ Recalcul automatique
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         return _mapper.Map<WorkoutDto>(workout);
     }
@@ -428,7 +436,7 @@ public class WorkoutService : IWorkoutService
         if (workout == null)
             throw WorkoutDomainException.WorkoutNotFound(workoutId);
 
-        workout.AddPhase(phaseDto.Type, phaseDto.Name, phaseDto.EstimatedDurationMinutes);
+        workout.AddPhase(phaseDto.Type, phaseDto.Name); // ✅ Plus de durée manuelle
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         return _mapper.Map<WorkoutDto>(workout);
     }
@@ -443,7 +451,8 @@ public class WorkoutService : IWorkoutService
         if (phase == null)
             throw WorkoutDomainException.PhaseNotFoundById(phaseId);
 
-        phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description, updateDto.EstimatedDurationMinutes);
+        phase.UpdateDetails(updateDto.Name ?? phase.Name, updateDto.Description); // ✅ Plus de durée manuelle
+        phase.RecalculateDuration(); // ✅ Recalcul automatique
         await _workoutRepository.UpdateAsync(workout, cancellationToken);
         return _mapper.Map<WorkoutDto>(workout);
     }
@@ -672,12 +681,12 @@ public class WorkoutService : IWorkoutService
             Type = originalWorkout.Type,
             Category = originalWorkout.Category,
             Difficulty = originalWorkout.Difficulty,
-            EstimatedDurationMinutes = originalWorkout.EstimatedDurationMinutes,
+            // ✅ EstimatedDurationMinutes supprimé - sera calculé automatiquement
             Phases = originalWorkout.Phases.Select(p => new CreateWorkoutPhaseDto
             {
                 Type = p.Type,
                 Name = p.Name,
-                EstimatedDurationMinutes = p.EstimatedDurationMinutes,
+                // ✅ EstimatedDurationMinutes supprimé - sera calculé automatiquement via exercices
                 Exercises = p.Exercises.Select(e => new CreateWorkoutExerciseDto
                 {
                     ExerciseId = e.ExerciseId,

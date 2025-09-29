@@ -13,17 +13,16 @@ public class WorkoutPhaseTests
         // Arrange
         var type = WorkoutPhaseType.WarmUp;
         var name = "Warm Up Phase";
-        var estimatedDuration = 10;
         var order = 1;
 
         // Act
-        var phase = new WorkoutPhase(type, name, estimatedDuration, order);
+        var phase = new WorkoutPhase(type, name, order);
 
         // Assert
         phase.Should().NotBeNull();
         phase.Type.Should().Be(type);
         phase.Name.Should().Be(name);
-        phase.EstimatedDurationMinutes.Should().Be(estimatedDuration);
+        phase.EstimatedDurationMinutes.Should().BeGreaterThan(0);
         phase.Order.Should().Be(order);
         phase.Exercises.Should().BeEmpty();
     }
@@ -34,18 +33,7 @@ public class WorkoutPhaseTests
     public void WorkoutPhase_Creation_ShouldThrowException_WithInvalidName(string invalidName)
     {
         // Arrange & Act & Assert
-        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, invalidName, 10, 1);
-        act.Should().Throw<WorkoutDomainException>();
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(181)]
-    public void WorkoutPhase_Creation_ShouldThrowException_WithInvalidDuration(int invalidDuration)
-    {
-        // Arrange & Act & Assert
-        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", invalidDuration, 1);
+        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, invalidName, 1);
         act.Should().Throw<WorkoutDomainException>();
     }
 
@@ -55,7 +43,7 @@ public class WorkoutPhaseTests
     public void WorkoutPhase_Creation_ShouldThrowException_WithInvalidOrder(int invalidOrder)
     {
         // Arrange & Act & Assert
-        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", 10, invalidOrder);
+        var act = () => new WorkoutPhase(WorkoutPhaseType.WarmUp, "Test", invalidOrder);
         act.Should().Throw<WorkoutDomainException>();
     }
 
@@ -66,15 +54,13 @@ public class WorkoutPhaseTests
         var phase = CreateValidPhase();
         var newName = "Updated Phase";
         var newDescription = "Updated description";
-        var newDuration = 15;
 
         // Act
-        phase.UpdateDetails(newName, newDescription, newDuration);
+        phase.UpdateDetails(newName, newDescription);
 
         // Assert
         phase.Name.Should().Be(newName);
         phase.Description.Should().Be(newDescription);
-        phase.EstimatedDurationMinutes.Should().Be(newDuration);
     }
 
     [Fact]
@@ -215,7 +201,6 @@ public class WorkoutPhaseTests
         return new WorkoutPhase(
             WorkoutPhaseType.MainEffort,
             "Test Phase",
-            30,
             1
         );
     }

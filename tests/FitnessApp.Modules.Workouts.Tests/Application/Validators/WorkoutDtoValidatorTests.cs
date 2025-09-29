@@ -1,5 +1,4 @@
 using FluentAssertions;
-using FluentValidation.TestHelper;
 using FitnessApp.SharedKernel.DTOs.Requests;
 using FitnessApp.SharedKernel.Enums;
 
@@ -21,7 +20,6 @@ public class CreateWorkoutDtoValidatorTests
             Type = WorkoutType.Template,
             Category = WorkoutCategory.Strength,
             Difficulty = DifficultyLevel.Intermediate,
-            EstimatedDurationMinutes = 45,
             Phases = []
         };
 
@@ -31,7 +29,6 @@ public class CreateWorkoutDtoValidatorTests
         dto.Type.Should().Be(WorkoutType.Template);
         dto.Category.Should().Be(WorkoutCategory.Strength);
         dto.Difficulty.Should().Be(DifficultyLevel.Intermediate);
-        dto.EstimatedDurationMinutes.Should().Be(45);
         dto.Phases.Should().BeEmpty();
     }
 
@@ -45,7 +42,6 @@ public class CreateWorkoutDtoValidatorTests
             Type = WorkoutType.UserCreated,
             Category = WorkoutCategory.Mixed,
             Difficulty = DifficultyLevel.Intermediate,
-            EstimatedDurationMinutes = 60,
             Phases = new List<CreateWorkoutPhaseDto>
             {
                 new CreateWorkoutPhaseDto
@@ -53,7 +49,6 @@ public class CreateWorkoutDtoValidatorTests
                     Type = WorkoutPhaseType.WarmUp,
                     Name = "Warm Up",
                     Description = "Preparation phase",
-                    EstimatedDurationMinutes = 10,
                     Exercises = []
                 },
                 new CreateWorkoutPhaseDto
@@ -61,7 +56,6 @@ public class CreateWorkoutDtoValidatorTests
                     Type = WorkoutPhaseType.MainEffort,
                     Name = "Main Workout",
                     Description = "Main effort phase",
-                    EstimatedDurationMinutes = 40,
                     Exercises = [
                         new CreateWorkoutExerciseDto
                         {
@@ -76,7 +70,6 @@ public class CreateWorkoutDtoValidatorTests
                     Type = WorkoutPhaseType.Stretching,
                     Name = "Cool Down",
                     Description = "Recovery phase",
-                    EstimatedDurationMinutes = 10,
                     Exercises = []
                 }
             }
@@ -101,8 +94,7 @@ public class UpdateWorkoutDtoValidatorTests
             Name = "Updated Name",
             Description = null, // Allows null for optional updates
             Type = null,
-            Difficulty = DifficultyLevel.Advanced,
-            EstimatedDurationMinutes = null
+            Difficulty = DifficultyLevel.Advanced
         };
 
         // Act & Assert
@@ -111,7 +103,6 @@ public class UpdateWorkoutDtoValidatorTests
         dto.Description.Should().BeNull();
         dto.Type.Should().BeNull();
         dto.Difficulty.Should().Be(DifficultyLevel.Advanced);
-        dto.EstimatedDurationMinutes.Should().BeNull();
     }
 }
 
@@ -176,8 +167,7 @@ public class AddWorkoutPhaseDtoValidatorTests
         {
             Type = WorkoutPhaseType.WarmUp,
             Name = "Warm Up Phase",
-            Description = "Preparation phase",
-            EstimatedDurationMinutes = 10
+            Description = "Preparation phase"
         };
 
         // Act & Assert
@@ -185,7 +175,6 @@ public class AddWorkoutPhaseDtoValidatorTests
         dto.Type.Should().Be(WorkoutPhaseType.WarmUp);
         dto.Name.Should().Be("Warm Up Phase");
         dto.Description.Should().Be("Preparation phase");
-        dto.EstimatedDurationMinutes.Should().Be(10);
     }
 }
 
