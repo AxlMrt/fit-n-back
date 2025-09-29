@@ -1,8 +1,8 @@
 using FitnessApp.IntegrationTests.Infrastructure;
+using FitnessApp.IntegrationTests.Helpers;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 
 namespace FitnessApp.IntegrationTests.Tests.Tracking;
 
@@ -23,19 +23,9 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var requestJson = """
-        {
-            "metricType": "Weight",
-            "value": 75.5,
-            "recordedAt": "2024-09-01T08:00:00Z",
-            "notes": "After morning workout",
-            "unit": "kg"
-        }
-        """;
-
         // Act
-        var response = await Client.PostAsync("/api/v1/tracking/metrics",
-            new StringContent(requestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+            ApiJsonTemplates.CreateUserMetric("Weight", 75.5, "kg", "2024-09-01T08:00:00Z", "After morning workout").ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -53,17 +43,8 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         // Arrange - Create a metric first
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "metricType": "Height",
-            "value": 175.0,
-            "notes": "Initial measurement",
-            "unit": "cm"
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/tracking/metrics",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+            ApiJsonTemplates.CreateHeightMetric(175.0, "Initial measurement").ToStringContent());
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var createContent = await createResponse.Content.ReadAsStringAsync();
@@ -71,16 +52,8 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         var metricId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Act - Update the metric
-        var updateRequestJson = """
-        {
-            "metricType": "Height",
-            "value": 176.5,
-            "notes": "Updated measurement after growth"
-        }
-        """;
-
-        var updateResponse = await Client.PutAsync($"/api/v1/tracking/metrics/{metricId}",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var updateResponse = await Client.PutAsync(ApiEndpoints.Tracking.UpdateMetric(Guid.Parse(metricId!)),
+            ApiJsonTemplates.UpdateUserMetric("Height", 176.5, "Updated measurement after growth").ToStringContent());
 
         // Assert
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -98,30 +71,17 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
 
         var metrics = new[]
         {
-            """
-            {
-                "metricType": "Weight",
-                "value": 75.0,
-                "unit": "kg"
-            }
-            """,
-            """
-            {
-                "metricType": "Height", 
-                "value": 175.0,
-                "unit": "cm"
-            }
-            """
+            ApiJsonTemplates.CreateWeightMetric(75.0),
+            ApiJsonTemplates.CreateHeightMetric(175.0)
         };
 
         foreach (var metricJson in metrics)
         {
-            await Client.PostAsync("/api/v1/tracking/metrics",
-                new StringContent(metricJson, Encoding.UTF8, "application/json"));
+            await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric, metricJson.ToStringContent());
         }
 
         // Act
-        var response = await Client.GetAsync("/api/v1/tracking/metrics");
+        var response = await Client.GetAsync(ApiEndpoints.Tracking.GetMetrics);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -141,37 +101,18 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
 
         var metrics = new[]
         {
-            """
-            {
-                "metricType": "Weight",
-                "value": 75.0,
-                "recordedAt": "2024-09-01T08:00:00Z"
-            }
-            """,
-            """
-            {
-                "metricType": "Weight",
-                "value": 74.5,
-                "recordedAt": "2024-09-02T08:00:00Z"
-            }
-            """,
-            """
-            {
-                "metricType": "Height",
-                "value": 175.0,
-                "recordedAt": "2024-09-02T08:00:00Z"
-            }
-            """
+            ApiJsonTemplates.CreateUserMetric("Weight", 75.0, recordedAt: "2024-09-01T08:00:00Z"),
+            ApiJsonTemplates.CreateUserMetric("Weight", 74.5, recordedAt: "2024-09-02T08:00:00Z"),
+            ApiJsonTemplates.CreateUserMetric("Height", 175.0, recordedAt: "2024-09-02T08:00:00Z")
         };
 
         foreach (var metricJson in metrics)
         {
-            await Client.PostAsync("/api/v1/tracking/metrics",
-                new StringContent(metricJson, Encoding.UTF8, "application/json"));
+            await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric, metricJson.ToStringContent());
         }
 
         // Act
-        var response = await Client.GetAsync("/api/v1/tracking/metrics/Weight");
+        var response = await Client.GetAsync(ApiEndpoints.Tracking.GetMetricsByType("Weight"));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -194,37 +135,18 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
 
         var metrics = new[]
         {
-            """
-            {
-                "metricType": "Weight",
-                "value": 76.0,
-                "recordedAt": "2024-08-28T08:00:00Z"
-            }
-            """,
-            """
-            {
-                "metricType": "Weight",
-                "value": 75.5,
-                "recordedAt": "2024-08-30T08:00:00Z"
-            }
-            """,
-            """
-            {
-                "metricType": "Weight",
-                "value": 75.8,
-                "recordedAt": "2024-08-26T08:00:00Z"
-            }
-            """
+            ApiJsonTemplates.CreateUserMetric("Weight", 76.0, recordedAt: "2024-08-28T08:00:00Z"),
+            ApiJsonTemplates.CreateUserMetric("Weight", 75.5, recordedAt: "2024-08-30T08:00:00Z"),
+            ApiJsonTemplates.CreateUserMetric("Weight", 75.8, recordedAt: "2024-08-26T08:00:00Z")
         };
 
         foreach (var metricJson in metrics)
         {
-            await Client.PostAsync("/api/v1/tracking/metrics",
-                new StringContent(metricJson, Encoding.UTF8, "application/json"));
+            await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric, metricJson.ToStringContent());
         }
 
         // Act
-        var response = await Client.GetAsync("/api/v1/tracking/metrics/Weight/latest");
+        var response = await Client.GetAsync(ApiEndpoints.Tracking.GetLatestMetric("Weight"));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -241,16 +163,10 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         // Arrange - Create a metric first
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "metricType": "Weight",
-            "value": 75.0,
-            "notes": "To be deleted"
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserMetric("Weight", 75.0, notes: "To be deleted");
 
-        var createResponse = await Client.PostAsync("/api/v1/tracking/metrics",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+            createRequestJson.ToStringContent());
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var createContent = await createResponse.Content.ReadAsStringAsync();
@@ -258,13 +174,13 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         var metricId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Act
-        var deleteResponse = await Client.DeleteAsync($"/api/v1/tracking/metrics/{metricId}");
+        var deleteResponse = await Client.DeleteAsync(ApiEndpoints.Tracking.DeleteMetric(Guid.Parse(metricId!)));
 
         // Assert
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify the metric is deleted by trying to get it
-        var getResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Tracking.GetMetrics);
         var getContent = await getResponse.Content.ReadAsStringAsync();
         
         getContent.Should().NotContain("\"notes\":\"To be deleted\"");
@@ -278,46 +194,22 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
 
         var metrics = new[]
         {
-            """
-            {
-                "metricType": "Weight",
-                "value": 75.0,
-                "unit": "kg"
-            }
-            """,
-            """
-            {
-                "metricType": "Weight",
-                "value": 165.3,
-                "unit": "lbs"
-            }
-            """,
-            """
-            {
-                "metricType": "Height",
-                "value": 175.0,
-                "unit": "cm"
-            }
-            """,
-            """
-            {
-                "metricType": "Height",
-                "value": 68.9,
-                "unit": "in"
-            }
-            """
+            ApiJsonTemplates.CreateUserMetric("Weight", 75.0, unit: "kg"),
+            ApiJsonTemplates.CreateUserMetric("Weight", 165.3, unit: "lbs"),
+            ApiJsonTemplates.CreateUserMetric("Height", 175.0, unit: "cm"),
+            ApiJsonTemplates.CreateUserMetric("Height", 68.9, unit: "in")
         };
 
         // Act
         foreach (var metricJson in metrics)
         {
-            var response = await Client.PostAsync("/api/v1/tracking/metrics",
-                new StringContent(metricJson, Encoding.UTF8, "application/json"));
+            var response = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+                metricJson.ToStringContent());
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
         // Assert
-        var getResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Tracking.GetMetrics);
         var content = await getResponse.Content.ReadAsStringAsync();
         
         content.Should().Contain("\"unit\":\"kg\"");
@@ -362,16 +254,11 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         var nonExistentId = Guid.NewGuid();
-        var updateRequestJson = """
-        {
-            "metricType": "Weight",
-            "value": 75.0
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdateUserMetric("Weight", 75.0);
 
         // Act
-        var response = await Client.PutAsync($"/api/v1/tracking/metrics/{nonExistentId}",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PutAsync(ApiEndpoints.Tracking.UpdateMetric(nonExistentId),
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -384,7 +271,7 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         // Act
-        var response = await Client.GetAsync("/api/v1/tracking/metrics/PersonalRecord/latest");
+        var response = await Client.GetAsync(ApiEndpoints.Tracking.GetLatestMetric("PersonalRecord"));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -399,7 +286,7 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var response = await Client.DeleteAsync($"/api/v1/tracking/metrics/{nonExistentId}");
+        var response = await Client.DeleteAsync(ApiEndpoints.Tracking.DeleteMetric(nonExistentId));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -414,16 +301,11 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
     {
         // Arrange - No authentication
 
-        var requestJson = """
-        {
-            "metricType": "Weight",
-            "value": 75.0
-        }
-        """;
+        var requestJson = ApiJsonTemplates.CreateUserMetric("Weight", 75.0);
 
         // Act
-        var response = await Client.PostAsync("/api/v1/tracking/metrics",
-            new StringContent(requestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+            requestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -433,7 +315,7 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
     public async Task GetUserMetrics_WithoutAuthentication_ShouldReturnUnauthorized()
     {
         // Act
-        var response = await Client.GetAsync("/api/v1/tracking/metrics");
+        var response = await Client.GetAsync(ApiEndpoints.Tracking.GetMetrics);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -450,16 +332,10 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         // Act & Assert 1: Create initial metric
-        var createRequestJson = """
-        {
-            "metricType": "Weight",
-            "value": 80.0,
-            "notes": "Starting weight"
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserMetric("Weight", 80.0, notes: "Starting weight");
 
-        var createResponse = await Client.PostAsync("/api/v1/tracking/metrics",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+            createRequestJson.ToStringContent());
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var createContent = await createResponse.Content.ReadAsStringAsync();
@@ -467,21 +343,15 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         var metricId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Act & Assert 2: Update the metric
-        var updateRequestJson = """
-        {
-            "metricType": "Weight",
-            "value": 78.5,
-            "notes": "Week 2 progress"
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdateUserMetric("Weight", 78.5, notes: "Week 2 progress");
 
-        var updateResponse = await Client.PutAsync($"/api/v1/tracking/metrics/{metricId}",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var updateResponse = await Client.PutAsync(ApiEndpoints.Tracking.UpdateMetric(Guid.Parse(metricId!)),
+            updateRequestJson.ToStringContent());
 
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Act & Assert 3: Get latest metric
-        var latestResponse = await Client.GetAsync("/api/v1/tracking/metrics/Weight/latest");
+        var latestResponse = await Client.GetAsync(ApiEndpoints.Tracking.GetLatestMetric("Weight"));
         latestResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var latestContent = await latestResponse.Content.ReadAsStringAsync();
         
@@ -489,14 +359,14 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         latestContent.Should().Contain("\"notes\":\"Week 2 progress\"");
 
         // Act & Assert 4: Get all metrics
-        var allResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var allResponse = await Client.GetAsync(ApiEndpoints.Tracking.GetMetrics);
         allResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var allContent = await allResponse.Content.ReadAsStringAsync();
         
         allContent.Should().Contain("\"metricType\":\"Weight\"");
 
         // Act & Assert 5: Delete the metric
-        var deleteResponse = await Client.DeleteAsync($"/api/v1/tracking/metrics/{metricId}");
+        var deleteResponse = await Client.DeleteAsync(ApiEndpoints.Tracking.DeleteMetric(Guid.Parse(metricId!)));
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
@@ -506,43 +376,32 @@ public class TrackingHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        // UserMetricType enum values: Weight = 0, Height = 1, PersonalRecord = 2
+        // Create different metric types
         var metrics = new[]
         {
-            (0, 75.0, "kg"),        // Weight
-            (1, 175.0, "cm"),       // Height
-            (2, 15.5, "reps")       // PersonalRecord
+            ApiJsonTemplates.CreateUserMetric("Weight", 75.0, unit: "kg"),
+            ApiJsonTemplates.CreateUserMetric("Height", 175.0, unit: "cm"), 
+            ApiJsonTemplates.CreateUserMetric("PersonalRecord", 15.5, unit: "reps")
         };
 
         // Act - Create different metric types
-        foreach (var (typeValue, value, unit) in metrics)
+        foreach (var metricJson in metrics)
         {
-            // Use invariant culture to ensure proper decimal formatting (15.5 not 15,5)
-            var valueString = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            
-            var requestJson = $$"""
-            {
-                "metricType": {{typeValue}},
-                "value": {{valueString}},
-                "unit": "{{unit}}"
-            }
-            """;
-
-            var response = await Client.PostAsync("/api/v1/tracking/metrics",
-                new StringContent(requestJson, Encoding.UTF8, "application/json"));
+            var response = await Client.PostAsync(ApiEndpoints.Tracking.CreateMetric,
+                metricJson.ToStringContent());
 
             // Debug: Capture error response if not OK
             if (response.StatusCode != HttpStatusCode.OK)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Request failed for MetricType {typeValue} with status {response.StatusCode}. Request JSON: {requestJson}. Error: {errorContent}");
+                throw new InvalidOperationException($"Request failed with status {response.StatusCode}. Request JSON: {metricJson}. Error: {errorContent}");
             }
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
         // Assert - Verify all metrics exist
-        var getResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Tracking.GetMetrics);
         var content = await getResponse.Content.ReadAsStringAsync();
         
         content.Should().Contain("\"metricType\":\"Weight\"");

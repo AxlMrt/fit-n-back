@@ -1,8 +1,8 @@
 using FitnessApp.IntegrationTests.Infrastructure;
+using FitnessApp.IntegrationTests.Helpers;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 
 namespace FitnessApp.IntegrationTests.Tests.Users;
 
@@ -23,24 +23,9 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var requestJson = """
-        {
-            "firstName": "John",
-            "lastName": "Doe",
-            "dateOfBirth": "1990-05-15T00:00:00Z",
-            "gender": "Male",
-            "height": 180.0,
-            "weight": 75.0,
-            "fitnessLevel": "Enthousiast",
-            "fitnessGoal": "Muscle_Gain",
-            "preferredWorkoutDuration": 45,
-            "hasEquipment": true
-        }
-        """;
-
         // Act
-        var response = await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(requestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Users.Profile,
+            ApiJsonTemplates.CreateUserProfile("John", "Doe", "1990-05-15T00:00:00Z", "Male", 180.0, 75.0, "Enthousiast", "Muscle_Gain").ToStringContent());
 
         // Assert
         if (response.StatusCode != HttpStatusCode.Created)
@@ -68,29 +53,16 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var requestJson = """
-        {
-            "firstName": "Jane",
-            "lastName": "Smith",
-            "dateOfBirth": "1985-03-20T00:00:00Z",
-            "gender": "Female",
-            "height": 165.0,
-            "weight": 60.0,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var requestJson = ApiJsonTemplates.CreateUserProfile("Jane", "Smith", "1985-03-20T00:00:00Z", "Female", 165.0, 60.0, "Beginner", "Weight_Loss");
 
         // Create profile first time
-        var firstResponse = await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(requestJson, Encoding.UTF8, "application/json"));
+        var firstResponse = await Client.PostAsync(ApiEndpoints.Users.Profile,
+            requestJson.ToStringContent());
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Act - Try to create again
-        var secondResponse = await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(requestJson, Encoding.UTF8, "application/json"));
+        var secondResponse = await Client.PostAsync(ApiEndpoints.Users.Profile,
+            requestJson.ToStringContent());
 
         // Assert
         secondResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -104,26 +76,13 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Alice",
-            "lastName": "Johnson",
-            "dateOfBirth": "1992-08-10T00:00:00Z",
-            "gender": "Female",
-            "height": 170.0,
-            "weight": 65.0,
-            "fitnessLevel": "Advanced",
-            "fitnessGoal": "Endurance",
-            "preferredWorkoutDuration": 60,
-            "hasEquipment": true
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Alice", "Johnson", "1992-08-10T00:00:00Z", "Female", 170.0, 65.0, "Advanced", "Endurance");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act
-        var response = await Client.GetAsync("/api/v1/users/profile");
+        var response = await Client.GetAsync(ApiEndpoints.Users.Profile);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -150,7 +109,7 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         // Act - Try to get profile without creating it first
-        var response = await Client.GetAsync("/api/v1/users/profile");
+        var response = await Client.GetAsync(ApiEndpoints.Users.Profile);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -162,36 +121,16 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange - Create profile first
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Original",
-            "lastName": "Name",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175.0,
-            "weight": 70.0,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Original", "Name", "1990-01-01T00:00:00Z", "Male", 175.0, 70.0, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act - Update personal info
-        var updateRequestJson = """
-        {
-            "firstName": "Updated",
-            "lastName": "Person",
-            "dateOfBirth": "1985-12-25T00:00:00Z",
-            "gender": "Female"
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePersonalInfoComplete("Updated", "Person", "1985-12-25T00:00:00Z", "Female");
 
-        var response = await Client.PatchAsync("/api/v1/users/profile/personal",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfilePersonal,
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -209,38 +148,16 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange - Create profile first
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Test",
-            "lastName": "User",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 75,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Test", "User", "1990-01-01T00:00:00Z", "Male", 175, 75, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act - Update measurements
-        var updateRequestJson = """
-        {
-            "height": 180,
-            "weight": 80,
-            "units": {
-                "heightUnit": "cm",
-                "weightUnit": "kg"
-            }
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePhysicalMeasurements(180, 80, "cm", "kg");
 
-        var response = await Client.PatchAsync("/api/v1/users/profile/measurements",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -261,34 +178,16 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange - Create profile first
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Fitness",
-            "lastName": "Enthusiast",
-            "dateOfBirth": "1988-06-30T00:00:00Z",
-            "gender": "Female",
-            "height": 168,
-            "weight": 62,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Fitness", "Enthusiast", "1988-06-30T00:00:00Z", "Female", 168, 62, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act - Update fitness profile
-        var updateRequestJson = """
-        {
-            "fitnessLevel": "Advanced",
-            "fitnessGoal": "Muscle_Gain"
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdateFitnessPreferences("Advanced", "Muscle_Gain");
 
-        var response = await Client.PatchAsync("/api/v1/users/profile/fitness",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfileFitness,
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -305,26 +204,13 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange - Create profile first
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "To",
-            "lastName": "Delete",
-            "dateOfBirth": "1995-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 70,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("To", "Delete", "1995-01-01T00:00:00Z", "Male", 175, 70, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act
-        var response = await Client.DeleteAsync("/api/v1/users/profile");
+        var response = await Client.DeleteAsync(ApiEndpoints.Users.Profile);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -333,7 +219,7 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         content.Should().Contain("\"message\":\"Profile deleted successfully\"");
 
         // Verify profile is deleted
-        var getResponse = await Client.GetAsync("/api/v1/users/profile");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Users.Profile);
         getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -359,7 +245,7 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         """;
 
         // Act
-        var response = await Client.PostAsync("/api/v1/users/profile",
+        var response = await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(invalidRequestJson, Encoding.UTF8, "application/json"));
 
         // Assert
@@ -373,23 +259,10 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         // Create profile first
-        var createRequestJson = """
-        {
-            "firstName": "Test",
-            "lastName": "User",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 75,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Test", "User", "1990-01-01T00:00:00Z", "Male", 175, 75, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         var invalidUpdateJson = """
         {
@@ -399,7 +272,7 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         """;
 
         // Act
-        var response = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(invalidUpdateJson, Encoding.UTF8, "application/json"));
 
         // Assert
@@ -412,16 +285,11 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var updateRequestJson = """
-        {
-            "firstName": "New",
-            "lastName": "Name"
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePersonalInfoComplete("New", "Name", "1990-01-01T00:00:00Z", "Male");
 
         // Act - Try to update without creating profile first
-        var response = await Client.PatchAsync("/api/v1/users/profile/personal",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfilePersonal,
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -437,38 +305,16 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Imperial",
-            "lastName": "User",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 70,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Imperial", "User", "1990-01-01T00:00:00Z", "Male", 175, 70, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act - Update with imperial units (5.9 ft ≈ 179.83 cm, 165 lbs ≈ 74.84 kg)
-        var updateRequestJson = """
-        {
-            "height": 5.9,
-            "weight": 165,
-            "units": {
-                "heightUnit": "ft",
-                "weightUnit": "lbs"
-            }
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePhysicalMeasurements(5.9, 165, "ft", "lbs");
 
-        var response = await Client.PatchAsync("/api/v1/users/profile/measurements",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -492,24 +338,11 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
     {
         // Arrange - No authentication
 
-        var requestJson = """
-        {
-            "firstName": "Test",
-            "lastName": "User",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 70,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var requestJson = ApiJsonTemplates.CreateUserProfile("Test", "User", "1990-01-01T00:00:00Z", "Male", 175, 70, "Beginner", "Weight_Loss");
 
         // Act
-        var response = await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(requestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Users.Profile,
+            requestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -519,7 +352,7 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
     public async Task GetProfile_WithoutAuthentication_ShouldReturnUnauthorized()
     {
         // Act
-        var response = await Client.GetAsync("/api/v1/users/profile");
+        var response = await Client.GetAsync(ApiEndpoints.Users.Profile);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -536,63 +369,35 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         // Step 1: Create complete profile
-        var createRequestJson = """
-        {
-            "firstName": "Complete",
-            "lastName": "User",
-            "dateOfBirth": "1987-04-12T00:00:00Z",
-            "gender": "Female",
-            "height": 165,
-            "weight": 58,
-            "fitnessLevel": "Enthousiast",
-            "fitnessGoal": "Muscle_Gain",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Complete", "User", "1987-04-12T00:00:00Z", "Female", 165, 58, "Enthousiast", "Muscle_Gain");
 
-        var createResponse = await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Step 2: Update personal info
-        var updatePersonalJson = """
-        {
-            "firstName": "Updated",
-            "lastName": "Complete"
-        }
-        """;
+        var updatePersonalJson = ApiJsonTemplates.UpdatePersonalInfoComplete("Updated", "Complete", "1987-04-12T00:00:00Z", "Female");
 
-        var updatePersonalResponse = await Client.PatchAsync("/api/v1/users/profile/personal",
-            new StringContent(updatePersonalJson, Encoding.UTF8, "application/json"));
+        var updatePersonalResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfilePersonal,
+            updatePersonalJson.ToStringContent());
         updatePersonalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Step 3: Update measurements
-        var updateMeasurementsJson = """
-        {
-            "height": 168,
-            "weight": 60
-        }
-        """;
+        var updateMeasurementsJson = ApiJsonTemplates.UpdatePhysicalMeasurements(168, 60);
 
-        var updateMeasurementsResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
-            new StringContent(updateMeasurementsJson, Encoding.UTF8, "application/json"));
+        var updateMeasurementsResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
+            updateMeasurementsJson.ToStringContent());
         updateMeasurementsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Step 4: Update fitness profile
-        var updateFitnessJson = """
-        {
-            "fitnessLevel": "Advanced",
-            "fitnessGoal": "Endurance"
-        }
-        """;
+        var updateFitnessJson = ApiJsonTemplates.UpdateFitnessPreferences("Advanced", "Endurance");
 
-        var updateFitnessResponse = await Client.PatchAsync("/api/v1/users/profile/fitness",
-            new StringContent(updateFitnessJson, Encoding.UTF8, "application/json"));
+        var updateFitnessResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileFitness,
+            updateFitnessJson.ToStringContent());
         updateFitnessResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Step 5: Verify final state
-        var getResponse = await Client.GetAsync("/api/v1/users/profile");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Users.Profile);
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await getResponse.Content.ReadAsStringAsync();
         
@@ -616,33 +421,16 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Original",
-            "lastName": "User",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 70,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Original", "User", "1990-01-01T00:00:00Z", "Male", 175, 70, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act - Update only first name
-        var updateRequestJson = """
-        {
-            "firstName": "Updated"
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePersonalInfo(firstName: "Updated");
 
-        var response = await Client.PatchAsync("/api/v1/users/profile/personal",
-            new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PatchAsync(ApiEndpoints.Users.ProfilePersonal,
+            updateRequestJson.ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -664,26 +452,13 @@ public class UserProfileHttpIntegrationTests : IntegrationTestBase
 
         var birthDate = DateTime.Now.AddYears(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        var createRequestJson = $$"""
-        {
-            "firstName": "Age",
-            "lastName": "Test",
-            "dateOfBirth": "{{birthDate}}",
-            "gender": "Male",
-            "height": 175,
-            "weight": 70,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss",
-            "preferredWorkoutDuration": 30,
-            "hasEquipment": false
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile("Age", "Test", birthDate, "Male", 175, 70, "Beginner", "Weight_Loss");
 
-        await Client.PostAsync("/api/v1/users/profile",
-            new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
+            createRequestJson.ToStringContent());
 
         // Act
-        var response = await Client.GetAsync("/api/v1/users/profile");
+        var response = await Client.GetAsync(ApiEndpoints.Users.Profile);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

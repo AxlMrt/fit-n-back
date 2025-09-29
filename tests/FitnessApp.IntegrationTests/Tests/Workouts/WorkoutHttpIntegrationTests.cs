@@ -1,5 +1,7 @@
 using FitnessApp.IntegrationTests.Infrastructure;
+using FitnessApp.IntegrationTests.Helpers;
 using System.Net;
+using static FitnessApp.IntegrationTests.Helpers.ApiJsonTemplates;
 
 namespace FitnessApp.IntegrationTests.Tests.Workouts;
 
@@ -10,7 +12,7 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetWorkouts_WithoutAuthentication_ShouldReturn401()
     {
-        var response = await Client.GetAsync("/api/v1/workouts/templates");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.Templates);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -20,7 +22,7 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/workouts/templates");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.Templates);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -36,49 +38,11 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Strength Training - Intermediate Level",
-            "description": "Bodyweight strength training program for intermediate level",
-            "type": "Template",
-            "category": "Strength",
-            "difficulty": "Intermediate",
-            "estimatedDurationMinutes": 40,
-            "phases": [
-                {
-                    "type": "WarmUp",
-                    "name": "Dynamic warm-up",
-                    "description": "Muscle activation and light cardio",
-                    "estimatedDurationMinutes": 8,
-                    "exercises": [
-                        {
-                            "exerciseId": "550e8400-e29b-41d4-a716-446655440100",
-                            "durationSeconds": 60,
-                            "sets": 2,
-                            "restTimeSeconds": 30
-                        }
-                    ]
-                },
-                {
-                    "type": "MainEffort",
-                    "name": "Strength Circuit",
-                    "description": "3 rounds of 4 exercises, focus on form",
-                    "estimatedDurationMinutes": 27,
-                    "exercises": [
-                        {
-                            "exerciseId": "550e8400-e29b-41d4-a716-446655440202",
-                            "reps": 12,
-                            "sets": 3,
-                            "restTimeSeconds": 60
-                        }
-                    ]
-                }
-            ]
-        }
-        """;
+        var createRequestJson = CreateComplexWorkoutTemplate(
+            "Strength Training - Intermediate Level",
+            "Bodyweight strength training program for intermediate level");
 
-        var response = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         
@@ -100,18 +64,9 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Unauthorized Workout",
-            "type": "Template",
-            "category": "Strength",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": 30
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate("Unauthorized Workout");
 
-        var response = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -121,19 +76,9 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
         
-        var createRequestJson = """
-        {
-            "name": "My Personal Workout",
-            "description": "Custom workout created by user",
-            "type": "UserCreated",
-            "category": "Cardio",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": 25
-        }
-        """;
+        var createRequestJson = CreateUserWorkout("My Personal Workout");
 
-        var response = await Client.PostAsync("/api/v1/workouts/my-workouts",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Workouts.MyWorkouts, createRequestJson.ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         
@@ -152,25 +97,20 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Test Workout to Get",
-            "description": "Workout for testing GET by ID",
-            "type": "Template",
-            "category": "Flexibility",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": 20
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate(
+            "Test Workout to Get", 
+            "Workout for testing GET by ID",
+            category: "Flexibility",
+            difficulty: "Beginner",
+            estimatedDurationMinutes: 20);
 
-        var createResponse = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var workoutId = ExtractIdFromJsonResponse(createContent);
 
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync($"/api/v1/workouts/{workoutId}");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.GetById(Guid.Parse(workoutId)));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -187,7 +127,7 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
         var nonExistentId = Guid.NewGuid();
 
-        var response = await Client.GetAsync($"/api/v1/workouts/{nonExistentId}");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.GetById(nonExistentId));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -197,33 +137,22 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Original Workout",
-            "description": "Original description",
-            "type": "Template",
-            "category": "Strength",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": 30
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate(
+            "Original Workout",
+            "Original description");
 
-        var createResponse = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var workoutId = ExtractIdFromJsonResponse(createContent);
 
-        var updateRequestJson = """
-        {
-            "name": "Updated Workout Name",
-            "description": "Updated workout description",
-            "difficulty": "Advanced",
-            "estimatedDurationMinutes": 45
-        }
-        """;
+        var updateRequestJson = UpdateWorkout(
+            name: "Updated Workout Name",
+            description: "Updated workout description",
+            difficulty: "Advanced",
+            estimatedDurationMinutes: 45);
 
-        var response = await Client.PutAsync($"/api/v1/workouts/admin/{workoutId}",
-            new StringContent(updateRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PutAsync(ApiEndpoints.Workouts.AdminUpdate(Guid.Parse(workoutId)), 
+            updateRequestJson.ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -240,23 +169,17 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Unique HIIT Training",
-            "description": "High intensity interval training",
-            "type": "Template",
-            "category": "Cardio",
-            "difficulty": "Advanced",
-            "estimatedDurationMinutes": 30
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate(
+            "Unique HIIT Training",
+            "High intensity interval training",
+            category: "Cardio",
+            difficulty: "Advanced");
 
-        await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
         
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/workouts/search?searchTerm=Unique");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.Search("Unique"));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -270,22 +193,16 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Stretching Session",
-            "type": "Template",
-            "category": "Flexibility",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": 15
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate(
+            "Stretching Session",
+            category: "Flexibility",
+            estimatedDurationMinutes: 15);
 
-        await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
         
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/workouts/category/Flexibility");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.GetByCategory("Flexibility"));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -299,7 +216,7 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/workouts/active");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.GetActive);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -315,26 +232,17 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Workout to Delete",
-            "type": "Template",
-            "category": "Strength",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": 30
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate("Workout to Delete");
 
-        var createResponse = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var workoutId = ExtractIdFromJsonResponse(createContent);
 
-        var response = await Client.DeleteAsync($"/api/v1/workouts/admin/{workoutId}");
+        var response = await Client.DeleteAsync(ApiEndpoints.Workouts.AdminDelete(Guid.Parse(workoutId)));
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         
-        var getResponse = await Client.GetAsync($"/api/v1/workouts/{workoutId}");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Workouts.GetById(Guid.Parse(workoutId)));
         getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -343,24 +251,19 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Exists Test Workout",
-            "type": "Template",
-            "category": "Cardio",
-            "difficulty": "Intermediate",
-            "estimatedDurationMinutes": 35
-        }
-        """;
+        var createRequestJson = CreateSimpleWorkoutTemplate(
+            "Exists Test Workout",
+            category: "Cardio",
+            difficulty: "Intermediate",
+            estimatedDurationMinutes: 35);
 
-        var createResponse = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Workouts.Templates, createRequestJson.ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var workoutId = ExtractIdFromJsonResponse(createContent);
 
         await AuthenticateAsUserAsync();
 
-        var response = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, $"/api/v1/workouts/{workoutId}"));
+        var response = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, ApiEndpoints.Workouts.Head(Guid.Parse(workoutId))));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -370,18 +273,9 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var invalidRequestJson = """
-        {
-            "name": "",
-            "type": "Template",
-            "category": "Strength",
-            "difficulty": "Beginner",
-            "estimatedDurationMinutes": -5
-        }
-        """;
+        var invalidRequestJson = CreateInvalidWorkout();
 
-        var response = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(invalidRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Workouts.Templates, invalidRequestJson.ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         
@@ -394,20 +288,15 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
         
-        var createRequestJson = """
-        {
-            "name": "My Custom Training",
-            "type": "UserCreated",
-            "category": "Strength",
-            "difficulty": "Intermediate",
-            "estimatedDurationMinutes": 40
-        }
-        """;
+        var createRequestJson = CreateUserWorkout(
+            "My Custom Training",
+            category: "Strength",
+            difficulty: "Intermediate",
+            estimatedDurationMinutes: 40);
 
-        await Client.PostAsync("/api/v1/workouts/my-workouts",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Workouts.MyWorkouts, createRequestJson.ToStringContent());
 
-        var response = await Client.GetAsync("/api/v1/workouts/my-workouts");
+        var response = await Client.GetAsync(ApiEndpoints.Workouts.MyWorkouts);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -421,62 +310,9 @@ public class WorkoutHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var cardioWorkoutJson = """
-        {
-            "name": "Express Cardio - 15 minutes",
-            "description": "Intensive 15-minute cardio workout to burn maximum calories",
-            "type": "Template",
-            "category": "Cardio",
-            "difficulty": "Advanced",
-            "estimatedDurationMinutes": 15,
-            "phases": [
-                {
-                    "type": "WarmUp",
-                    "name": "Quick activation",
-                    "estimatedDurationMinutes": 2,
-                    "exercises": [
-                        {
-                            "exerciseId": "550e8400-e29b-41d4-a716-446655440100",
-                            "durationSeconds": 60,
-                            "sets": 2,
-                            "restTimeSeconds": 0
-                        }
-                    ]
-                },
-                {
-                    "type": "MainEffort",
-                    "name": "Intense Cardio",
-                    "description": "Tabata - 20s all-out / 10s rest, 4 rounds",
-                    "estimatedDurationMinutes": 12,
-                    "exercises": [
-                        {
-                            "exerciseId": "550e8400-e29b-41d4-a716-446655440101",
-                            "durationSeconds": 20,
-                            "sets": 8,
-                            "restTimeSeconds": 10,
-                            "notes": "Maximum intensity"
-                        }
-                    ]
-                },
-                {
-                    "type": "Recovery",
-                    "name": "Cool down",
-                    "estimatedDurationMinutes": 1,
-                    "exercises": [
-                        {
-                            "exerciseId": "550e8400-e29b-41d4-a716-446655440100",
-                            "durationSeconds": 30,
-                            "sets": 1,
-                            "notes": "Very slow tempo for recovery"
-                        }
-                    ]
-                }
-            ]
-        }
-        """;
+        var cardioWorkoutJson = CreateCardioWorkout();
 
-        var response = await Client.PostAsync("/api/v1/workouts/templates",
-            new StringContent(cardioWorkoutJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Workouts.Templates, cardioWorkoutJson.ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         

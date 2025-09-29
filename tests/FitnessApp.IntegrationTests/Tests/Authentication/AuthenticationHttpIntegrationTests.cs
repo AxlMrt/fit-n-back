@@ -1,16 +1,14 @@
 using FitnessApp.IntegrationTests.Infrastructure;
-using FitnessApp.IntegrationTests.Helpers;
-using FluentAssertions;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Xunit;
+using FitnessApp.IntegrationTests.Helpers;
+using static FitnessApp.IntegrationTests.Helpers.ApiJsonTemplates;
 
 namespace FitnessApp.IntegrationTests.Tests.Authentication;
 
 /// <summary>
-/// Tests d'intégration HTTP pour le module Authentication - Pipeline complet Controller → Service → Repository → Database
-/// Simule de vrais utilisateurs avec des requêtes JSON string comme dans un client web/mobile
+/// Integration tests for Authentication module with complete HTTP pipeline testing.
 /// </summary>
 public class AuthenticationHttpIntegrationTests : IntegrationTestBase
 {
@@ -23,21 +21,9 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Register_WithValidData_ShouldCreateUserAndReturnTokens()
     {
-        // Arrange - JSON string comme un vrai utilisateur l'enverrait
-        var registerJson = """
-        {
-            "email": "newuser@example.com",
-            "userName": "newuser456",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("newuser@example.com", "newuser456", "SecurePass#2024!").ToStringContent());
 
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
-
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         
         var content = await response.Content.ReadAsStringAsync();
@@ -47,7 +33,6 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
         content.Should().Contain("\"email\":\"newuser@example.com\"");
         content.Should().Contain("\"role\":\"Athlete\"");
         
-        // Vérifier que les tokens sont valides
         var authResponse = JsonSerializer.Deserialize<JsonElement>(content);
         var accessToken = authResponse.GetProperty("accessToken").GetString();
         var refreshToken = authResponse.GetProperty("refreshToken").GetString();
@@ -59,32 +44,11 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Register_WithDuplicateEmail_ShouldReturnConflict()
     {
-        // Arrange - Premier utilisateur
-        var firstUserJson = """
-        {
-            "email": "duplicate@example.com",
-            "userName": "first456",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(firstUserJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("duplicate@example.com", "first456", DefaultPassword).ToStringContent());
 
-        // Deuxième utilisateur avec même email
-        var duplicateJson = """
-        {
-            "email": "duplicate@example.com",
-            "userName": "second456",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(duplicateJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("duplicate@example.com", "second456", DefaultPassword).ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -95,32 +59,11 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Register_WithDuplicateUsername_ShouldReturnConflict()
     {
-        // Arrange - Premier utilisateur
-        var firstUserJson = """
-        {
-            "email": "first@example.com",
-            "userName": "duplicate456",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(firstUserJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("first@example.com", "duplicate456", DefaultPassword).ToStringContent());
 
-        // Deuxième utilisateur avec même username
-        var duplicateJson = """
-        {
-            "email": "second@example.com",
-            "userName": "duplicate456",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(duplicateJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("second@example.com", "duplicate456", DefaultPassword).ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -131,19 +74,8 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Register_WithInvalidEmail_ShouldReturnBadRequest()
     {
-        // Arrange
-        var invalidEmailJson = """
-        {
-            "email": "not-an-email",
-            "userName": "validuser",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(invalidEmailJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("not-an-email", "validuser", DefaultPassword).ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -152,19 +84,8 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Register_WithMismatchedPasswords_ShouldReturnBadRequest()
     {
-        // Arrange
-        var mismatchedPasswordsJson = """
-        {
-            "email": "test@example.com",
-            "userName": "testuser",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "DifferentPass#789@"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(mismatchedPasswordsJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("test@example.com", "testuser", DefaultPassword, "DifferentPass#789@").ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -177,30 +98,11 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Login_WithValidCredentials_ShouldReturnTokens()
     {
-        // Arrange - D'abord créer un utilisateur
-        var registerJson = """
-        {
-            "email": "logintest@example.com",
-            "userName": "logintest",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("logintest@example.com", "logintest", DefaultPassword).ToStringContent());
 
-        // Tentative de connexion
-        var loginJson = """
-        {
-            "email": "logintest@example.com",
-            "password": "SecurePass#2024!"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/login", 
-            new StringContent(loginJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Login, 
+            LoginUser("logintest@example.com", DefaultPassword).ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -214,17 +116,8 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Login_WithInvalidEmail_ShouldReturnUnauthorized()
     {
-        // Arrange
-        var loginJson = """
-        {
-            "email": "nonexistent@example.com",
-            "password": "AnyPassword#2024!"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/login", 
-            new StringContent(loginJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Login, 
+            LoginUser("nonexistent@example.com", "AnyPassword#2024!").ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -235,30 +128,11 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Login_WithInvalidPassword_ShouldReturnUnauthorized()
     {
-        // Arrange - Créer utilisateur d'abord
-        var registerJson = """
-        {
-            "email": "passwordtest@example.com",
-            "userName": "passwordtest",
-            "password": "CorrectPass#2024!",
-            "confirmPassword": "CorrectPass#2024!"
-        }
-        """;
-        
-        await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("passwordtest@example.com", "passwordtest", "CorrectPass#2024!").ToStringContent());
 
-        // Tentative avec mauvais mot de passe
-        var loginJson = """
-        {
-            "email": "passwordtest@example.com",
-            "password": "WrongPassword#789@"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/login", 
-            new StringContent(loginJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Login, 
+            LoginUser("passwordtest@example.com", "WrongPassword#789@").ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -273,36 +147,18 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task RefreshToken_WithValidToken_ShouldReturnNewTokens()
     {
-        // Arrange - Créer et connecter utilisateur
-        var registerJson = """
-        {
-            "email": "refreshtest@example.com",
-            "userName": "refreshtest",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        var registerResponse = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        var registerResponse = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("refreshtest@example.com", "refreshtest", DefaultPassword).ToStringContent());
         
         var registerContent = await registerResponse.Content.ReadAsStringAsync();
         var authData = JsonSerializer.Deserialize<JsonElement>(registerContent);
         var originalRefreshToken = authData.GetProperty("refreshToken").GetString();
         var originalAccessToken = authData.GetProperty("accessToken").GetString();
 
-        // Attendre un peu pour s'assurer que le timestamp du JWT est différent
         await Task.Delay(1100);
 
-        // Act - Utiliser le refresh token
-        var refreshJson = $$"""
-        {
-            "refreshToken": "{{originalRefreshToken}}"
-        }
-        """;
-
-        var refreshResponse = await Client.PostAsync("/api/v1/auth/refresh", 
-            new StringContent(refreshJson, Encoding.UTF8, "application/json"));
+        var refreshResponse = await Client.PostAsync(ApiEndpoints.Auth.Refresh, 
+            RefreshToken(originalRefreshToken!).ToStringContent());
 
         // Assert
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -323,16 +179,8 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task RefreshToken_WithInvalidToken_ShouldReturnUnauthorized()
     {
-        // Arrange - Utiliser un token complètement invalide
-        var invalidRefreshJson = """
-        {
-            "refreshToken": "invalid-token-that-does-not-exist"
-        }
-        """;
-
-        // Act
-        var response = await Client.PostAsync("/api/v1/auth/refresh", 
-            new StringContent(invalidRefreshJson, Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Refresh, 
+            RefreshToken("invalid-token-that-does-not-exist").ToStringContent());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -343,42 +191,23 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task RefreshToken_WithUsedToken_ShouldReturnUnauthorized()
     {
-        // Arrange - Créer utilisateur et obtenir tokens
-        var registerJson = """
-        {
-            "email": "reusedtoken@example.com",
-            "userName": "reusedtoken",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        var registerResponse = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        var registerResponse = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("reusedtoken@example.com", "reusedtoken", DefaultPassword).ToStringContent());
         
         var registerContent = await registerResponse.Content.ReadAsStringAsync();
         var authData = JsonSerializer.Deserialize<JsonElement>(registerContent);
         var originalRefreshToken = authData.GetProperty("refreshToken").GetString();
 
-        // Première utilisation du refresh token (devrait réussir)
-        var refreshJson = $$"""
-        {
-            "refreshToken": "{{originalRefreshToken}}"
-        }
-        """;
-
-        var firstRefreshResponse = await Client.PostAsync("/api/v1/auth/refresh", 
-            new StringContent(refreshJson, Encoding.UTF8, "application/json"));
+        var firstRefreshResponse = await Client.PostAsync(ApiEndpoints.Auth.Refresh, 
+            RefreshToken(originalRefreshToken!).ToStringContent());
         
         // Vérifier que la première utilisation fonctionne
         firstRefreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Attendre un court délai pour s'assurer que le token est bien marqué comme "Used" en BDD
         await Task.Delay(100);
 
-        // Deuxième utilisation avec le même token original (devrait échouer car marqué comme "Used")
-        var secondRefreshResponse = await Client.PostAsync("/api/v1/auth/refresh", 
-            new StringContent(refreshJson, Encoding.UTF8, "application/json"));
+        var secondRefreshResponse = await Client.PostAsync(ApiEndpoints.Auth.Refresh, 
+            RefreshToken(originalRefreshToken!).ToStringContent());
 
         // Assert - Le token original ne peut plus être utilisé
         secondRefreshResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -393,28 +222,16 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetAuthUser_WithValidToken_ShouldReturnUserInfo()
     {
-        // Arrange - Créer et connecter utilisateur
-        var registerJson = """
-        {
-            "email": "authuser@example.com",
-            "userName": "authuser",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        var registerResponse = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        var registerResponse = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("authuser@example.com", "authuser", DefaultPassword).ToStringContent());
         
         var registerContent = await registerResponse.Content.ReadAsStringAsync();
         var authData = JsonSerializer.Deserialize<JsonElement>(registerContent);
         var accessToken = authData.GetProperty("accessToken").GetString();
 
-        // Set authorization header
         SetAuthorizationHeader(accessToken!);
 
-        // Act
-        var response = await Client.GetAsync("/api/v1/auth/me");
+        var response = await Client.GetAsync(ApiEndpoints.Auth.Me);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -429,8 +246,7 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetAuthUser_WithoutToken_ShouldReturnUnauthorized()
     {
-        // Act - Pas de token d'autorisation
-        var response = await Client.GetAsync("/api/v1/auth/me");
+        var response = await Client.GetAsync(ApiEndpoints.Auth.Me);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -439,11 +255,9 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetAuthUser_WithInvalidToken_ShouldReturnUnauthorized()
     {
-        // Arrange
         SetAuthorizationHeader("invalid-jwt-token-123");
 
-        // Act
-        var response = await Client.GetAsync("/api/v1/auth/me");
+        var response = await Client.GetAsync(ApiEndpoints.Auth.Me);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -456,18 +270,8 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Logout_WithValidToken_ShouldSucceed()
     {
-        // Arrange - Créer et connecter utilisateur
-        var registerJson = """
-        {
-            "email": "logouttest@example.com",
-            "userName": "logouttest",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        var registerResponse = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        var registerResponse = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("logouttest@example.com", "logouttest", DefaultPassword).ToStringContent());
         
         var registerContent = await registerResponse.Content.ReadAsStringAsync();
         var authData = JsonSerializer.Deserialize<JsonElement>(registerContent);
@@ -475,8 +279,7 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
 
         SetAuthorizationHeader(accessToken!);
 
-        // Act - Logout
-        var logoutResponse = await Client.PostAsync("/api/v1/auth/logout", null);
+        var logoutResponse = await Client.PostAsync(ApiEndpoints.Auth.Logout, null);
 
         // Assert
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -487,8 +290,7 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Logout_WithoutToken_ShouldReturnUnauthorized()
     {
-        // Act - Pas de token d'autorisation
-        var response = await Client.PostAsync("/api/v1/auth/logout", null);
+        var response = await Client.PostAsync(ApiEndpoints.Auth.Logout, null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -501,31 +303,13 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task CompleteAuthFlow_RegisterLoginRefreshLogout_ShouldWorkEndToEnd()
     {
-        // 1. Register
-        var registerJson = """
-        {
-            "email": "complete@example.com",
-            "userName": "complete",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        var registerResponse = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        var registerResponse = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("complete@example.com", "complete", DefaultPassword).ToStringContent());
         
         registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // 2. Login
-        var loginJson = """
-        {
-            "email": "complete@example.com",
-            "password": "SecurePass#2024!"
-        }
-        """;
-
-        var loginResponse = await Client.PostAsync("/api/v1/auth/login", 
-            new StringContent(loginJson, Encoding.UTF8, "application/json"));
+        var loginResponse = await Client.PostAsync(ApiEndpoints.Auth.Login, 
+            LoginUser("complete@example.com", DefaultPassword).ToStringContent());
         
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -534,72 +318,46 @@ public class AuthenticationHttpIntegrationTests : IntegrationTestBase
         var accessToken = loginData.GetProperty("accessToken").GetString();
         var refreshToken = loginData.GetProperty("refreshToken").GetString();
 
-        // 3. Protected request
         SetAuthorizationHeader(accessToken!);
-        var meResponse = await Client.GetAsync("/api/v1/auth/me");
+        var meResponse = await Client.GetAsync(ApiEndpoints.Auth.Me);
         meResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 4. Refresh token
-        var refreshJson = $$"""
-        {
-            "refreshToken": "{{refreshToken}}"
-        }
-        """;
-
-        var refreshResponse = await Client.PostAsync("/api/v1/auth/refresh", 
-            new StringContent(refreshJson, Encoding.UTF8, "application/json"));
+        var refreshResponse = await Client.PostAsync(ApiEndpoints.Auth.Refresh, 
+            RefreshToken(refreshToken!).ToStringContent());
         
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 5. Logout
-        var logoutResponse = await Client.PostAsync("/api/v1/auth/logout", null);
+        var logoutResponse = await Client.PostAsync(ApiEndpoints.Auth.Logout, null);
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 6. Verify token is invalidated (if token revocation is implemented)
-        var finalMeResponse = await Client.GetAsync("/api/v1/auth/me");
+        var finalMeResponse = await Client.GetAsync(ApiEndpoints.Auth.Me);
         finalMeResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task TokenSecurityValidation_ShouldWork()
     {
-        // Arrange - Créer utilisateur
-        var registerJson = """
-        {
-            "email": "security@example.com",
-            "userName": "security",
-            "password": "SecurePass#2024!",
-            "confirmPassword": "SecurePass#2024!"
-        }
-        """;
-        
-        var registerResponse = await Client.PostAsync("/api/v1/auth/register", 
-            new StringContent(registerJson, Encoding.UTF8, "application/json"));
+        var registerResponse = await Client.PostAsync(ApiEndpoints.Auth.Register, 
+            RegisterUser("security@example.com", "security", DefaultPassword).ToStringContent());
         
         var registerContent = await registerResponse.Content.ReadAsStringAsync();
         var authData = JsonSerializer.Deserialize<JsonElement>(registerContent);
         var accessToken = authData.GetProperty("accessToken").GetString();
 
-        // Act & Assert - Token validation scenarios
-        
-        // 1. Valid token should work
         SetAuthorizationHeader(accessToken!);
-        var validResponse = await Client.GetAsync("/api/v1/auth/me");
+        var validResponse = await Client.GetAsync(ApiEndpoints.Auth.Me);
         validResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 2. Malformed token should fail
         SetAuthorizationHeader("malformed-token");
-        var malformedResponse = await Client.GetAsync("/api/v1/auth/me");
+        var malformedResponse = await Client.GetAsync(ApiEndpoints.Auth.Me);
         malformedResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
-        // 3. Empty token should fail
         SetAuthorizationHeader("");
-        var emptyResponse = await Client.GetAsync("/api/v1/auth/me");
+        var emptyResponse = await Client.GetAsync(ApiEndpoints.Auth.Me);
         emptyResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
-        // 4. No authorization header should fail
         Client.DefaultRequestHeaders.Authorization = null;
-        var noHeaderResponse = await Client.GetAsync("/api/v1/auth/me");
+        var noHeaderResponse = await Client.GetAsync(ApiEndpoints.Auth.Me);
         noHeaderResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 

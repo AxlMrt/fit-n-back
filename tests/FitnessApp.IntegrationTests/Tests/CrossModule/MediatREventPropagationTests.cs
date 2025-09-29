@@ -1,6 +1,5 @@
 using FitnessApp.IntegrationTests.Infrastructure;
 using FitnessApp.SharedKernel.Events.Users;
-using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 

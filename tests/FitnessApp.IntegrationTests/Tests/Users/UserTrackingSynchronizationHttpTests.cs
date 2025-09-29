@@ -1,9 +1,8 @@
 using FitnessApp.IntegrationTests.Infrastructure;
+using FitnessApp.IntegrationTests.Helpers;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
-using FitnessApp.SharedKernel.Enums;
 
 namespace FitnessApp.IntegrationTests.Tests.Users;
 
@@ -24,21 +23,19 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Sync",
-            "lastName": "Test",
-            "dateOfBirth": "1990-05-15T00:00:00Z",
-            "gender": "Male",
-            "height": 180,
-            "weight": 75,
-            "fitnessLevel": "Enthousiast",
-            "fitnessGoal": "Muscle_Gain"
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile(
+            firstName: "Sync",
+            lastName: "Test",
+            dateOfBirth: "1990-05-15T00:00:00Z",
+            gender: "Male",
+            height: 180,
+            weight: 75,
+            fitnessLevel: "Enthousiast",
+            fitnessGoal: "Muscle_Gain"
+        );
 
         // Act - Create profile via HTTP
-        var createResponse = await Client.PostAsync("/api/v1/users/profile",
+        var createResponse = await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         // Assert - Profile created successfully
@@ -48,7 +45,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Verify metrics synced to Tracking module
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         metricsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var content = await metricsResponse.Content.ReadAsStringAsync();
@@ -78,37 +75,31 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         // Arrange - Create initial profile
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Update",
-            "lastName": "Test",
-            "dateOfBirth": "1988-06-30T00:00:00Z",
-            "gender": "Female",
-            "height": 170,
-            "weight": 65,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Weight_Loss"
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile(
+            firstName: "Update",
+            lastName: "Test",
+            dateOfBirth: "1988-06-30T00:00:00Z",
+            gender: "Female",
+            height: 170,
+            weight: 65,
+            fitnessLevel: "Beginner",
+            fitnessGoal: "Weight_Loss"
+        );
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500); // Wait for initial sync
 
         // Act - Update physical measurements
-        var updateRequestJson = """
-        {
-            "height": 172,
-            "weight": 63,
-            "units": {
-                "heightUnit": "cm",
-                "weightUnit": "kg"
-            }
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePhysicalMeasurements(
+            height: 172,
+            weight: 63,
+            heightUnit: "cm",
+            weightUnit: "kg"
+        );
 
-        var updateResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var updateResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
 
         // Assert - Update successful
@@ -118,7 +109,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Verify updated metrics in Tracking module
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         metricsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var content = await metricsResponse.Content.ReadAsStringAsync();
@@ -153,26 +144,24 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         // Arrange
         await AuthenticateAsUserAsync();
 
-        var createRequestJson = """
-        {
-            "firstName": "Height",
-            "lastName": "Only",
-            "dateOfBirth": "1990-01-01T00:00:00Z",
-            "gender": "Male",
-            "height": 175,
-            "weight": 70,
-            "fitnessLevel": "Beginner",
-            "fitnessGoal": "Muscle_Gain"
-        }
-        """;
+        var createRequestJson = ApiJsonTemplates.CreateUserProfile(
+            firstName: "Height",
+            lastName: "Only",
+            dateOfBirth: "1990-01-01T00:00:00Z",
+            gender: "Male",
+            height: 175,
+            weight: 70,
+            fitnessLevel: "Beginner",
+            fitnessGoal: "Muscle_Gain"
+        );
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500);
 
         // Clear existing metrics for clean test
-        var initialMetricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var initialMetricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var initialContent = await initialMetricsResponse.Content.ReadAsStringAsync();
         var initialDoc = JsonDocument.Parse(initialContent);
         var initialMetrics = initialDoc.RootElement.EnumerateArray().ToList();
@@ -180,17 +169,13 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
             m.GetProperty("metricType").GetString() == "Weight");
 
         // Act - Update only height
-        var updateRequestJson = """
-        {
-            "height": 177,
-            "units": {
-                "heightUnit": "cm",
-                "weightUnit": "kg"
-            }
-        }
-        """;
+        var updateRequestJson = ApiJsonTemplates.UpdatePhysicalMeasurementsPartial(
+            height: 177,
+            heightUnit: "cm",
+            weightUnit: "kg"
+        );
 
-        var updateResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var updateResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
 
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -199,7 +184,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Assert - Only height should be synced
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();
@@ -238,13 +223,13 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500);
 
         // Get initial height count
-        var initialMetricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var initialMetricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var initialContent = await initialMetricsResponse.Content.ReadAsStringAsync();
         var initialDoc = JsonDocument.Parse(initialContent);
         var initialMetrics = initialDoc.RootElement.EnumerateArray().ToList();
@@ -262,7 +247,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        var updateResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var updateResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
 
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -271,7 +256,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Assert - Only weight should be synced
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();
@@ -310,7 +295,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500);
@@ -327,7 +312,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PatchAsync("/api/v1/users/profile/measurements",
+        await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(update1Json, Encoding.UTF8, "application/json"));
 
         await Task.Delay(700); // Wait between updates
@@ -343,13 +328,13 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PatchAsync("/api/v1/users/profile/measurements",
+        await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(update2Json, Encoding.UTF8, "application/json"));
 
         await Task.Delay(1000); // Final wait for sync
 
         // Assert - Should have multiple entries
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();
@@ -400,7 +385,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500);
@@ -417,7 +402,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        var updateResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var updateResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
 
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -425,7 +410,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Assert - Tracking should store in metric units
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();
@@ -469,7 +454,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         """;
 
         // Act
-        var createResponse = await Client.PostAsync("/api/v1/users/profile",
+        var createResponse = await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -477,7 +462,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Assert - Tracking should have standardized metric values
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();
@@ -519,13 +504,13 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500);
 
         // Get initial metrics count
-        var initialResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var initialResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var initialContent = await initialResponse.Content.ReadAsStringAsync();
         var initialDoc = JsonDocument.Parse(initialContent);
         var initialCount = initialDoc.RootElement.GetArrayLength();
@@ -542,7 +527,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        var updateResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var updateResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(invalidUpdateJson, Encoding.UTF8, "application/json"));
 
         // Assert - Update should fail
@@ -551,7 +536,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(500);
 
         // Tracking metrics should not have changed
-        var finalResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var finalResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var finalContent = await finalResponse.Content.ReadAsStringAsync();
         var finalDoc = JsonDocument.Parse(finalContent);
         var finalCount = finalDoc.RootElement.GetArrayLength();
@@ -566,7 +551,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
 
         // Get initial metrics count (should be 0 for fresh user)
-        var initialResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var initialResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var initialContent = await initialResponse.Content.ReadAsStringAsync();
         var initialDoc = JsonDocument.Parse(initialContent);
         var initialCount = initialDoc.RootElement.GetArrayLength();
@@ -583,7 +568,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        var updateResponse = await Client.PatchAsync("/api/v1/users/profile/measurements",
+        var updateResponse = await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(updateRequestJson, Encoding.UTF8, "application/json"));
 
         // Assert - Should fail
@@ -592,7 +577,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(500);
 
         // Tracking should remain unchanged
-        var finalResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var finalResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var finalContent = await finalResponse.Content.ReadAsStringAsync();
         var finalDoc = JsonDocument.Parse(finalContent);
         var finalCount = finalDoc.RootElement.GetArrayLength();
@@ -623,7 +608,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PostAsync("/api/v1/users/profile",
+        await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(500);
@@ -655,7 +640,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         await Task.Delay(2000); // Wait for all sync operations
 
         // Assert - All metrics should be consistent
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();
@@ -697,7 +682,7 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        var createResponse = await Client.PostAsync("/api/v1/users/profile",
+        var createResponse = await Client.PostAsync(ApiEndpoints.Users.Profile,
             new StringContent(createRequestJson, Encoding.UTF8, "application/json"));
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -741,13 +726,13 @@ public class UserTrackingSynchronizationHttpTests : IntegrationTestBase
         }
         """;
 
-        await Client.PatchAsync("/api/v1/users/profile/measurements",
+        await Client.PatchAsync(ApiEndpoints.Users.ProfileMeasurements,
             new StringContent(updateMeasurementsJson, Encoding.UTF8, "application/json"));
 
         await Task.Delay(1000);
 
         // Assert - Should have initial + updated measurements only
-        var metricsResponse = await Client.GetAsync("/api/v1/tracking/metrics");
+        var metricsResponse = await Client.GetAsync(ApiEndpoints.Tracking.Metrics);
         var content = await metricsResponse.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         var metrics = doc.RootElement.EnumerateArray().ToList();

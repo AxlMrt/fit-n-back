@@ -1,5 +1,7 @@
 using FitnessApp.IntegrationTests.Infrastructure;
 using System.Net;
+using FitnessApp.IntegrationTests.Helpers;
+using static FitnessApp.IntegrationTests.Helpers.ApiJsonTemplates;
 
 namespace FitnessApp.IntegrationTests.Tests.Exercises;
 
@@ -12,7 +14,7 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetExercises_WithoutAuthentication_ShouldReturn401()
     {
-        var response = await Client.GetAsync("/api/v1/exercises");
+        var response = await Client.GetAsync(ApiEndpoints.Exercises.List);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -22,7 +24,7 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/exercises");
+        var response = await Client.GetAsync(ApiEndpoints.Exercises.List);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -41,24 +43,14 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Push-ups Integration Test",
-            "description": "A basic push-up exercise",
-            "type": "Strength",
-            "muscleGroups": ["Chest", "Shoulders"],
-            "difficulty": "Beginner",
-            "equipment": ["None"]
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises", 
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create, 
+            CreateExercise("Push-ups Integration Test", "A basic push-up exercise", "Strength", 
+                new[] { "Chest", "Shoulders" }, "Beginner", new[] { "None" }).ToStringContent());
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/exercises?type=Strength&difficulty=Beginner");
+        var response = await Client.GetAsync(ApiEndpoints.Exercises.ListWithFilters("Strength", "Beginner"));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -75,20 +67,15 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "New Exercise",
-            "description": "A test exercise", 
-            "type": "Strength",
-            "muscleGroups": ["Arms"],
-            "difficulty": "Intermediate",
-            "equipment": ["Dumbbells"],
-            "instructions": "Perform the exercise carefully"
-        }
-        """;
+        var response = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("New Exercise", "A test exercise", "Strength", 
+                new[] { "Arms" }, "Intermediate", new[] { "Dumbbells" }, "Perform the exercise carefully").ToStringContent());
 
-        var response = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        if (response.StatusCode != HttpStatusCode.Created)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Exercise creation failed with status {response.StatusCode}: {errorContent}");
+        }
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         
@@ -111,16 +98,8 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsUserAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Unauthorized Exercise",
-            "type": "Strength",
-            "muscleGroups": ["Arms"]
-        }
-        """;
-
-        var response = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Unauthorized Exercise", "Test description", "Strength", new[] { "Arms" }, "Beginner", new[] { "None" }).ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -130,16 +109,8 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var invalidRequestJson = """
-        {
-            "name": "",
-            "type": "Strength",
-            "muscleGroups": ["Arms"]
-        }
-        """;
-
-        var response = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(invalidRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("", "", "Strength", new[] { "Arms" }, "Beginner", new[] { "None" }).ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         
@@ -152,17 +123,8 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Get Test Exercise",
-            "type": "Cardio",
-            "muscleGroups": ["Legs"],
-            "difficulty": "Advanced"
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Get Test Exercise", "", "Cardio", new[] { "Legs" }, "Advanced", new string[0]).ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         createContent.Should().Contain("\"id\":\"");
         
@@ -170,7 +132,7 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
 
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync($"/api/v1/exercises/{exerciseId}");
+        var response = await Client.GetAsync(ApiEndpoints.Exercises.GetById(Guid.Parse(exerciseId)));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -187,7 +149,7 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
         await AuthenticateAsUserAsync();
         var nonExistentId = Guid.NewGuid();
 
-        var response = await Client.GetAsync($"/api/v1/exercises/{nonExistentId}");
+        var response = await Client.GetAsync(ApiEndpoints.Exercises.GetById(nonExistentId));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -197,30 +159,13 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Original Exercise",
-            "type": "Strength",
-            "muscleGroups": ["Arms"],
-            "difficulty": "Beginner"
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Original Exercise", "", "Strength", new[] { "Arms" }, "Beginner", new string[0]).ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var exerciseId = ExtractIdFromJsonResponse(createContent);
 
-        var updateRequestJson = """
-        {
-            "name": "Updated Exercise",
-            "description": "Updated description",
-            "difficulty": "Advanced"
-        }
-        """;
-
-        var response = await Client.PutAsync($"/api/v1/exercises/{exerciseId}",
-            new StringContent(updateRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await Client.PutAsync(ApiEndpoints.Exercises.Update(Guid.Parse(exerciseId)),
+            UpdateExercise(name: "Updated Exercise", description: "Updated description", difficulty: "Advanced").ToStringContent());
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -237,20 +182,12 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Unique Push-up Variation",
-            "type": "Strength",
-            "muscleGroups": ["Chest"]
-        }
-        """;
-
-        await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Unique Push-up Variation", "A unique variation", "Strength", new[] { "Chest" }, "Beginner", new[] { "None" }).ToStringContent());
         
         await AuthenticateAsUserAsync();
 
-        var response = await Client.GetAsync("/api/v1/exercises/search?term=Unique");
+        var response = await Client.GetAsync(ApiEndpoints.Exercises.Search("Unique"));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
@@ -264,26 +201,19 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Exercise to Activate",
-            "type": "Stretching",
-            "muscleGroups": ["Core"]
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Exercise to Activate", "Exercise to test activation", "Stretching", new[] { "Core" }, "Beginner", new[] { "None" }).ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var exerciseId = ExtractIdFromJsonResponse(createContent);
+        var exerciseGuid = Guid.Parse(exerciseId);
 
-        await Client.PostAsync($"/api/v1/exercises/{exerciseId}/deactivate", null);
+        await Client.PostAsync(ApiEndpoints.Exercises.Deactivate(exerciseGuid), null);
 
-        var response = await Client.PostAsync($"/api/v1/exercises/{exerciseId}/activate", null);
+        var response = await Client.PostAsync(ApiEndpoints.Exercises.Activate(exerciseGuid), null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
-        var getResponse = await Client.GetAsync($"/api/v1/exercises/{exerciseId}");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Exercises.GetById(exerciseGuid));
         var content = await getResponse.Content.ReadAsStringAsync();
         content.Should().Contain("\"isActive\":true");
     }
@@ -293,24 +223,17 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Exercise to Deactivate",
-            "type": "Strength",
-            "muscleGroups": ["Legs"]
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Exercise to Deactivate", "Exercise to test deactivation", "Strength", new[] { "Legs" }, "Beginner", new[] { "None" }).ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var exerciseId = ExtractIdFromJsonResponse(createContent);
+        var exerciseGuid = Guid.Parse(exerciseId);
 
-        var response = await Client.PostAsync($"/api/v1/exercises/{exerciseId}/deactivate", null);
+        var response = await Client.PostAsync(ApiEndpoints.Exercises.Deactivate(exerciseGuid), null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
-        var getResponse = await Client.GetAsync($"/api/v1/exercises/{exerciseId}");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Exercises.GetById(exerciseGuid));
         var content = await getResponse.Content.ReadAsStringAsync();
         content.Should().Contain("\"isActive\":false");
     }
@@ -320,24 +243,17 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Exercise to Delete",
-            "type": "Cardio",
-            "muscleGroups": ["Legs"]
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Exercise to Delete", "Exercise to test deletion", "Cardio", new[] { "Legs" }, "Beginner", new[] { "None" }).ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var exerciseId = ExtractIdFromJsonResponse(createContent);
+        var exerciseGuid = Guid.Parse(exerciseId);
 
-        var response = await Client.DeleteAsync($"/api/v1/exercises/{exerciseId}");
+        var response = await Client.DeleteAsync(ApiEndpoints.Exercises.Delete(exerciseGuid));
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         
-        var getResponse = await Client.GetAsync($"/api/v1/exercises/{exerciseId}");
+        var getResponse = await Client.GetAsync(ApiEndpoints.Exercises.GetById(exerciseGuid));
         getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -346,31 +262,39 @@ public class ExerciseHttpIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
         
-        var createRequestJson = """
-        {
-            "name": "Exists Test Exercise",
-            "type": "Strength",
-            "muscleGroups": ["Arms"]
-        }
-        """;
-
-        var createResponse = await Client.PostAsync("/api/v1/exercises",
-            new StringContent(createRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var createResponse = await Client.PostAsync(ApiEndpoints.Exercises.Create,
+            CreateExercise("Exists Test Exercise", "Exercise to test existence", "Strength", new[] { "Arms" }, "Beginner", new[] { "None" }).ToStringContent());
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var exerciseId = ExtractIdFromJsonResponse(createContent);
+        var exerciseGuid = Guid.Parse(exerciseId);
 
         await AuthenticateAsUserAsync();
 
-        var response = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, $"/api/v1/exercises/{exerciseId}"));
+        var response = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, ApiEndpoints.Exercises.GetById(exerciseGuid)));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
     
     private static string ExtractIdFromJsonResponse(string jsonContent)
     {
-        var idStart = jsonContent.IndexOf("\"id\":\"") + 6;
-        var idEnd = jsonContent.IndexOf("\"", idStart);
-        return jsonContent.Substring(idStart, idEnd - idStart);
+        // Try different patterns for ID extraction
+        var patterns = new[] { "\"id\":\"", "\"Id\":\"", "\"id\": \"", "\"Id\": \"" };
+        
+        foreach (var pattern in patterns)
+        {
+            var idStartIndex = jsonContent.IndexOf(pattern);
+            if (idStartIndex != -1)
+            {
+                var idStart = idStartIndex + pattern.Length;
+                var idEnd = jsonContent.IndexOf("\"", idStart);
+                if (idEnd != -1)
+                {
+                    return jsonContent.Substring(idStart, idEnd - idStart);
+                }
+            }
+        }
+        
+        throw new InvalidOperationException($"Could not extract ID from JSON response: {jsonContent}");
     }
 }
 
