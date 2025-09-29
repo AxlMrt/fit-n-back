@@ -196,6 +196,8 @@ public sealed class GlobalExceptionMiddleware
             "WORKOUT_NOT_FOUND" => HttpStatusCode.NotFound,
             "PHASE_NOT_FOUND" => HttpStatusCode.NotFound,
             "SESSION_NOT_FOUND" => HttpStatusCode.NotFound,
+            "METRIC_NOT_FOUND" => HttpStatusCode.NotFound,
+            "WORKOUT_SESSION_NOT_FOUND" => HttpStatusCode.NotFound,
             
             // Conflict cases
             "USER_ALREADY_EXISTS" => HttpStatusCode.Conflict,

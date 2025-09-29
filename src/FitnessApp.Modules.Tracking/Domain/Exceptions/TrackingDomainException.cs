@@ -111,4 +111,11 @@ public sealed class TrackingDomainException : DomainException
     
     public static TrackingDomainException WorkoutAlreadyScheduled(DateTime scheduledDate) =>
         new("WORKOUT_ALREADY_SCHEDULED", $"Workout is already scheduled for {scheduledDate:yyyy-MM-dd}");
+    
+    // Not found factory methods
+    public static TrackingDomainException MetricNotFound(Guid metricId) =>
+        new("METRIC_NOT_FOUND", $"Metric with ID {metricId} not found");
+    
+    public static TrackingDomainException WorkoutSessionNotFound(Guid sessionId) =>
+        new("WORKOUT_SESSION_NOT_FOUND", $"Workout session with ID {sessionId} not found");
 }

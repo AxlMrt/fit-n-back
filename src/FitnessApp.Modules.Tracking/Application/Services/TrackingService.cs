@@ -192,7 +192,7 @@ public class TrackingService : ITrackingService
         var metric = await _userMetricRepository.GetByIdAsync(metricId, cancellationToken);
         if (metric == null)
         {
-            throw new InvalidOperationException($"Metric with ID {metricId} not found");
+            throw TrackingDomainException.MetricNotFound(metricId);
         }
 
         metric.UpdateValue(value, notes);
@@ -227,7 +227,7 @@ public class TrackingService : ITrackingService
         var metric = await _userMetricRepository.GetByIdAsync(metricId, cancellationToken);
         if (metric == null)
         {
-            throw new InvalidOperationException($"Metric with ID {metricId} not found");
+            throw TrackingDomainException.MetricNotFound(metricId);
         }
 
         await _userMetricRepository.DeleteAsync(metric, cancellationToken);
